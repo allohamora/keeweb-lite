@@ -13,7 +13,9 @@
     "format": "prettier . --check",
     "format:fix": "prettier --write .",
     "csslint": "stylelint \"src/**/*.{css,ts,tsx,astro}\"",
-    "csslint:fix": "stylelint \"src/**/*.{css,ts,tsx,astro}\" --fix"
+    "csslint:fix": "stylelint \"src/**/*.{css,ts,tsx,astro}\" --fix",
+    "lint": "eslint \"**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"**/*.{ts,tsx}\" --fix"
   },
   "dependencies": {
     "astro": "^5.17.1"
@@ -21,6 +23,15 @@
   "devDependencies": {
     "@commitlint/cli": "^20.4.1",
     "@commitlint/config-conventional": "^20.4.1",
+    "@eslint/js": "^9.39.2",
+    "@types/eslint-plugin-jsx-a11y": "^6.10.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-beautiful-sort": "^3.0.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.3.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1",
@@ -28,11 +39,13 @@
     "stylelint-config-clean-order": "^8.0.0",
     "stylelint-config-html": "^1.1.0",
     "stylelint-config-standard": "^40.0.0",
-    "stylelint-prettier": "^5.0.3"
+    "stylelint-prettier": "^5.0.3",
+    "typescript-eslint": "^8.55.0"
   },
   "lint-staged": {
-    "*.{css,ts,tsx,astro}": "stylelint --fix",
-    "*.{js,cjs,mjs,json,yml,md}": "prettier --write"
+    "*.{ts,tsx}": "eslint --fix",
+    "*.{js,cjs,mjs,json,yml,md}": "prettier --write",
+    "*.{css,ts,tsx}": "stylelint --fix"
   },
   "engines": {
     "node": ">=v24.13.0",
