@@ -14,8 +14,8 @@
     "format:fix": "prettier --write .",
     "csslint": "stylelint \"src/**/*.{css,ts,tsx,astro}\"",
     "csslint:fix": "stylelint \"src/**/*.{css,ts,tsx,astro}\" --fix",
-    "lint": "eslint \"**/*.{ts,tsx}\"",
-    "lint:fix": "eslint \"**/*.{ts,tsx}\" --fix"
+    "lint": "eslint \"**/*.{ts,tsx,astro}\"",
+    "lint:fix": "eslint \"**/*.{ts,tsx,astro}\" --fix"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -27,12 +27,16 @@
     "@commitlint/config-conventional": "^20.4.1",
     "@eslint/js": "^9.39.2",
     "@types/eslint-plugin-jsx-a11y": "^6.10.1",
+    "@types/eslint-plugin-tailwindcss": "^3.17.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-astro": "^1.5.0",
     "eslint-plugin-beautiful-sort": "^3.0.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-tailwindcss": "^4.0.0-beta.0",
     "globals": "^17.3.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
@@ -45,9 +49,9 @@
     "typescript-eslint": "^8.55.0"
   },
   "lint-staged": {
-    "*.{ts,tsx}": "eslint --fix",
+    "*.{ts,tsx,astro}": "eslint --fix",
     "*.{js,cjs,mjs,json,yml,md}": "prettier --write",
-    "*.{css,ts,tsx}": "stylelint --fix"
+    "*.{css,ts,tsx,astro}": "stylelint --fix"
   },
   "engines": {
     "node": ">=v24.13.0",
