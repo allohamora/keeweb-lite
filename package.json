@@ -11,7 +11,9 @@
     "astro": "astro",
     "prepare": "husky",
     "format": "prettier . --check",
-    "format:fix": "prettier --write ."
+    "format:fix": "prettier --write .",
+    "csslint": "stylelint \"src/**/*.{css,ts,tsx,astro}\"",
+    "csslint:fix": "stylelint \"src/**/*.{css,ts,tsx,astro}\" --fix"
   },
   "dependencies": {
     "astro": "^5.17.1"
@@ -21,9 +23,15 @@
     "@commitlint/config-conventional": "^20.4.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "stylelint": "^17.1.1",
+    "stylelint-config-clean-order": "^8.0.0",
+    "stylelint-config-html": "^1.1.0",
+    "stylelint-config-standard": "^40.0.0",
+    "stylelint-prettier": "^5.0.3"
   },
   "lint-staged": {
+    "*.{css,ts,tsx,astro}": "stylelint --fix",
     "*.{js,cjs,mjs,json,yml,md}": "prettier --write"
   },
   "engines": {
