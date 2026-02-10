@@ -8,5 +8,11 @@
   ],
   "rules": {
     "at-rule-no-deprecated": [true, { "ignoreAtRules": ["apply"] }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/*.{js,jsx,ts,tsx}"],
+      "customSyntax": "postcss-styled-syntax"
+    }
+  ]
 }

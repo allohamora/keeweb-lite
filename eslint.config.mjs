@@ -49,6 +49,8 @@ export default defineConfig(
       '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/no-deprecated': 'error',
       'react/no-unknown-property': ['error', { ignore: ['class', 'set:html', 'is:inline', 'define:vars'] }],
+      'jsx-a11y/click-events-have-key-events': 'warn',
+      'jsx-a11y/no-noninteractive-element-interactions': 'warn',
       'beautiful-sort/import': [
         'error',
         { special: [], order: ['special', 'namespace', 'default', 'defaultObj', 'obj', 'none'] },
