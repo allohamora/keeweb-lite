@@ -51,6 +51,22 @@ npm run format
 npm run format:fix
 ```
 
+## Commit Conventions
+
+- Use [Conventional Commits](https://www.conventionalcommits.org/) format: `<type>[optional scope]: <description>`
+- Keep commit summaries concise.
+- Common types:
+  - `feat`: new feature
+  - `fix`: bug fix
+  - `docs`: documentation only
+  - `style`: formatting, whitespace
+  - `refactor`: code restructuring without behavior change
+  - `perf`: performance improvement
+  - `test`: adding or updating tests
+  - `chore`: maintenance, dependencies, tooling
+  - `ci`: CI/CD changes
+- Breaking changes: add `!` after type (e.g., `feat!:`) or `BREAKING CHANGE:` in footer.
+
 ## Project Structure
 
 ```text
