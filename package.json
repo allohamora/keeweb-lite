@@ -9,10 +9,22 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "prepare": "husky"
+    "prepare": "husky",
+    "format": "prettier . --check",
+    "format:fix": "prettier --write ."
   },
   "dependencies": {
     "astro": "^5.17.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs,json,yml,md}": "prettier --write"
   },
   "engines": {
     "node": ">=v24.13.0",
@@ -25,10 +37,5 @@
   "bugs": {
     "url": "https://github.com/allohamora/keeweb-lite/issues"
   },
-  "homepage": "https://github.com/allohamora/keeweb-lite#readme",
-  "devDependencies": {
-    "@commitlint/cli": "^20.4.1",
-    "@commitlint/config-conventional": "^20.4.1",
-    "husky": "^9.1.7"
-  }
+  "homepage": "https://github.com/allohamora/keeweb-lite#readme"
 }

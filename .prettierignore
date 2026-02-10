@@ -1,0 +1,6 @@
+dist
+node_modules
+public
+.husky
+package-lock.json
+coverage
