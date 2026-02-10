@@ -2,7 +2,11 @@
   "extends": [
     "stylelint-config-standard",
     "stylelint-config-html",
+    "stylelint-config-tailwindcss",
     "stylelint-config-clean-order",
     "stylelint-prettier/recommended"
-  ]
+  ],
+  "rules": {
+    "at-rule-no-deprecated": [true, { "ignoreAtRules": ["apply"] }]
+  }
 }
