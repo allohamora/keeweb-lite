@@ -13,6 +13,10 @@
   "dependencies": {
     "astro": "^5.17.1"
   },
+  "engines": {
+    "node": ">=v24.13.0",
+    "npm": ">=11.9.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/allohamora/keeweb-lite.git"
