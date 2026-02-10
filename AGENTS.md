@@ -55,6 +55,9 @@ npm run preview   # Preview production build
 ### Code Quality
 
 ```bash
+# Diagnostics
+npm run astro check  # Astro diagnostics & type-checking
+
 # Linting
 npm run lint         # ESLint check (ts, tsx, astro)
 npm run lint:fix     # ESLint fix
