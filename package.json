@@ -8,7 +8,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "prepare": "husky"
   },
   "dependencies": {
     "astro": "^5.17.1"
@@ -24,5 +25,10 @@
   "bugs": {
     "url": "https://github.com/allohamora/keeweb-lite/issues"
   },
-  "homepage": "https://github.com/allohamora/keeweb-lite#readme"
+  "homepage": "https://github.com/allohamora/keeweb-lite#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
+    "husky": "^9.1.7"
+  }
 }
