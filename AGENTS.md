@@ -30,25 +30,42 @@ This project is intentionally focused on a small, practical feature set because 
 
 ## Tech Stack
 
-- Astro 5 + React 19
-- TypeScript (strict)
-- TailwindCSS v4 + shadcn-style UI components
-- `kdbxweb` for KDBX operations
-- Zustand planned for app state (not implemented yet)
+- **Astro 5**: Full-stack framework with hybrid content + islands architecture
+- **React 19**: Interactive UI islands & concurrent features
+- **TypeScript (strict)**: End-to-end static typing
+- **TailwindCSS v4**: Utility-first styling with CSS layering & `@apply` minimization
+- **Shadcn/Ui**: Accessible, composable component primitives styled with Tailwind and project design tokens
+- **kdbxweb**: KDBX file format operations
+- **Zustand**: Planned for app state management
+- **React Hook Form**: Planned for performant form state management
+- **Zod**: Planned for schema-based validation & type inference
+- **ESLint / Prettier / Stylelint**: Consistent formatting & linting
+- **Modules (ESM)**: Native module interoperability
 
 ## Development
 
-```bash
-npm run dev
-npm run build
-npm run preview
+### Running the Application
 
-npm run lint
-npm run lint:fix
-npm run csslint
-npm run csslint:fix
-npm run format
-npm run format:fix
+```bash
+npm run dev       # Start Astro dev server
+npm run build     # Production build
+npm run preview   # Preview production build
+```
+
+### Code Quality
+
+```bash
+# Linting
+npm run lint         # ESLint check (ts, tsx, astro)
+npm run lint:fix     # ESLint fix
+
+# CSS Linting
+npm run csslint      # Stylelint check
+npm run csslint:fix  # Stylelint fix
+
+# Formatting
+npm run format       # Prettier check
+npm run format:fix   # Prettier write
 ```
 
 ## Commit Conventions
@@ -84,6 +101,34 @@ src/
 - All business logic must be implemented in `src/services/name.ts` files.
 - Example: `src/services/kdbx.ts` should contain all KDBX actions.
 - UI components and pages should call services, not implement business logic directly.
+
+## Development Guidelines
+
+### Dependencies
+
+- Install new dependencies using npm install commands.
+- DO NOT manually edit `package.json` or `package-lock.json`.
+
+### Code Style
+
+- Write comments only when necessary to clarify complex logic; prefer self-documenting code.
+- Use `for...of` loops instead of `forEach` for better performance and readability.
+- Avoid single-letter or one-word variable names; use descriptive names that clearly indicate purpose (e.g., `task` instead of `t`, `fileData` instead of `d`).
+- DO NOT use the non-null assertion operator (`!`) in TypeScript; instead, use proper type guards, optional chaining, or refactor to handle null/undefined cases explicitly.
+
+### Component Development
+
+- Use `shadcn` CLI commands to install or update UI components.
+- DO NOT write component source from memory; always use the CLI to ensure consistency.
+
+### Astro Patterns
+
+- Use Astro Actions (`src/actions`) instead of adding bespoke API endpoint routes.
+- Implement server logic in actions and invoke them from forms/components to keep a unified server boundary.
+
+### Maintenance
+
+- After changes, update tests and docs when needed to keep behavior and documentation aligned.
 
 ## Security and Privacy Baseline
 
