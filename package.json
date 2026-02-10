@@ -12,5 +12,13 @@
   },
   "dependencies": {
     "astro": "^5.17.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/allohamora/keeweb-lite.git"
+  },
+  "bugs": {
+    "url": "https://github.com/allohamora/keeweb-lite/issues"
+  },
+  "homepage": "https://github.com/allohamora/keeweb-lite#readme"
 }
