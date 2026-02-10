@@ -1,2 +1,5 @@
 # keeweb-lite
-lightweight, web-only password manager inspired by KeeWeb with Google Drive support
+
+Lightweight, web-only password manager inspired by [KeeWeb](https://github.com/keeweb/keeweb).
+
+This project is intentionally created because KeeWeb is abandoned.
