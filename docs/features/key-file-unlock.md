@@ -37,7 +37,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 
 - Unlock screen shows key-file add/remove control.
 - Selected key file name indicator is visible.
-- Show helper hint that key file is remembered in Internal App Storage using KeeWeb-style `data` mode and can be cleared.
+- Show helper hint that key file is remembered in Internal App Storage using KeeWeb-style `data` mode, is sensitive credential-derived metadata, and can be cleared.
 - Wrong key-file/password errors are explicit.
 
 ## Data and Storage
@@ -45,7 +45,10 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - Persist remembered key-file metadata in Internal App Storage (localStorage) within recent-file records:
   - `keyFileName`
   - `keyFileHash` (KeeWeb-compatible base64 hash representation)
-  - file identity binding via the recent-file record context (`fileId`/`sourceType`/`sourceLocator` matcher)
+  - strict `fileIdentity` binding via recent-file record context:
+    - Google Drive: Drive `fileId` + `sourceType = gdrive`
+    - Local file: local `fileIdentity` fingerprint + `sourceType = file`
+  - if identity does not match exactly, remembered key metadata must not be applied
 - Runtime Memory keeps only transient unlock bytes for active operations.
 - Do not persist raw plaintext key-file bytes.
 - Do not persist key-file local path in lite.
@@ -65,6 +68,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - Treat zeroization as best-effort in browser/JS runtimes: keep key material in `Uint8Array`/`ArrayBuffer`, avoid unnecessary copies/string conversions, and overwrite buffers immediately after unlock attempts (success or failure).
 - Zeroization cannot be fully guaranteed in browser/JS environments due to GC/runtime copies; treat this as risk reduction, not an absolute guarantee.
 - Persist only KeeWeb-style remembered hash representation; never persist raw key-file bytes.
+- Persisted `keyFileHash` is credential-derived data; treat it as sensitive metadata and provide explicit per-file clear action.
 
 ## Acceptance Criteria
 

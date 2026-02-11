@@ -17,8 +17,8 @@ Define automatic workspace lock behavior and unlock re-entry flow.
 - Lock triggers:
   - inactivity timeout
   - event-triggered lock settings are boolean flags (no tri-state)
-  - `lockOnMinimize`: `true` (KeeWeb default)
-  - `lockOnOsLock`: `false` (KeeWeb default; governs OS lock and sleep-triggered lock events)
+  - `lockOnMinimize`: `true` (browser mapping: lock when page becomes hidden via `visibilitychange`/`pagehide`; this includes minimize/background-tab behavior in web runtime)
+  - `lockOnOsLock`: `false` (no dedicated OS-lock listener in browser-only runtime; OS lock/sleep is handled only through regular visibility/idle events)
   - `lockOnCopy`: `false` (KeeWeb default)
   - `lockOnAutoType`: `false` (KeeWeb default)
 - On lock:

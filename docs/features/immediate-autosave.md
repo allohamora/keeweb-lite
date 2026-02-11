@@ -7,7 +7,7 @@ Define a single save pipeline that persists every edit immediately.
 ## Scope
 
 - Entry/group edits.
-- Local file-input source (running in Local cache mode by default) and Drive-backed sources.
+- Local file-input source (`sourceMode = local-cache`) and Drive-backed sources (`sourceMode = drive-sync`).
 
 ## Functional Requirements
 
@@ -17,12 +17,14 @@ Define a single save pipeline that persists every edit immediately.
   - `autoSaveInterval = -1` (sync/save on each dirty change event)
 - Any data mutation triggers save immediately.
 - Save pipeline is serialized (one write in flight).
-- If edits happen during save, queue another save run.
-- Never drop pending edits.
+- Save serialization uses browser Web Locks API (`navigator.locks`) with a single save lock name (`keeweb-save`).
+- If edits happen during save, queue another save run through the same Web Locks queue.
+- Never drop pending edits; queued save requests execute in lock-queue order.
+- Save runs may coalesce rapid dirty events into one write of the latest encrypted state before releasing the lock.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
-  - Local cache fallback mode: update encrypted cache/export state
-  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update sync fields (`driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncError`, `isSyncInProgress`)
+  - `local-cache` fallback mode: update encrypted cache/export state
+  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update sync fields (`driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, `activeSyncError`, `lastSyncErrorSummary`)
 
 ## UI Requirements
 
@@ -31,14 +33,19 @@ Define a single save pipeline that persists every edit immediately.
   - `saved`
   - `error`
 - Save status must reflect real persistence result, not optimistic completion.
+- Save UI semantics:
+  - `saving` while save lock is held or save requests are queued
+  - `saved` when queue is drained and latest write succeeded
+  - `error` when latest queued write fails
 
 ## Data and Storage
 
 - Queue/save state is maintained in Runtime Memory (non-persistent).
+- Save queue state includes lock/queue indicators used for status rendering.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
-  - Local cache mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed metadata: Internal App Storage (localStorage) file-info fields, including `driveRevisionId` and `lastSuccessfulSyncAt`; runtime model holds `isSyncInProgress` and `lastSyncError`
+  - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
+  - Drive-backed metadata: Internal App Storage (localStorage) file-info fields, including `driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, and `lastSyncErrorSummary`; runtime model holds `activeSyncError`
   - Drive OAuth runtime token data: OAuth Token Store (`localStorage` key `keeweb-lite.oauth.google-drive`, cleared on `logout` or invalid refresh-token path)
 
 ## Failure Handling

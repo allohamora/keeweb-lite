@@ -27,6 +27,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   6. app downloads bytes and unlocks DB
 - Save/sync flow:
   - after edits, sync to same Drive file
+  - sync UI/render state is derived from single `syncStatus` state value (not from ad-hoc boolean combinations)
   - sync strategy follows KeeWeb 2-way merge behavior
   - compare local known revision with remote revision
   - detect and surface revision conflicts
@@ -51,10 +52,11 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 ## UI Requirements
 
 - Show sync state:
-  - `sync in progress` (`isSyncInProgress = true`)
-  - `sync error` (`lastSyncError` present)
-  - `changes not synced` (`hasLocalChanges = true` with no in-flight sync/error)
-  - `synced` (no `isSyncInProgress`, no `lastSyncError`, no `hasLocalChanges`)
+  - `syncing` (`syncStatus = syncing`)
+  - `error` (`syncStatus = error`)
+  - `changes not synced` (`syncStatus = pending`)
+  - `synced` (`syncStatus = idle`)
+  - `conflict` (`syncStatus = conflict`)
 - At top of opened DB view show:
   - status circle 1: Save status
   - status circle 2: Sync status
@@ -68,12 +70,12 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 - Persist KeeWeb file-info metadata for quick reopen in Internal App Storage (localStorage):
   - `id`, `name`, `sourceType`, `sourceLocator`, `sourceOptions`
+  - `sourceMode` (`drive-sync`)
   - `driveRevisionId` (Drive head revision id)
   - `lastSuccessfulSyncAt` (last successful sync timestamp)
-  - `hasLocalChanges`, `saveState`, `lastOpenedAt`, `challengeResponseState`, optional key-file metadata
+  - `saveStatus`, `syncStatus`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`, optional key-file metadata
 - Keep in Runtime Memory (non-persistent):
-  - `isSyncInProgress` (in-flight sync flag)
-  - `lastSyncError` (active attempt error state)
+  - `activeSyncError` (full active attempt error state)
   - active model sync state and merge/retry flow state
 - Persist OAuth runtime token data in browser `localStorage` key `keeweb-lite.oauth.google-drive`.
   - Stored envelope fields include `refreshToken`, `accessToken`, `expiresAt`, and provider/scope metadata.
@@ -89,7 +91,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Sync failures should provide inline actions (`Retry sync`, and `Resolve conflict` when applicable).
 - If remote key changed and merge/open fails with invalid key, prompt for remote key update flow before continuing sync.
 - Download/export failures are explicit and retryable.
-- Failed sync attempts must not overwrite previous successful `lastSuccessfulSyncAt`; they set `lastSyncError` and keep unsynced state visible.
+- Failed sync attempts must not overwrite previous successful `lastSuccessfulSyncAt`; they set `syncStatus = error`, update `activeSyncError`, and persist sanitized `lastSyncErrorSummary`.
 
 ## Security and Privacy
 
