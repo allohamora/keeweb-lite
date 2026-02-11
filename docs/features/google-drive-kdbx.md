@@ -65,7 +65,10 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - `lastSyncAt`
   - `lastSyncStatus`
   - `lastSyncError`
-- Persist OAuth runtime token data in Runtime Data Store (localStorage, KeeWeb default behavior).
+- Persist OAuth runtime token data in browser `localStorage` under key `keeweb-lite.oauth.google-drive`.
+  - Stored envelope fields: `refreshToken`, `accessToken`, `expiresAt`, and minimal provider/scope metadata.
+  - At-rest expectation: no app-level encryption for token envelope; rely on browser/OS storage protections.
+  - Retention: persist across reloads until explicit `logout`, token refresh failure (`invalid_grant`/revoked), or user/browser storage clear.
 - OAuth requests include offline refresh capability (KeeWeb default).
 
 ## Failure Handling
@@ -79,6 +82,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Use least-privilege scope `drive.file`.
 - Do not log OAuth tokens or plaintext secrets.
 - Persist only minimum metadata required for reopen/sync.
+- `logout` must remove `keeweb-lite.oauth.google-drive` from `localStorage` and clear in-memory auth state before returning success.
 
 ## Acceptance Criteria
 

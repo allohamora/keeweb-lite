@@ -9,7 +9,11 @@ Use these canonical terms consistently across feature specs.
 - Encrypted Offline Cache (IndexedDB)
   - Encrypted KDBX bytes only (no decrypted values, no plaintext credentials).
 - Runtime Data Store (localStorage)
-  - Persistent OAuth runtime token data for Drive integration (KeeWeb-like behavior).
+  - Persistent OAuth runtime token data for Drive integration (KeeWeb-like behavior), stored in browser `localStorage` only.
+  - Key: `keeweb-lite.oauth.google-drive`.
+  - Value: JSON token envelope for Drive auth (`refreshToken`, `accessToken`, `expiresAt`, scope/provider metadata).
+  - At-rest protection expectation: no app-level encryption; relies on browser/OS storage protections.
+  - Retention semantics: keep until explicit `logout`, refresh-token invalidation, or user/browser storage clear.
 - Runtime Memory (non-persistent)
   - Unlocked database model, transient UI/edit state, entered password, and raw key bytes during unlock flow.
 

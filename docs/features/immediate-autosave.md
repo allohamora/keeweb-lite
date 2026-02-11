@@ -35,7 +35,7 @@ Define a single save pipeline that persists every edit immediately.
   - local writable: source file via File System Access API
   - in-memory/fallback: Encrypted Offline Cache (IndexedDB)
   - Drive-backed metadata: Internal App Storage (IndexedDB)
-  - Drive OAuth runtime token data: Runtime Data Store (localStorage)
+  - Drive OAuth runtime token data: browser `localStorage` key `keeweb-lite.oauth.google-drive` (cleared on `logout` or invalid refresh token)
 
 ## Failure Handling
 
