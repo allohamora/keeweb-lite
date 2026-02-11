@@ -40,6 +40,8 @@ Define key-file-assisted unlock behavior consistent with KeeWeb patterns.
 - Never log key-file content.
 - Keep raw key bytes in memory only for unlock lifecycle.
 - Clear/zero raw key buffers after unlock usage.
+- Treat zeroization as best-effort in browser/JS runtimes: keep key material in `Uint8Array`/`ArrayBuffer`, avoid unnecessary copies/string conversions, and overwrite buffers immediately after unlock attempts (success or failure).
+- Zeroization cannot be fully guaranteed in browser/JS environments due to GC/runtime copies; treat this as risk reduction, not an absolute guarantee.
 - Persisted remembered-key data must be non-plaintext representation only.
 
 ## Acceptance Criteria
