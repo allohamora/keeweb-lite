@@ -21,7 +21,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
   - fallback: file input
 - Save behavior by mode:
   - writable local source: save back to same file
-  - fallback/non-writable source: keep working state and persist encrypted cache
+  - fallback/non-writable source: keep working state and persist encrypted cache bytes in Encrypted Offline Cache (IndexedDB)
 - Recent local files appear in quick access list.
 
 ## UI Requirements
@@ -32,10 +32,10 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 ## Data and Storage
 
-- Persist recent-file metadata in internal metadata store.
-- Persist remembered key-file reference data in internal metadata store.
-- Persist encrypted KDBX bytes in offline cache.
-- Keep runtime unlocked model in memory while file is open.
+- Persist recent-file metadata in Internal App Storage (IndexedDB).
+- Persist remembered key-file reference data in Internal App Storage (IndexedDB).
+- Persist encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB).
+- Keep runtime unlocked model in Runtime Memory (non-persistent) while file is open.
 
 ## Failure Handling
 

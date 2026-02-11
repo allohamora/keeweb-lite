@@ -26,7 +26,7 @@ Define automatic workspace lock behavior and unlock re-entry flow.
 
 ## Data and Storage
 
-- Lock clears active unlocked workspace state.
+- Lock clears active unlocked workspace state from Runtime Memory (non-persistent).
 - Re-entry requires unlock from root/open flow.
 
 ## Failure Handling

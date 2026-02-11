@@ -48,8 +48,8 @@ Define the two primary UI states and user navigation model.
 
 ## Data and Storage
 
-- Quick access list is populated from persisted recent-file metadata.
-- Entered password and raw key bytes remain session-memory only.
+- Quick access list is populated from recent-file metadata in Internal App Storage (IndexedDB).
+- Entered password and raw key bytes remain in Runtime Memory (non-persistent) only.
 
 ## Failure Handling
 

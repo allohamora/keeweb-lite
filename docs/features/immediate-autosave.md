@@ -30,8 +30,12 @@ Define a single save pipeline that persists every edit immediately.
 
 ## Data and Storage
 
-- Queue/save state is maintained in app runtime state.
-- Persisted targets depend on source adapter and configuration.
+- Queue/save state is maintained in Runtime Memory (non-persistent).
+- Persisted targets depend on source adapter and configuration:
+  - local writable: source file via File System Access API
+  - in-memory/fallback: Encrypted Offline Cache (IndexedDB)
+  - Drive-backed metadata: Internal App Storage (IndexedDB)
+  - Drive OAuth runtime token data: Runtime Data Store (localStorage)
 
 ## Failure Handling
 

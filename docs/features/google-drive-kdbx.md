@@ -56,16 +56,16 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 ## Data and Storage
 
-- Persist minimal file metadata for quick reopen:
+- Persist minimal file metadata for quick reopen in Internal App Storage (IndexedDB):
   - file id
   - file name
   - revision id
   - minimal adapter options
-- Sync metadata fields:
+- Persist sync metadata in Internal App Storage (IndexedDB):
   - `lastSyncAt`
   - `lastSyncStatus`
   - `lastSyncError`
-- Token policy uses persistent runtime-data storage (KeeWeb default).
+- Persist OAuth runtime token data in Runtime Data Store (localStorage, KeeWeb default behavior).
 - OAuth requests include offline refresh capability (KeeWeb default).
 
 ## Failure Handling

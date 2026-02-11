@@ -16,7 +16,7 @@ Define key-file-assisted unlock behavior consistent with KeeWeb patterns.
   - password + key file
 - Key file is selected locally.
 - Remember-key-file is enabled by default.
-- Remembered key-file information is saved in internal app storage for quick reopen (KeeWeb-like behavior).
+- Remembered key-file information is saved in Internal App Storage (IndexedDB) for quick reopen (KeeWeb-like behavior).
 - User should not need to re-select key file on every reopen when remembered data is available.
 
 ## UI Requirements
@@ -27,7 +27,7 @@ Define key-file-assisted unlock behavior consistent with KeeWeb patterns.
 
 ## Data and Storage
 
-- Persist remembered key-file reference data in internal app storage.
+- Persist remembered key-file reference data in Internal App Storage (IndexedDB).
 - Do not persist raw plaintext key-file bytes.
 
 ## Failure Handling
