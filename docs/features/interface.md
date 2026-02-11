@@ -27,7 +27,7 @@ Define the two primary UI states and user navigation model.
   - entry list pane
   - entry details pane
   - footer with file/save/sync state
-- Settings/import/panel workflows temporarily replace list/details content.
+- Import/panel workflows temporarily replace list/details content.
 
 ## UI Requirements
 

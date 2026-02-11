@@ -32,8 +32,9 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 ## Data and Storage
 
-- Persist recent-file metadata in internal settings store.
-- Persist encrypted KDBX bytes in offline cache unless disabled.
+- Persist recent-file metadata in internal metadata store.
+- Persist remembered key-file reference data in internal metadata store.
+- Persist encrypted KDBX bytes in offline cache.
 - Keep runtime unlocked model in memory while file is open.
 
 ## Failure Handling

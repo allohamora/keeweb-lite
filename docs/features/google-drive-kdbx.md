@@ -61,9 +61,8 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - `lastSyncAt`
   - `lastSyncStatus`
   - `lastSyncError`
-- Token policy:
-  - default: token may persist in runtime-data store
-  - short-lived mode: token is session-only
+- Token policy uses persistent runtime-data storage (KeeWeb default).
+- OAuth requests include offline refresh capability (KeeWeb default).
 
 ## Failure Handling
 

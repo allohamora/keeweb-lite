@@ -7,8 +7,7 @@ Define key-file-assisted unlock behavior consistent with KeeWeb patterns.
 ## Scope
 
 - Optional local key file with local and cloud-backed DBs.
-- Remember-key-file modes.
-- Optional device-owner encrypted unlock secret handling.
+- Remember-key-file behavior.
 
 ## Functional Requirements
 
@@ -16,13 +15,9 @@ Define key-file-assisted unlock behavior consistent with KeeWeb patterns.
   - password only
   - password + key file
 - Key file is selected locally.
-- Remember modes:
-  - `none`: store no key-file reference
-  - `data`: store key-file hash metadata
-  - `path`: store key-file path metadata when path access exists
-- Optional device-owner unlock secret storage:
-  - `memory`: encrypted secret in runtime memory only
-  - `file`: encrypted secret in persisted file-info metadata (time-limited)
+- Remember-key-file is enabled by default.
+- Remembered key-file information is saved in internal app storage for quick reopen (KeeWeb-like behavior).
+- User should not need to re-select key file on every reopen when remembered data is available.
 
 ## UI Requirements
 
@@ -32,8 +27,8 @@ Define key-file-assisted unlock behavior consistent with KeeWeb patterns.
 
 ## Data and Storage
 
-- Store key-file metadata only (hash/path/name based on mode).
-- Do not persist raw key-file bytes.
+- Persist remembered key-file reference data in internal app storage.
+- Do not persist raw plaintext key-file bytes.
 
 ## Failure Handling
 
@@ -45,9 +40,10 @@ Define key-file-assisted unlock behavior consistent with KeeWeb patterns.
 - Never log key-file content.
 - Keep raw key bytes in memory only for unlock lifecycle.
 - Clear/zero raw key buffers after unlock usage.
+- Persisted remembered-key data must be non-plaintext representation only.
 
 ## Acceptance Criteria
 
 - Both unlock variants work for supported databases.
-- Remember mode behavior matches selected mode.
+- Remember-key behavior matches fixed defaults.
 - No plaintext key material is persisted.

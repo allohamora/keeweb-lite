@@ -12,28 +12,17 @@ Define automatic workspace lock behavior and unlock re-entry flow.
 
 ## Functional Requirements
 
-- Default idle auto-lock timeout is `15` minutes.
-- Auto-lock can be disabled with timeout `0`.
+- Idle auto-lock timeout is `15` minutes.
 - Lock triggers:
   - inactivity timeout
-  - minimize (if enabled)
-  - OS lock/sleep (if enabled)
-  - copy event (if enabled)
-  - auto-type event (if enabled)
+  - minimize (`on`, KeeWeb default)
+  - OS lock/sleep (`off`, KeeWeb default)
+  - copy event (`off`, KeeWeb default)
+  - auto-type event (`off`, KeeWeb default)
 - On lock:
   - if no unsaved changes: close files and return to root/open page
-  - if unsaved changes and autosave on: save then lock
-  - if unsaved changes and autosave off: prompt save/discard/cancel
+  - if unsaved changes: save-first policy (KeeWeb default)
 - On root/open page idle event, clear typed password input.
-
-## UI Requirements
-
-- Settings expose:
-  - inactivity timeout
-  - lock-on-minimize
-  - lock-on-copy
-  - lock-on-auto-type
-  - lock-on-OS-lock/sleep
 
 ## Data and Storage
 
@@ -51,6 +40,6 @@ Define automatic workspace lock behavior and unlock re-entry flow.
 
 ## Acceptance Criteria
 
-- Lock triggers fire according to settings.
+- Lock triggers fire according to fixed defaults.
 - Unsaved changes are handled safely.
 - User returns to root/open page and must unlock again.

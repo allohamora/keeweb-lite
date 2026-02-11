@@ -14,7 +14,7 @@ Define behavior for databases without a writable external target.
 
 - Keep unlocked database model in runtime memory while session is active.
 - Apply edits immediately to in-memory model.
-- Persist encrypted KDBX bytes to offline cache when allowed.
+- Persist encrypted KDBX bytes to offline cache by default (KeeWeb default).
 - Never call Drive sync unless source adapter is `gdrive`.
 - Provide export/download action for current encrypted state.
 
