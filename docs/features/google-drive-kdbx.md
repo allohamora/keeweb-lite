@@ -47,8 +47,12 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - `synced`
   - `sync error`
   - `idle/not synced`
-- Show colored sync status circle.
-- Show last sync metadata and actionable retry on failure.
+- At top of opened DB view show:
+  - status circle 1: save state
+  - status circle 2: Drive sync state
+  - `Sync now` button
+  - sync metadata (last sync time + result + last error when present)
+- Show colored sync status circles and actionable retry on failure.
 
 ## Data and Storage
 
