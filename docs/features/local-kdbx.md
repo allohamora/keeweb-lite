@@ -32,9 +32,9 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 ## Data and Storage
 
-- Persist recent-file metadata in Internal App Storage (IndexedDB).
-- Persist remembered key-file reference data in Internal App Storage (IndexedDB).
-- Persist encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB).
+- Store recent-file metadata in Internal App Storage (IndexedDB).
+- Keep remembered key-file reference data in Internal App Storage (IndexedDB).
+- Cache encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB).
 - Keep runtime unlocked model in Runtime Memory (non-persistent) while file is open.
 
 ## Failure Handling
