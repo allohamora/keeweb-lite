@@ -8,10 +8,12 @@ Define the two primary UI states and user navigation model.
 
 - Root/open page (startup and unlock).
 - Workspace page (KeeWeb-like render/edit layout).
+- Password generator access in open and workspace contexts.
 
 ## Functional Requirements
 
 - App starts on the root/open page.
+- Lite has no settings page; behavior is controlled by fixed defaults in feature specs.
 - Root/open page shows a source strategy selector above the password input:
   - `Local`
   - `Google Drive`
@@ -19,6 +21,7 @@ Define the two primary UI states and user navigation model.
   - password input and enter/open action
   - optional key file control
   - quick access list for recent files
+  - password generator action
   - inline unlock message area
 - Selecting a quick access item pre-fills file context and focuses unlock.
 - Successful unlock switches to workspace page.
@@ -27,6 +30,7 @@ Define the two primary UI states and user navigation model.
   - left menu pane
   - entry list pane
   - entry details pane
+  - password generator action for entry editing
   - footer with file/save/sync state
 - Top workspace status bar contains:
   - status circle 1: save state
@@ -49,7 +53,7 @@ Define the two primary UI states and user navigation model.
 
 ## Data and Storage
 
-- Quick access list is populated from recent-file metadata in Internal App Storage (IndexedDB).
+- Quick access list is populated from recent-file metadata in Internal App Storage (localStorage).
 - Entered password and raw key bytes remain in Runtime Memory (non-persistent) only.
 
 ## Failure Handling

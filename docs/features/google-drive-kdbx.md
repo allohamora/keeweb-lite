@@ -56,16 +56,16 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 ## Data and Storage
 
-- Persist minimal file metadata for quick reopen in Internal App Storage (IndexedDB):
+- Persist minimal file metadata for quick reopen in Internal App Storage (localStorage):
   - file id
   - file name
   - revision id
   - minimal adapter options
-- Persist sync metadata in Internal App Storage (IndexedDB):
+- Persist sync metadata in Internal App Storage (localStorage):
   - `lastSyncAt`
   - `lastSyncStatus`
   - `lastSyncError`
-- Persist OAuth runtime token data in browser `localStorage` under key `keeweb-lite.oauth.google-drive`.
+- Persist OAuth runtime token data in browser `localStorage` under key `keeweb-lite.oauth.google-drive` (project-specific key).
   - Stored envelope fields: `refreshToken`, `accessToken`, `expiresAt`, and minimal provider/scope metadata.
   - At-rest expectation: no app-level encryption for token envelope; rely on browser/OS storage protections.
   - Retention: persist across reloads until explicit `logout`, token refresh failure (`invalid_grant`/revoked), or user/browser storage clear.

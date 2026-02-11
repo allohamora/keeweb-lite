@@ -11,6 +11,7 @@ Define a single save pipeline that persists every edit immediately.
 
 ## Functional Requirements
 
+- Autosave-on-change is a fixed lite default (not user-configurable).
 - Any data mutation triggers save immediately.
 - Save pipeline is serialized (one write in flight).
 - If edits happen during save, queue another save run.
@@ -32,9 +33,9 @@ Define a single save pipeline that persists every edit immediately.
 
 - Queue/save state is maintained in Runtime Memory (non-persistent).
 - Persisted targets depend on source adapter and configuration:
-  - local writable: source file via File System Access API
+  - local writable: source file via File System Access API writable handle
   - in-memory/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed metadata: Internal App Storage (IndexedDB)
+  - Drive-backed metadata: Internal App Storage (localStorage)
   - Drive OAuth runtime token data: browser `localStorage` key `keeweb-lite.oauth.google-drive` (cleared on `logout` or invalid refresh token)
 
 ## Failure Handling

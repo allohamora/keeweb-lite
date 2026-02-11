@@ -22,7 +22,8 @@ Define automatic workspace lock behavior and unlock re-entry flow.
   - `lockOnAutoType`: `false` (KeeWeb default)
 - On lock:
   - if no unsaved changes: close files and return to root/open page
-  - if unsaved changes: save-first policy (KeeWeb default)
+  - if unsaved changes: save-first policy
+- Lite keeps autosave-on-change enabled by default; no autosave-off mode in lite.
 - On root/open page idle event, clear typed password input.
 
 ## Data and Storage
@@ -33,7 +34,7 @@ Define automatic workspace lock behavior and unlock re-entry flow.
 ## Failure Handling
 
 - Save errors during lock flow are visible and block silent data loss.
-- User can explicitly decide save/discard/cancel when autosave is off.
+- If a lock-time save fails, keep error state visible and offer explicit retry/discard options.
 
 ## Security and Privacy
 

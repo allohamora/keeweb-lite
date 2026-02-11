@@ -12,9 +12,10 @@ Define behavior for databases without a writable external target.
 
 ## Functional Requirements
 
+- Lite defaults to in-memory-first behavior unless a writable source target is available.
 - Keep unlocked database model in Runtime Memory (non-persistent) while session is active.
 - Apply edits immediately to in-memory model.
-- Persist encrypted KDBX bytes to Encrypted Offline Cache (IndexedDB) by default (KeeWeb default).
+- Persist encrypted KDBX bytes to Encrypted Offline Cache (IndexedDB) by default.
 - Never call Drive sync unless source adapter is `gdrive`.
 - Provide export/download action for current encrypted state.
 
@@ -28,7 +29,7 @@ Define behavior for databases without a writable external target.
 
 - Runtime Memory (non-persistent): unlocked model and transient editing state.
 - Encrypted Offline Cache (IndexedDB): encrypted KDBX bytes only.
-- Internal App Storage (IndexedDB): recent-file metadata for quick access.
+- Internal App Storage (localStorage): recent-file metadata for quick access.
 
 ## Failure Handling
 
