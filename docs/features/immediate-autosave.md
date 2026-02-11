@@ -7,7 +7,7 @@ Define a single save pipeline that persists every edit immediately.
 ## Scope
 
 - Entry/group edits.
-- Local, Local cache mode, and Drive-backed sources.
+- Local file-input source (running in Local cache mode by default) and Drive-backed sources.
 
 ## Functional Requirements
 
@@ -21,7 +21,7 @@ Define a single save pipeline that persists every edit immediately.
 - Never drop pending edits.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
-  - Local cache mode/fallback: update encrypted cache/export state
+  - Local cache fallback mode: update encrypted cache/export state
   - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update sync fields (`driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncError`, `isSyncInProgress`)
 
 ## UI Requirements

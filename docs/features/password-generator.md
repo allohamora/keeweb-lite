@@ -52,6 +52,6 @@ Define KeeWeb-like password generator behavior for lite workflows.
 
 ## Acceptance Criteria
 
-- User can generate passwords from open and workspace contexts.
+- User can generate passwords from unlock and workspace contexts.
 - Applied passwords persist through immediate autosave.
 - Applied passwords are recoverable through native KDBX history.

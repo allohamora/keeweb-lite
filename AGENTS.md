@@ -12,7 +12,7 @@ This project is intentionally focused on a small, practical feature set because 
 - Read, render, edit, and save KDBX through `kdbxweb`.
 - Save immediately after every edit.
 - Use native KDBX entry history and render history/restore in the UI.
-- For Drive-backed files, sync after each change and provide manual `Sync now`.
+- For Drive-backed files, sync after each change and provide manual `Sync`.
 - For in-memory mode, keep the unlocked model in memory and provide a `Download` button.
 - Persist and display last sync metadata.
 - Show sync status with a colored status circle (different colors per sync state).
