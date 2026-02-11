@@ -19,13 +19,13 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
   1. user selects database source/file
   2. user optionally selects key file (loaded into memory)
   3. user enters password and unlocks
-- Default mode is `remember key file for reopen` using KeeWeb-style `data` semantics.
+- Default mode is `remember key file for reopen` using KeeWeb-compatible `rememberKeyFiles = data` semantics.
 - Selected key-file bytes are used for unlock and then cleared from raw runtime buffers (best effort).
-- Persisted remember-key data is enabled by default in lite using non-plaintext representation.
+- Persisted remember-key data is enabled by default in lite.
 - Remembered key storage is file-scoped, not global-single-slot: metadata is attached to recent-file records.
-- Remembered-key `data` mode stores key metadata only (`keyFileName` + non-plaintext `keyFileHash`), never raw key bytes.
+- Remembered-key `data` mode stores `keyFileName` and non-plaintext `keyFileHash` metadata, not local key-file paths.
 - Lite does not use key-file-path remember mode.
-- On reopen, if a matching file has remembered `keyFileHash`, app derives unlock key material in memory from that hash representation.
+- On reopen, if a matching file has remembered `keyFileHash`, app reconstructs unlock key material in Runtime Memory from the stored hash representation (KeeWeb parity).
 - User should not need to re-select key file on same-session reopen or after reload when remembered key data is available.
 - When user switches to a different database file, current key-file selection must be cleared first.
 - After file switch, key-file state may be re-populated only if remembered metadata matches that selected file context.
@@ -34,14 +34,14 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 
 - Root/open screen shows key-file add/remove control.
 - Selected key file name indicator is visible.
-- Show helper hint that key file is remembered in internal app storage as hash metadata and can be cleared.
+- Show helper hint that key file is remembered in internal app storage using KeeWeb-style `data` mode and can be cleared.
 - Wrong key-file/password errors are explicit.
 
 ## Data and Storage
 
 - Persist remembered key-file metadata in Internal App Storage (localStorage) within recent-file records:
   - `keyFileName`
-  - `keyFileHash` (or equivalent non-plaintext key representation)
+  - `keyFileHash` (or equivalent non-plaintext remembered-key hash representation)
   - file identity binding via the recent-file record context (`fileId`/storage/path matcher)
 - Runtime Memory keeps only transient unlock bytes for active operations.
 - Do not persist raw plaintext key-file bytes.
@@ -71,5 +71,5 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - Clear-remembered-key action forces key-file re-selection on next unlock.
 - Selecting another database file clears previous file key-file selection before unlock.
 - Multiple files may each have remembered key metadata, and metadata is applied only to matching file context.
-- Lite remember behavior matches KeeWeb `rememberKeyFiles = data` semantics (hash metadata, no raw bytes, no path mode).
+- Lite remember behavior matches KeeWeb `rememberKeyFiles = data` semantics (persisted `keyFileHash` metadata, no path mode).
 - No plaintext key material is persisted.
