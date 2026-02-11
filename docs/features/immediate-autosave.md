@@ -40,7 +40,7 @@ Define a single save pipeline that persists every edit immediately.
 ## Failure Handling
 
 - Save errors keep unsaved/error indicators visible.
-- Retry path must exist (auto retry and/or explicit user action).
+- Retry path must exist (auto-retry and/or explicit user action).
 - Failed save must never be marked as successful.
 
 ## Security and Privacy
