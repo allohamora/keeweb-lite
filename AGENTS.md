@@ -12,8 +12,8 @@ This project is intentionally focused on a small, practical feature set because 
 - Read, render, edit, and save KDBX through `kdbxweb`.
 - Save immediately after every edit.
 - Use native KDBX entry history and render history/restore in the UI.
-- For Drive-backed files, sync after each change and provide manual `Sync now`.
-- For in-memory mode, update only in memory and provide a `Download key` button.
+- For Drive-backed files, sync after each change and provide manual `Sync`.
+- For in-memory mode, keep the unlocked model in memory and provide a `Download` button.
 - Persist and display last sync metadata.
 - Show sync status with a colored status circle (different colors per sync state).
 - Keep a KeeWeb-like interface with no server.
@@ -136,6 +136,7 @@ src/
 ## Security and Privacy Baseline
 
 - Never log secrets (passwords, key file data, decrypted values, OAuth tokens).
-- Never persist plaintext credentials.
+- Never persist plaintext database unlock credentials (passwords, key-file bytes, decrypted values).
+- OAuth runtime tokens for cloud storage are stored in `localStorage` using provider-scoped keys (Google Drive key: `keeweb-lite.oauth.google-drive`).
 - Prefer least-privilege Drive scopes (`drive.file`).
 - Persist only minimum metadata needed for reopen/sync.
