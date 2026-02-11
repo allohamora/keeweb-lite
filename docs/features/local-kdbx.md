@@ -20,8 +20,8 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 - Save behavior for local files:
   - after each edit, keep latest encrypted state in Encrypted Offline Cache (IndexedDB)
   - do not write back to originally selected local file path
-- Provide `Download latest` action to export current encrypted `.kdbx` bytes.
-- Recent local files appear in quick access list.
+- Provide `Download` action to export current encrypted `.kdbx` bytes.
+- Recent local files appear in the Recent files list.
 - On selecting a different `.kdbx`, previously selected key-file state is cleared unless remembered key metadata for that file exists in recent-file records.
 
 ## UI Requirements
@@ -29,7 +29,8 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 - Display selected local file name before unlock.
 - Show save state (`saving`, `saved`, `error`).
 - Show local source mode as download/export-based.
-- Show `Download latest` action when local file is open.
+- Show `Download` action when local file is open.
+- If data is cached locally and not yet downloaded, show a clear inline hint (`Stored locally until downloaded`).
 - Provide password generator action in open flow and workspace entry editing flow.
 
 ## Data and Storage

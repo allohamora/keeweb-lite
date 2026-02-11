@@ -12,17 +12,17 @@ Define behavior for browser-local and other non-writable source modes.
 
 ## Functional Requirements
 
-- Lite defaults to in-memory-first behavior for local file-input sources.
+- Lite defaults to Local cache mode behavior for local file-input sources.
 - This mode defines database persistence behavior; key-file remember defaults are still defined by Key File Unlock (`rememberKeyFiles = data`, hash-based metadata parity).
 - Keep unlocked database model in Runtime Memory (non-persistent) while session is active.
-- Apply edits immediately to in-memory model.
+- Apply edits immediately to the active in-memory model.
 - Persist encrypted KDBX bytes to Encrypted Offline Cache (IndexedDB) by default.
 - Never call Drive sync unless source adapter is `gdrive`.
 - Provide `Download` action for current encrypted state.
 
 ## UI Requirements
 
-- Show clear source mode (`in-memory` vs synced source).
+- Show clear source mode (`Local cache mode` vs synced source).
 - Show save state (`saving`, `saved`, `error`).
 - Show explicit hint when data is cached locally only.
 
@@ -30,7 +30,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 - Runtime Memory (non-persistent): unlocked model and transient editing state.
 - Encrypted Offline Cache (IndexedDB): encrypted KDBX bytes only.
-- Internal App Storage (localStorage): recent-file metadata for quick access.
+- Internal App Storage (localStorage): recent-file metadata for the Recent files list.
 
 ## Failure Handling
 
@@ -44,6 +44,6 @@ Define behavior for browser-local and other non-writable source modes.
 
 ## Acceptance Criteria
 
-- In-memory edits apply immediately.
+- Local cache mode edits apply immediately.
 - No unintended cloud sync occurs in this mode.
 - User can always export current encrypted DB state.

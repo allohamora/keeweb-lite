@@ -22,15 +22,15 @@ Define automatic workspace lock behavior and unlock re-entry flow.
   - `lockOnCopy`: `false` (KeeWeb default)
   - `lockOnAutoType`: `false` (KeeWeb default)
 - On lock:
-  - if no unsaved changes: close files and return to root/open view
+  - if no unsaved changes: close files and return to Unlock screen
   - if unsaved changes: save-first policy
 - Lite keeps autosave-on-change enabled by default; no autosave-off mode in lite.
-- On root/open view idle event, clear typed password input.
+- On Unlock screen idle event, clear typed password input.
 
 ## Data and Storage
 
 - Lock clears active unlocked workspace state from Runtime Memory (non-persistent).
-- Re-entry requires unlock from root/open flow.
+- Re-entry requires unlock from Unlock screen flow.
 
 ## Failure Handling
 
@@ -45,4 +45,4 @@ Define automatic workspace lock behavior and unlock re-entry flow.
 
 - Lock triggers fire according to fixed defaults.
 - Unsaved changes are handled safely.
-- User returns to root/open view and must unlock again.
+- User returns to Unlock screen and must unlock again.

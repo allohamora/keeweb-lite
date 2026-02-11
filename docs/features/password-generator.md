@@ -6,14 +6,14 @@ Define KeeWeb-like password generator behavior for lite workflows.
 
 ## Scope
 
-- Generator access from root/open and workspace.
+- Generator access from Unlock screen and workspace.
 - Password generation, apply, and copy flows.
 - Integration with immediate autosave and entry history.
 
 ## Functional Requirements
 
 - Generator is available from:
-  - root/open view
+  - Unlock screen
   - workspace entry editing flow
 - Generator supports core options:
   - length
@@ -33,7 +33,7 @@ Define KeeWeb-like password generator behavior for lite workflows.
 - Generator opens as a focused panel/modal and can be dismissed with `Esc`.
 - Generated password field supports reveal/hide and copy.
 - `Generate` and `Apply` actions are clearly separated.
-- Root/open generator can be used without an opened DB.
+- Unlock screen generator can be used without an opened DB.
 
 ## Data and Storage
 

@@ -14,7 +14,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - OAuth auth flow.
 - Drive file listing/open/save.
 - Sync and revision conflict handling.
-- Last-sync metadata and sync status UI.
+- Last sync metadata and sync status UI.
 
 ## Functional Requirements
 
@@ -31,11 +31,11 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - compare local known revision with remote revision
   - detect and surface revision conflicts
   - on remote-newer or save `revConflict`, load remote and merge into local model (`db.merge(remoteDb)`)
-  - if local file is not modified, remote load updates local model directly (no merge)
+  - if local file has no local changes, remote load updates local model directly (no merge)
   - after successful merge with local changes, save merged result back to Drive
   - limit load/merge retry loops per sync cycle to `3` attempts (KeeWeb parity)
-- Manual `Sync now` action triggers immediate sync.
-- `Download latest` action exports current encrypted `.kdbx` bytes without changing remote sync state.
+- Manual `Sync` action triggers immediate sync.
+- `Download` action exports current encrypted `.kdbx` bytes without changing remote sync state.
 - Adapter API surface:
   - `list`
   - `stat`
@@ -51,28 +51,29 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 ## UI Requirements
 
 - Show sync state:
-  - `syncing` (`file.syncing = true`)
-  - `sync error` (`file.syncError` present)
-  - `modified/unsynced` (`file.modified = true` with no in-flight sync/error)
-  - `synced` (no `syncing`, no `syncError`, no `modified`)
+  - `sync in progress` (`isSyncInProgress = true`)
+  - `sync error` (`lastSyncError` present)
+  - `changes not synced` (`hasLocalChanges = true` with no in-flight sync/error)
+  - `synced` (no `isSyncInProgress`, no `lastSyncError`, no `hasLocalChanges`)
 - At top of opened DB view show:
-  - status circle 1: save state
-  - status circle 2: Drive sync state
-  - `Download latest` button
-  - `Sync now` button
+  - status circle 1: Save status
+  - status circle 2: Sync status
+  - `Download` button
+  - `Sync` button
   - sync metadata (last successful sync time + result + last error when present)
+- Sync metadata should include absolute timestamp from `lastSuccessfulSyncAt` and a relative display (for example, `2 minutes ago`).
 - Show colored sync status circles and actionable retry on failure.
 
 ## Data and Storage
 
 - Persist KeeWeb file-info metadata for quick reopen in Internal App Storage (localStorage):
-  - `id`, `name`, `storage`, `path`, `opts`
-  - `rev` (Drive head revision id)
-  - `syncDate` (last successful sync timestamp)
-  - `modified`, `editState`, `openDate`, `chalResp`, optional key-file metadata
+  - `id`, `name`, `sourceType`, `sourceLocator`, `sourceOptions`
+  - `driveRevisionId` (Drive head revision id)
+  - `lastSuccessfulSyncAt` (last successful sync timestamp)
+  - `hasLocalChanges`, `saveState`, `lastOpenedAt`, `challengeResponseState`, optional key-file metadata
 - Keep in Runtime Memory (non-persistent):
-  - `syncing` (in-flight sync flag)
-  - `syncError` (active attempt error state)
+  - `isSyncInProgress` (in-flight sync flag)
+  - `lastSyncError` (active attempt error state)
   - active model sync state and merge/retry flow state
 - Persist OAuth runtime token data in browser `localStorage` key `keeweb-lite.oauth.google-drive`.
   - Stored envelope fields include `refreshToken`, `accessToken`, `expiresAt`, and provider/scope metadata.
@@ -85,9 +86,10 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Expired auth triggers reconnect flow.
 - Permission/network errors keep unsynced state visible.
 - Revision conflicts are explicit and require conflict resolution flow.
+- Sync failures should provide inline actions (`Retry sync`, and `Resolve conflict` when applicable).
 - If remote key changed and merge/open fails with invalid key, prompt for remote key update flow before continuing sync.
 - Download/export failures are explicit and retryable.
-- Failed sync attempts must not overwrite previous successful `syncDate`; they set `syncError` and keep unsynced state visible.
+- Failed sync attempts must not overwrite previous successful `lastSuccessfulSyncAt`; they set `lastSyncError` and keep unsynced state visible.
 
 ## Security and Privacy
 
