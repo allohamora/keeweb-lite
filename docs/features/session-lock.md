@@ -15,10 +15,11 @@ Define automatic workspace lock behavior and unlock re-entry flow.
 - Idle auto-lock timeout is `15` minutes.
 - Lock triggers:
   - inactivity timeout
-  - minimize (`on`, KeeWeb default)
-  - OS lock/sleep (`off`, KeeWeb default)
-  - copy event (`off`, KeeWeb default)
-  - auto-type event (`off`, KeeWeb default)
+  - event-triggered lock settings are boolean flags (no tri-state)
+  - `lockOnMinimize`: `true` (KeeWeb default)
+  - `lockOnOsLockOrSleep`: `false` (KeeWeb default)
+  - `lockOnCopy`: `false` (KeeWeb default)
+  - `lockOnAutoType`: `false` (KeeWeb default)
 - On lock:
   - if no unsaved changes: close files and return to root/open page
   - if unsaved changes: save-first policy (KeeWeb default)
