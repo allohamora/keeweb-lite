@@ -18,7 +18,7 @@ Define behavior for browser-local and other non-writable source modes.
 - Apply edits immediately to in-memory model.
 - Persist encrypted KDBX bytes to Encrypted Offline Cache (IndexedDB) by default.
 - Never call Drive sync unless source adapter is `gdrive`.
-- Provide `Download latest` action for current encrypted state.
+- Provide `Download` action for current encrypted state.
 
 ## UI Requirements
 
@@ -39,7 +39,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 ## Security and Privacy
 
-- Do not store plaintext credentials or decrypted values.
+- Do not store plaintext unlock credentials or decrypted values.
 - Store encrypted DB bytes only in Encrypted Offline Cache (IndexedDB).
 
 ## Acceptance Criteria

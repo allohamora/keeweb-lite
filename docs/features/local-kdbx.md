@@ -35,7 +35,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 ## Data and Storage
 
 - Store recent-file metadata in Internal App Storage (localStorage).
-- Store remembered key-file metadata in recent-file records in Internal App Storage (localStorage) by default using KeeWeb-style `data` representation (`keyFileHash`/equivalent non-plaintext hash representation), never raw key-file bytes or local key-file paths.
+- Store remembered key-file metadata in recent-file records in Internal App Storage (localStorage) by default using KeeWeb `rememberKeyFiles = data` representation (`keyFileHash` as KeeWeb-compatible base64 hash representation), never raw key-file bytes or local key-file paths.
 - Cache encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB).
 - Keep runtime unlocked model in Runtime Memory (non-persistent) while file is open.
 
@@ -49,7 +49,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 ## Security and Privacy
 
 - Do not log sensitive file or credential material.
-- Do not persist plaintext credentials.
+- Do not persist plaintext database unlock credentials.
 
 ## Acceptance Criteria
 

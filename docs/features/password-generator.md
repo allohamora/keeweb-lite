@@ -13,7 +13,7 @@ Define KeeWeb-like password generator behavior for lite workflows.
 ## Functional Requirements
 
 - Generator is available from:
-  - root/open page
+  - root/open view
   - workspace entry editing flow
 - Generator supports core options:
   - length
