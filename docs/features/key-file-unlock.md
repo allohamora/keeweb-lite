@@ -14,7 +14,11 @@ Define key-file-assisted unlock behavior for the lite profile with persistent re
 - Unlock supports:
   - password only
   - password + key file
-- Key file is selected locally.
+- Key file is selected from local file input and loaded into Runtime Memory for unlock.
+- Unlock sequence:
+  1. user selects database source/file
+  2. user optionally selects key file (loaded into memory)
+  3. user enters password and unlocks
 - Default mode is `remember key file for reopen`.
 - Selected key-file bytes are used for unlock and then cleared from raw runtime buffers (best effort).
 - Persisted remember-key data is enabled by default in lite using non-plaintext representation.

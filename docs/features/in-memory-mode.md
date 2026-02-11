@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define behavior for databases without a writable external target.
+Define behavior for browser-local and other non-writable source modes.
 
 ## Scope
 
@@ -12,12 +12,12 @@ Define behavior for databases without a writable external target.
 
 ## Functional Requirements
 
-- Lite defaults to in-memory-first behavior unless a writable source target is available.
+- Lite defaults to in-memory-first behavior for local file-input sources.
 - Keep unlocked database model in Runtime Memory (non-persistent) while session is active.
 - Apply edits immediately to in-memory model.
 - Persist encrypted KDBX bytes to Encrypted Offline Cache (IndexedDB) by default.
 - Never call Drive sync unless source adapter is `gdrive`.
-- Provide export/download action for current encrypted state.
+- Provide `Download latest` action for current encrypted state.
 
 ## UI Requirements
 

@@ -8,20 +8,19 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 - Local file selection.
 - Unlock with password and optional key file.
-- Save behavior for writable and fallback modes.
+- Browser-local save/export behavior.
 
 ## Functional Requirements
 
 - Local open flow:
-  1. user selects `.kdbx`
-  2. user provides password and optional key file
-  3. app opens DB and renders workspace
-- Local selection paths:
-  - KeeWeb-like baseline: file input
-  - enhanced path when available: File System Access API picker with writable handle
-- Save behavior by mode:
-  - writable local source (File System Access API handle): save back to same file after each edit
-  - fallback/non-writable source (file input): keep working state and persist encrypted cache bytes in Encrypted Offline Cache (IndexedDB)
+  1. user selects `.kdbx` from local file input
+  2. user optionally selects key file from local file input (loaded into memory)
+  3. user enters password
+  4. app opens DB and renders workspace
+- Save behavior for local files:
+  - after each edit, keep latest encrypted state in Encrypted Offline Cache (IndexedDB)
+  - do not write back to originally selected local file path
+- Provide `Download latest` action to export current encrypted `.kdbx` bytes.
 - Recent local files appear in quick access list.
 - On selecting a different `.kdbx`, previously selected key-file state is cleared unless the single remembered key-file record matches the newly selected file.
 
@@ -29,7 +28,8 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 - Display selected local file name before unlock.
 - Show save state (`saving`, `saved`, `error`).
-- Show whether file is writable or fallback mode.
+- Show local source mode as download/export-based.
+- Show `Download latest` action when local file is open.
 - Provide password generator action in open flow and workspace entry editing flow.
 
 ## Data and Storage
@@ -42,9 +42,9 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 ## Failure Handling
 
 - Wrong password/key file shows explicit unlock failure.
-- Write permission loss prompts re-authorization.
 - Save failure keeps unsaved/error status visible and recoverable.
 - If source is unavailable, allow reopen from encrypted cache when possible.
+- Download/export failure surfaces actionable retry feedback.
 
 ## Security and Privacy
 
@@ -54,5 +54,6 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 ## Acceptance Criteria
 
 - Local `.kdbx` opens with correct credentials.
-- Edits persist according to selected local mode.
+- Every edit updates local encrypted cached state.
+- User can download current latest encrypted `.kdbx` from local mode.
 - Save failures are visible and recoverable.

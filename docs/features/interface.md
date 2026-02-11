@@ -35,7 +35,8 @@ Define the two primary UI states and user navigation model.
 - Top workspace status bar contains:
   - status circle 1: save state
   - status circle 2: sync/source state
-  - `Sync now` button
+  - `Download latest` button
+  - `Sync now` button (Drive-backed files only)
   - sync metadata text (last sync time + result)
 - Workspace render/edit layout follows KeeWeb-like menu/list/details behavior.
 - Import/panel workflows temporarily replace list/details content.
@@ -48,7 +49,9 @@ Define the two primary UI states and user navigation model.
 - `Esc` returns from open view to entries when files are already open.
 - Save and sync state must be visible without developer tools.
 - Two status circles must be visible at top of opened DB view.
-- `Sync now` and sync metadata must be visible at top of opened DB view.
+- `Download latest` must be visible at top of opened DB view.
+- `Sync now` must be visible for Drive-backed files at top of opened DB view.
+- Sync metadata must be visible at top of opened DB view.
 - Source selector labels must use canonical names: `Local` and `Google Drive`.
 
 ## Data and Storage
@@ -70,5 +73,5 @@ Define the two primary UI states and user navigation model.
 
 - Root/open page is sufficient for both first open and quick reopen.
 - Workspace page reliably renders KeeWeb-like menu/list/details edit structure.
-- Opened DB view shows two status circles, sync button, and sync metadata at top.
+- Opened DB view shows two status circles, download button, and sync metadata at top.
 - Navigation between root/open and workspace pages is clear and predictable.

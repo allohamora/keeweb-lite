@@ -17,7 +17,7 @@ Define a single save pipeline that persists every edit immediately.
 - If edits happen during save, queue another save run.
 - Never drop pending edits.
 - Source-specific persistence:
-  - local writable: overwrite source file
+  - local file-input source: update encrypted cache and latest downloadable export state
   - in-memory/fallback: update encrypted cache/export state
   - Drive-backed: sync via Drive adapter
 
@@ -33,7 +33,7 @@ Define a single save pipeline that persists every edit immediately.
 
 - Queue/save state is maintained in Runtime Memory (non-persistent).
 - Persisted targets depend on source adapter and configuration:
-  - local writable: source file via File System Access API writable handle
+  - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - in-memory/fallback: Encrypted Offline Cache (IndexedDB)
   - Drive-backed metadata: Internal App Storage (localStorage)
   - Drive OAuth runtime token data: browser `localStorage` key `keeweb-lite.oauth.google-drive` (cleared on `logout` or invalid refresh token)

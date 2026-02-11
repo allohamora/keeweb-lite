@@ -19,9 +19,9 @@ Use these canonical terms consistently across feature specs.
 
 ## External Persistence Targets
 
-- Local writable source
-  - Original `.kdbx` file through File System Access API writable handle (when available/authorized).
-- Local non-writable source
-  - `.kdbx` selected via file input (no direct write-back; in-memory plus encrypted cache flow).
+- Local import source
+  - `.kdbx` selected via local file input and read in browser.
+- Local export target
+  - Downloaded `.kdbx` generated from current encrypted state (`Download latest`).
 - Google Drive source
   - Remote Drive file bytes and revisions.

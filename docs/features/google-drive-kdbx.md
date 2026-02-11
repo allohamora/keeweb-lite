@@ -22,12 +22,15 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   1. user starts Drive open
   2. app performs OAuth code flow with PKCE
   3. user selects file from Drive browser/list
-  4. app downloads bytes and unlocks DB
+  4. user optionally selects key file from local file input (loaded into memory)
+  5. user enters password
+  6. app downloads bytes and unlocks DB
 - Save/sync flow:
   - after edits, sync to same Drive file
   - compare local known revision with remote revision
   - detect and surface revision conflicts
 - Manual `Sync now` action triggers immediate sync.
+- `Download latest` action exports current encrypted `.kdbx` bytes without changing remote sync state.
 - Adapter API surface:
   - `list`
   - `stat`
@@ -50,6 +53,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - At top of opened DB view show:
   - status circle 1: save state
   - status circle 2: Drive sync state
+  - `Download latest` button
   - `Sync now` button
   - sync metadata (last sync time + result + last error when present)
 - Show colored sync status circles and actionable retry on failure.
@@ -76,6 +80,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Expired auth triggers reconnect flow.
 - Permission/network errors keep unsynced state visible.
 - Revision conflicts are explicit and require conflict resolution flow.
+- Download/export failures are explicit and retryable.
 
 ## Security and Privacy
 
