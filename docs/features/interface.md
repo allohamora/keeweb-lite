@@ -14,7 +14,7 @@ Define the two primary UI states and user navigation model.
 - App starts on the root/open page.
 - Root/open page shows a source strategy selector above the password input:
   - `Local`
-  - `Google`
+  - `Google Drive`
 - Root/open page includes:
   - password input and enter/open action
   - optional key file control
@@ -45,6 +45,7 @@ Define the two primary UI states and user navigation model.
 - Save and sync state must be visible without developer tools.
 - Two status circles must be visible at top of opened DB view.
 - `Sync now` and sync metadata must be visible at top of opened DB view.
+- Source selector labels must use canonical names: `Local` and `Google Drive`.
 
 ## Data and Storage
 
