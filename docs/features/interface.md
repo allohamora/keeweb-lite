@@ -12,17 +12,11 @@ Define the two primary UI states and user navigation model.
 ## Functional Requirements
 
 - App starts on the root/open page.
-- Root/open page provides primary actions:
-  - `Open`
-  - `New`
-  - `Demo` (optional)
-  - `More`
-- `More` reveals secondary actions:
-  - storage providers
-  - settings
-  - generator
+- Root/open page shows a source strategy selector above the password input:
+  - `Local`
+  - `Google`
 - Root/open page includes:
-  - password input and enter action
+  - password input and enter/open action
   - optional key file control
   - quick access list for recent files
   - inline unlock message area
