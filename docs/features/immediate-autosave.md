@@ -19,7 +19,7 @@ Define a single save pipeline that persists every edit immediately.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
   - in-memory/fallback: update encrypted cache/export state
-  - Drive-backed: sync via Drive adapter
+  - Drive-backed: sync via Drive adapter and update Drive sync metadata (`lastSyncAt`/status/error)
 
 ## UI Requirements
 
@@ -35,7 +35,7 @@ Define a single save pipeline that persists every edit immediately.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - in-memory/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed metadata: Internal App Storage (localStorage)
+  - Drive-backed metadata: Internal App Storage (localStorage), including `lastSyncAt`, `lastSyncStatus`, and `lastSyncError`
   - Drive OAuth runtime token data: browser `localStorage` key `keeweb-lite.oauth.google-drive` (cleared on `logout` or invalid refresh token)
 
 ## Failure Handling
@@ -43,6 +43,7 @@ Define a single save pipeline that persists every edit immediately.
 - Save errors keep unsaved/error indicators visible.
 - Retry path must exist (auto-retry and/or explicit user action).
 - Failed save must never be marked as successful.
+- Failed Drive sync retries must preserve previous successful `lastSyncAt` value.
 
 ## Security and Privacy
 

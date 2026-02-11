@@ -37,7 +37,7 @@ Define the two primary UI states and user navigation model.
   - status circle 2: sync/source state
   - `Download latest` button
   - `Sync now` button (Drive-backed files only)
-  - sync metadata text (last sync time + result)
+  - sync metadata text (last successful sync time + result + last error when present)
 - Workspace render/edit layout follows KeeWeb-like menu/list/details behavior.
 - Import/panel workflows temporarily replace list/details content.
 

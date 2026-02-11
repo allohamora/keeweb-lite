@@ -55,7 +55,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - status circle 2: Drive sync state
   - `Download latest` button
   - `Sync now` button
-  - sync metadata (last sync time + result + last error when present)
+  - sync metadata (last successful sync time + result + last error when present)
 - Show colored sync status circles and actionable retry on failure.
 
 ## Data and Storage
@@ -65,10 +65,13 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - file name
   - revision id
   - minimal adapter options
-- Persist sync metadata in Internal App Storage (localStorage):
-  - `lastSyncAt`
-  - `lastSyncStatus`
-  - `lastSyncError`
+  - `lastSyncAt` (last successful sync timestamp, KeeWeb-style `syncDate` equivalent)
+- Persist sync result summary in Internal App Storage (localStorage):
+  - `lastSyncStatus` (`synced` | `sync error` | `idle/not synced`)
+  - `lastSyncError` (optional sanitized error text)
+- Keep in Runtime Memory (non-persistent):
+  - `syncing` (in-flight sync flag)
+  - transient active-attempt error state
 - Persist OAuth runtime token data in browser `localStorage` under key `keeweb-lite.oauth.google-drive` (project-specific key).
   - Stored envelope fields: `refreshToken`, `accessToken`, `expiresAt`, and minimal provider/scope metadata.
   - At-rest expectation: no app-level encryption for token envelope; rely on browser/OS storage protections.
@@ -81,6 +84,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Permission/network errors keep unsynced state visible.
 - Revision conflicts are explicit and require conflict resolution flow.
 - Download/export failures are explicit and retryable.
+- Failed sync attempts must not overwrite `lastSyncAt`; they update `lastSyncStatus` and `lastSyncError`.
 
 ## Security and Privacy
 

@@ -22,7 +22,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
   - do not write back to originally selected local file path
 - Provide `Download latest` action to export current encrypted `.kdbx` bytes.
 - Recent local files appear in quick access list.
-- On selecting a different `.kdbx`, previously selected key-file state is cleared unless the single remembered key-file record matches the newly selected file.
+- On selecting a different `.kdbx`, previously selected key-file state is cleared unless remembered key metadata for that file exists in recent-file records.
 
 ## UI Requirements
 
@@ -35,7 +35,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 ## Data and Storage
 
 - Store recent-file metadata in Internal App Storage (localStorage).
-- Store a single remembered key-file reference record in Internal App Storage (localStorage) by default using non-plaintext representation (`keyFileHash`/equivalent), never raw key-file bytes.
+- Store remembered key-file metadata in recent-file records in Internal App Storage (localStorage) by default using non-plaintext representation (`keyFileHash`/equivalent), never raw key-file bytes.
 - Cache encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB).
 - Keep runtime unlocked model in Runtime Memory (non-persistent) while file is open.
 

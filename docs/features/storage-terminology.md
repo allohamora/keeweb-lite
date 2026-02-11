@@ -5,7 +5,7 @@ Use these canonical terms consistently across feature specs.
 ## Canonical Stores
 
 - Internal App Storage (localStorage)
-  - App-managed persisted state, including recent files, Drive file/revision context, sync status fields, and one remembered key-file metadata record (`keyFileName`, non-plaintext `keyFileHash`/equivalent, bound file identity).
+  - App-managed persisted state, including recent files, Drive file/revision context, sync status fields, and remembered key-file metadata per recent-file record (`keyFileName`, non-plaintext `keyFileHash`/equivalent, file-bound by record identity).
 - Encrypted Offline Cache (IndexedDB)
   - Encrypted KDBX bytes only (no decrypted values, no plaintext credentials).
 - Runtime Data Store (localStorage)
