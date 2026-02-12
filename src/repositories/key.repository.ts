@@ -1,4 +1,5 @@
 import { clear, createStore, del, get, set } from 'idb-keyval';
+import { z } from 'zod';
 import { toStorageKey, type FileIdentity } from '../utils/file-identity.utils';
 
 const KEY_DATABASE_NAME = 'keeweb-lite';
@@ -6,26 +7,20 @@ const KEY_STORE_NAME = 'keys';
 
 const keyStore = createStore(KEY_DATABASE_NAME, KEY_STORE_NAME);
 
-export type Key = {
-  fileName: string;
-  fileHash: string;
-};
+const keySchema = z.object({
+  fileName: z.string(),
+  fileHash: z.string(),
+});
 
-const isKey = (value: unknown): value is Key => {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const candidate = value as Partial<Key>;
-  return typeof candidate.fileName === 'string' && typeof candidate.fileHash === 'string';
-};
+export type Key = z.infer<typeof keySchema>;
 
 export const getKey = async (fileIdentity: FileIdentity) => {
   const storageKey = toStorageKey(fileIdentity);
   const value = await get<unknown>(storageKey, keyStore);
+  const result = keySchema.safeParse(value);
 
-  if (isKey(value)) {
-    return value;
+  if (result.success) {
+    return result.data;
   }
 
   await del(storageKey, keyStore);
@@ -33,7 +28,7 @@ export const getKey = async (fileIdentity: FileIdentity) => {
 };
 
 export const setKey = async (fileIdentity: FileIdentity, key: Key) => {
-  await set(toStorageKey(fileIdentity), key, keyStore);
+  await set(toStorageKey(fileIdentity), keySchema.parse(key), keyStore);
 };
 
 export const clearKey = async (fileIdentity: FileIdentity) => {
