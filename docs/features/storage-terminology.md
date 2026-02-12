@@ -22,12 +22,12 @@ Use these canonical terms consistently across feature specs.
   - `lastSyncErrorSummary` (Internal App Storage): sanitized persisted summary (`code` + short message + timestamp) used for reopen UI context.
 - File identity (`fileIdentity`)
   - Google Drive files: Drive file `id`.
-  - Local files: content fingerprint + local context metadata (for example: hash of encrypted bytes + file name + file size) used only for matching recent-file metadata.
+  - Local files: content fingerprint + local context metadata (for example: hash of encrypted bytes + file name + file size) used only for matching persisted file metadata.
 
 ## Canonical Stores
 
 - Internal App Storage (localStorage)
-  - App-managed persisted state, including recent files and file-info fields (`sourceType`, `sourceLocator`, `sourceOptions`, `sourceMode`, `saveStatus`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`) plus remembered key-file metadata (`keyFileName`, `keyFileHash`, file-bound by `fileIdentity`; `keyFileHash` is base64-encoded).
+  - App-managed persisted state, including file-info fields (`sourceType`, `sourceLocator`, `sourceOptions`, `sourceMode`, `saveStatus`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`) plus remembered key-file metadata (`keyFileName`, `keyFileHash`, file-bound by `fileIdentity`; `keyFileHash` is base64-encoded).
 - Encrypted Offline Cache (IndexedDB)
   - Encrypted KDBX bytes only (no decrypted values, no plaintext unlock credentials).
 - OAuth Token Store (localStorage)

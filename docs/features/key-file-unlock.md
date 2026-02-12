@@ -24,7 +24,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - KeeWeb upstream default is currently `rememberKeyFiles = path`; lite intentionally overrides this to `data` while keeping KeeWeb `data`-mode hash semantics.
 - Selected key-file bytes are used for unlock and then cleared from raw runtime buffers (best effort).
 - Persisted remember-key data is enabled by default in lite.
-- Remembered key storage is file-scoped, not global-single-slot: metadata is attached to recent-file records.
+- Remembered key storage is file-scoped, not global-single-slot: metadata is attached to persisted file metadata records.
 - Remembered-key `data` mode stores `keyFileName` and `keyFileHash` from KeeWeb credentials state, not local key-file paths.
 - `keyFileHash` is stored as KeeWeb base64 hash representation (`bytesToBase64(hash.getBinary())` parity).
 - Lite does not use key-file-path remember mode.
@@ -42,10 +42,10 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 
 ## Data and Storage
 
-- Persist remembered key-file metadata in Internal App Storage (localStorage) within recent-file records:
+- Persist remembered key-file metadata in Internal App Storage (localStorage) within file metadata records:
   - `keyFileName`
   - `keyFileHash` (KeeWeb-compatible base64 hash representation)
-  - strict `fileIdentity` binding via recent-file record context:
+  - strict `fileIdentity` binding via file metadata record context:
     - Google Drive: Drive `fileId` + `sourceType = gdrive`
     - Local file: local `fileIdentity` fingerprint + `sourceType = file`
   - if identity does not match exactly, remembered key metadata must not be applied

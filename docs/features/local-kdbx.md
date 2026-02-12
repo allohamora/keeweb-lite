@@ -21,8 +21,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
   - after each edit, keep latest encrypted state in Encrypted Offline Cache (IndexedDB)
   - do not write back to originally selected local file path
 - Provide `Download` action to export current encrypted `.kdbx` bytes.
-- Recent local files appear in the Recent files list.
-- On selecting a different `.kdbx`, previously selected key-file state is cleared unless remembered key metadata for that file exists in recent-file records.
+- On selecting a different `.kdbx`, previously selected key-file state is cleared unless remembered key metadata for that file exists in file metadata records.
 
 ## UI Requirements
 
@@ -35,8 +34,8 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 ## Data and Storage
 
-- Store recent-file metadata in Internal App Storage (localStorage).
-- Store remembered key-file metadata in recent-file records in Internal App Storage (localStorage) by default using KeeWeb `rememberKeyFiles = data` representation (`keyFileHash` as KeeWeb-compatible base64 hash representation), never raw key-file bytes or local key-file paths.
+- Store file metadata in Internal App Storage (localStorage).
+- Store remembered key-file metadata in file metadata records in Internal App Storage (localStorage) by default using KeeWeb `rememberKeyFiles = data` representation (`keyFileHash` as KeeWeb-compatible base64 hash representation), never raw key-file bytes or local key-file paths.
 - Cache encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB).
 - Keep runtime unlocked model in Runtime Memory (non-persistent) while file is open.
 
