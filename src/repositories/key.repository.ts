@@ -1,11 +1,20 @@
 import { clear, createStore, del, get, set } from 'idb-keyval';
 import { z } from 'zod';
-import { toStorageKey, type FileIdentity } from '../utils/file-identity.utils';
 
 const KEY_DATABASE_NAME = 'keeweb-lite';
 const KEY_STORE_NAME = 'keys';
 
 const keyStore = createStore(KEY_DATABASE_NAME, KEY_STORE_NAME);
+
+type FileIdentity = {
+  fingerprint: string;
+  fileName: string;
+  fileSize: number;
+};
+
+const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
+  return [fingerprint, fileName, fileSize.toString()].join(':');
+};
 
 const keySchema = z.object({
   fileName: z.string(),
