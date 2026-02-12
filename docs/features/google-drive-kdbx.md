@@ -70,10 +70,9 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 - Persist KeeWeb file-info metadata for quick reopen in Internal App Storage (localStorage):
   - `id`, `name`, `sourceType`, `sourceLocator`, `sourceOptions`
-  - `sourceMode` (`drive-sync`)
   - `driveRevisionId` (Drive head revision id)
   - `lastSuccessfulSyncAt` (last successful sync timestamp)
-  - `saveStatus`, `syncStatus`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`
+  - `syncStatus`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`
 - Persist optional remembered key-file metadata in IndexedDB via `/repositories/key.repository.ts`, keyed by strict `fileIdentity` (`sourceType = gdrive` + Drive `fileId`).
 - Keep in Runtime Memory (non-persistent):
   - `activeSyncError` (full active attempt error state)

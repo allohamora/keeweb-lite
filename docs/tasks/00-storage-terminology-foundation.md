@@ -16,7 +16,7 @@ If state models and storage contracts are inconsistent early, unlock/render logi
 
 ## Checklist
 
-1. [ ] Create shared domain types for `sourceMode`, `saveStatus`, `syncStatus`, `fileIdentity`, and sync error summaries.
+1. [ ] Create shared domain types for `syncStatus`, `fileIdentity`, and sync error summaries.
 2. [ ] Define typed persisted file-record schema with local fields first and optional Drive fields for later extension.
 3. [ ] Implement Internal App Storage service (localStorage) with safe parse/fallback behavior.
 4. [ ] Implement Encrypted Offline Cache adapter (IndexedDB) that stores encrypted KDBX bytes only.

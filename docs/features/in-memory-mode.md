@@ -12,7 +12,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 ## Functional Requirements
 
-- Lite defaults to `sourceMode = local-cache` behavior for local file-input sources.
+- Lite defaults to local-cache behavior for local file-input sources.
 - This mode defines database persistence behavior; key-file remember defaults are still defined by Key File Unlock (`rememberKeyFiles = data`, hash-based metadata parity).
 - Keep unlocked database model in Runtime Memory (non-persistent) while session is active.
 - Apply edits immediately to the active in-memory model.

@@ -7,7 +7,7 @@ Define a single save pipeline that persists every edit immediately.
 ## Scope
 
 - Entry/group edits.
-- Local file-input source (`sourceMode = local-cache`) and Drive-backed sources (`sourceMode = drive-sync`).
+- Local file-input source and Drive-backed sources.
 
 ## Functional Requirements
 

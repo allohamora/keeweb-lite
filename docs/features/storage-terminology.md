@@ -4,13 +4,6 @@ Use these canonical terms consistently across feature specs.
 
 ## Canonical Models
 
-- Source mode (`sourceMode`)
-  - `local-cache`: local/opened file is writable only through local encrypted cache + `Download`.
-  - `drive-sync`: opened file is backed by Google Drive sync.
-- Save status (`saveStatus`)
-  - `saving`
-  - `saved`
-  - `error`
 - Sync status (`syncStatus`)
   - `idle`: no local changes and no in-flight sync.
   - `pending`: local changes exist and are not yet synced.
@@ -27,7 +20,7 @@ Use these canonical terms consistently across feature specs.
 ## Canonical Stores
 
 - Internal App Storage (localStorage)
-  - App-managed persisted file-info state only (`sourceType`, `sourceLocator`, `sourceOptions`, `sourceMode`, `saveStatus`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`), managed by a dedicated KDBX metadata service (for example `src/services/kdbx-metadata.service.ts`).
+  - App-managed persisted file-info state only (`sourceType`, `sourceLocator`, `sourceOptions`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`), managed by a dedicated KDBX metadata service (for example `src/services/kdbx-metadata.service.ts`).
 - Remembered Key Metadata Store (IndexedDB)
   - Remembered key-file metadata (`keyFileName`, `keyFileHash`) keyed by strict `fileIdentity` binding.
   - `keyFileHash` is stored in KeeWeb-compatible base64 hash representation.
