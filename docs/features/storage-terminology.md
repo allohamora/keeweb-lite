@@ -30,8 +30,8 @@ Use these canonical terms consistently across feature specs.
   - Managed by `src/repositories/key.repository.ts`.
 - Encrypted Offline Cache (IndexedDB)
   - Implemented by `encryptedBytes` in `src/repositories/kdbx.repository.ts` (no decrypted values, no plaintext unlock credentials).
-- OAuth Token Store (localStorage)
-  - Persistent OAuth runtime token data for Drive integration, stored in browser `localStorage` key `keeweb-lite.oauth.google-drive`.
+- OAuth Token Store (IndexedDB)
+  - Persistent OAuth runtime token data for Drive integration, stored in `src/repositories/google-drive.repository.ts` using key `keeweb-lite.oauth.google-drive`.
   - Token envelope fields include `refreshToken`, `accessToken`, `expiresAt`, and provider/scope metadata.
   - At-rest protection expectation: no app-level encryption; relies on browser/OS storage protections.
   - Retention semantics: keep until explicit `logout`, refresh-token invalidation, or user/browser storage clear.

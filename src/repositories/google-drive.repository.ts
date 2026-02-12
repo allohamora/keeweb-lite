@@ -1,6 +1,12 @@
+import { createStore, del, get, set } from 'idb-keyval';
 import { z } from 'zod';
 
-const GOOGLE_DRIVE_OAUTH_STORAGE_KEY = 'keeweb-lite.oauth.google-drive';
+const GOOGLE_DRIVE_OAUTH_STORAGE_KEY = 'keeweb-lite.google-drive-oauth';
+
+const GOOGLE_DRIVE_OAUTH_DATABASE_NAME = 'keeweb-lite';
+const GOOGLE_DRIVE_OAUTH_STORE_NAME = 'google-drive-oauth';
+
+const googleDriveOauthStore = createStore(GOOGLE_DRIVE_OAUTH_DATABASE_NAME, GOOGLE_DRIVE_OAUTH_STORE_NAME);
 
 const googleDriveOauthTokenSchema = z.object({
   refreshToken: z.string(), // "1//0gExampleRefreshToken"
@@ -12,31 +18,22 @@ const googleDriveOauthTokenSchema = z.object({
 
 export type GoogleDriveOauthToken = z.infer<typeof googleDriveOauthTokenSchema>;
 
-export const clearGoogleDriveOauthToken = () => {
-  localStorage.removeItem(GOOGLE_DRIVE_OAUTH_STORAGE_KEY);
+export const clearGoogleDriveOauthToken = async () => {
+  await del(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, googleDriveOauthStore);
 };
 
-export const getGoogleDriveOauthToken = () => {
-  const candidate = localStorage.getItem(GOOGLE_DRIVE_OAUTH_STORAGE_KEY);
-  if (!candidate) {
-    return;
+export const getGoogleDriveOauthToken = async () => {
+  const indexedDbTokenCandidate = await get<unknown>(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, googleDriveOauthStore);
+  const indexedDbTokenResult = googleDriveOauthTokenSchema.safeParse(indexedDbTokenCandidate);
+
+  if (indexedDbTokenResult.success) {
+    return indexedDbTokenResult.data;
   }
 
-  try {
-    const parsed: unknown = JSON.parse(candidate);
-    const result = googleDriveOauthTokenSchema.safeParse(parsed);
-
-    if (result.success) {
-      return result.data;
-    }
-  } catch {
-    // Handled by deleting malformed data below.
-  }
-
-  clearGoogleDriveOauthToken();
-  return;
+  await del(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, googleDriveOauthStore);
+  return undefined;
 };
 
-export const setGoogleDriveOauthToken = (token: GoogleDriveOauthToken) => {
-  localStorage.setItem(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, JSON.stringify(googleDriveOauthTokenSchema.parse(token)));
+export const setGoogleDriveOauthToken = async (token: GoogleDriveOauthToken) => {
+  await set(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, googleDriveOauthTokenSchema.parse(token), googleDriveOauthStore);
 };
