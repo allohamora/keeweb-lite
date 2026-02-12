@@ -7,9 +7,9 @@ const KDBX_STORE_NAME = 'kdbx';
 const kdbxStore = createStore(KDBX_DATABASE_NAME, KDBX_STORE_NAME);
 
 type FileIdentity = {
-  fingerprint: string;
-  fileName: string;
-  fileSize: number;
+  fingerprint: string; // "sha256:9b74c9897bac770ffc029102a200c5de"
+  fileName: string; // "Personal Vault.kdbx"
+  fileSize: number; // 183424
 };
 
 const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {

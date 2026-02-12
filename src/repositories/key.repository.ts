@@ -7,9 +7,9 @@ const KEY_STORE_NAME = 'keys';
 const keyStore = createStore(KEY_DATABASE_NAME, KEY_STORE_NAME);
 
 type FileIdentity = {
-  fingerprint: string;
-  fileName: string;
-  fileSize: number;
+  fingerprint: string; // "sha256:9b74c9897bac770ffc029102a200c5de"
+  fileName: string; // "Personal Vault.kdbx"
+  fileSize: number; // 183424
 };
 
 const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
@@ -17,8 +17,8 @@ const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
 };
 
 const keySchema = z.object({
-  fileName: z.string(),
-  fileHash: z.string(),
+  fileName: z.string(), // "YubiKey.keyx"
+  fileHash: z.string(), // "QWxhZGRpbjpPcGVuU2VzYW1l"
 });
 
 export type Key = z.infer<typeof keySchema>;
