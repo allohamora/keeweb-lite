@@ -4,6 +4,6 @@ export type FileIdentity = {
   fileSize: number;
 };
 
-export const fileIdentityStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
+export const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
   return [fingerprint, fileName, fileSize.toString()].join(':');
 };
