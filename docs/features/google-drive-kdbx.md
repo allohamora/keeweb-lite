@@ -68,12 +68,12 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 ## Data and Storage
 
-- Persist KeeWeb file-info metadata for quick reopen in Internal App Storage (localStorage):
+- Persist KDBX metadata for quick reopen in IndexedDB via `src/repositories/kdbx.repository.ts`:
   - `id`, `name`, `sourceType`, `sourceLocator`, `sourceOptions`
   - `driveRevisionId` (Drive head revision id)
   - `lastSuccessfulSyncAt` (last successful sync timestamp)
-  - `syncStatus`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`
-- Persist optional remembered key-file metadata in IndexedDB via `/repositories/key.repository.ts`, keyed by strict `fileIdentity` (`sourceType = gdrive` + Drive `fileId`).
+  - `syncStatus`, `lastSyncErrorDetails`, `lastOpenedAt`, `challengeResponseState`
+- Persist optional remembered key-file metadata in IndexedDB via `src/repositories/key.repository.ts`, keyed by strict `fileIdentity` (`fingerprint` + `fileName` + `fileSize`).
 - Keep in Runtime Memory (non-persistent):
   - `activeSyncError` (full active attempt error state)
   - active model sync state and merge/retry flow state
@@ -91,14 +91,14 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Sync failures should provide inline actions (`Retry sync`, and `Resolve conflict` when applicable).
 - If remote key changed and merge/open fails with invalid key, prompt for remote key update flow before continuing sync.
 - Download/export failures are explicit and retryable.
-- Failed sync attempts must not overwrite previous successful `lastSuccessfulSyncAt`; they set `syncStatus = error`, update `activeSyncError`, and persist sanitized `lastSyncErrorSummary`.
+- Failed sync attempts must not overwrite previous successful `lastSuccessfulSyncAt`; they set `syncStatus = error`, update `activeSyncError`, and persist sanitized `lastSyncErrorDetails`.
 
 ## Security and Privacy
 
 - Use least-privilege scope `drive.file`.
 - Do not log OAuth tokens or plaintext secrets.
 - Persist only minimum metadata required for reopen/sync.
-- `logout` must revoke token (best effort) and remove `keeweb-lite.oauth.google-drive` from `localStorage` before returning success.
+- `logout` must clear `keeweb-lite.oauth.google-drive` from `localStorage`; optional token revocation is best effort.
 
 ## Acceptance Criteria
 

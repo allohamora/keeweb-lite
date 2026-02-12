@@ -53,7 +53,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - `Download` must be visible at top of opened DB view.
 - `Sync` must be visible for Drive-backed files at top of opened DB view.
 - Sync metadata must be visible at top of opened DB view.
-- Drive-backed sync state uses canonical status model semantics (`syncStatus`, `lastSyncErrorSummary`) for status-circle rendering.
+- Drive-backed sync state uses canonical status model semantics (`syncStatus`, `lastSyncErrorDetails`) for status-circle rendering.
 - Source selector labels must use canonical names: `Local` and `Google Drive`.
 
 ## Data and Storage

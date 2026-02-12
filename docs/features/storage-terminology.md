@@ -12,21 +12,24 @@ Use these canonical terms consistently across feature specs.
   - `error`: latest sync attempt failed.
 - Sync errors
   - `activeSyncError` (Runtime Memory): full error object/details for the current app session.
-  - `lastSyncErrorSummary` (Internal App Storage): sanitized persisted summary (`code` + short message + timestamp) used for reopen UI context.
+  - `lastSyncErrorDetails` (KDBX metadata): persisted sync error object (`code`, `message`, `timestamp`) used for reopen UI context.
 - File identity (`fileIdentity`)
-  - Google Drive files: Drive file `id`.
-  - Local files: content fingerprint + local context metadata (for example: hash of encrypted bytes + file name + file size) used only for matching persisted file metadata and remembered key metadata.
+  - Repository key tuple: `fingerprint` + `fileName` + `fileSize`.
+  - The same tuple is used in `src/repositories/key.repository.ts` and `src/repositories/kdbx.repository.ts` for matching per-file records.
 
 ## Canonical Stores
 
-- Internal App Storage (localStorage)
-  - App-managed persisted file-info state only (`sourceType`, `sourceLocator`, `sourceOptions`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`), managed by a dedicated KDBX metadata service (for example `src/services/kdbx-metadata.service.ts`).
+- KDBX Record Store (IndexedDB)
+  - Managed by `src/repositories/kdbx.repository.ts`.
+  - Stores per-file KDBX record data keyed by `fileIdentity`, including:
+    - `metadata` (`id`, `name`, `sourceType`, `sourceLocator`, `sourceOptions`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorDetails`, `lastOpenedAt`, `challengeResponseState`)
+    - optional `encryptedBytes` (encrypted KDBX bytes only)
 - Remembered Key Metadata Store (IndexedDB)
-  - Remembered key-file metadata (`keyFileName`, `keyFileHash`) keyed by strict `fileIdentity` binding.
-  - `keyFileHash` is stored in KeeWeb-compatible base64 hash representation.
-  - Managed by `/repositories/key.repository.ts`.
+  - Remembered key-file metadata (`fileName`, `fileHash`) keyed by strict `fileIdentity` binding.
+  - `fileHash` is stored in KeeWeb-compatible base64 hash representation.
+  - Managed by `src/repositories/key.repository.ts`.
 - Encrypted Offline Cache (IndexedDB)
-  - Encrypted KDBX bytes only (no decrypted values, no plaintext unlock credentials).
+  - Implemented by `encryptedBytes` in `src/repositories/kdbx.repository.ts` (no decrypted values, no plaintext unlock credentials).
 - OAuth Token Store (localStorage)
   - Persistent OAuth runtime token data for Drive integration, stored in browser `localStorage` key `keeweb-lite.oauth.google-drive`.
   - Token envelope fields include `refreshToken`, `accessToken`, `expiresAt`, and provider/scope metadata.

@@ -30,7 +30,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 - Runtime Memory (non-persistent): unlocked model and transient editing state.
 - Encrypted Offline Cache (IndexedDB): encrypted KDBX bytes only.
-- Internal App Storage (localStorage): persisted file metadata and source descriptors.
+- IndexedDB KDBX metadata store (`src/repositories/kdbx.repository.ts`): persisted file metadata and source descriptors.
 
 ## Failure Handling
 

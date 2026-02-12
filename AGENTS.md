@@ -95,15 +95,16 @@ src/
 ├── layouts/         # Astro layouts
 ├── pages/           # Astro pages
 ├── lib/             # Custom libs and third party GOF wrappers
+├── repositories/    # Persistence repositories and storage adapters (*.repository.ts)
 ├── services/        # Business/domain logic services (*.ts)
 └── styles/          # Global styles
 ```
 
-## Service Layer Rule
+## Repository Layer Rule
 
-- All business logic must be implemented in `src/services/name.ts` files.
-- Example: `src/services/kdbx.ts` should contain all KDBX actions.
-- UI components and pages should call services, not implement business logic directly.
+- Browser persistence logic must be implemented in `src/repositories/name.repository.ts` files.
+- Example: `src/repositories/kdbx.repository.ts` contains persisted KDBX metadata and encrypted-byte storage operations.
+- UI components and pages should consume repository-backed app logic, not call browser storage APIs directly.
 
 ## Development Guidelines
 
