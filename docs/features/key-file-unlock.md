@@ -24,7 +24,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - KeeWeb upstream default is currently `rememberKeyFiles = path`; lite intentionally overrides this to `data` while keeping KeeWeb `data`-mode hash semantics.
 - Selected key-file bytes are used for unlock and then cleared from raw runtime buffers (best effort).
 - Persisted remember-key data is enabled by default in lite.
-- Remembered key storage is file-scoped, not global-single-slot: metadata is attached to persisted file metadata records.
+- Remembered key storage is file-scoped, not global-single-slot: metadata is stored by `fileIdentity` in a dedicated IndexedDB store.
 - Remembered-key `data` mode stores `keyFileName` and `keyFileHash` from KeeWeb credentials state, not local key-file paths.
 - `keyFileHash` is stored as KeeWeb base64 hash representation (`bytesToBase64(hash.getBinary())` parity).
 - Lite does not use key-file-path remember mode.
@@ -37,18 +37,19 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 
 - Unlock screen shows key-file add/remove control.
 - Selected key file name indicator is visible.
-- Show helper hint that key file is remembered in Internal App Storage using KeeWeb-style `data` mode, is sensitive credential-derived metadata, and can be cleared.
+- Show helper hint that key file is remembered in IndexedDB using KeeWeb-style `data` mode, is sensitive credential-derived metadata, and can be cleared.
 - Wrong key-file/password errors are explicit.
 
 ## Data and Storage
 
-- Persist remembered key-file metadata in Internal App Storage (localStorage) within file metadata records:
+- Persist remembered key-file metadata in IndexedDB via `/repositories/key.repository.ts`:
   - `keyFileName`
   - `keyFileHash` (KeeWeb-compatible base64 hash representation)
-  - strict `fileIdentity` binding via file metadata record context:
+  - strict `fileIdentity` binding:
     - Google Drive: Drive `fileId` + `sourceType = gdrive`
     - Local file: local `fileIdentity` fingerprint + `sourceType = file`
   - if identity does not match exactly, remembered key metadata must not be applied
+- Keep KDBX file metadata persistence in a separate dedicated metadata service (Internal App Storage / localStorage, for example `src/services/kdbx-metadata.service.ts`); do not couple remembered key metadata to that record.
 - Runtime Memory keeps only transient unlock bytes for active operations.
 - Do not persist raw plaintext key-file bytes.
 - Do not persist key-file local path in lite.

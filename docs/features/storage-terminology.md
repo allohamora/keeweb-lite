@@ -22,12 +22,16 @@ Use these canonical terms consistently across feature specs.
   - `lastSyncErrorSummary` (Internal App Storage): sanitized persisted summary (`code` + short message + timestamp) used for reopen UI context.
 - File identity (`fileIdentity`)
   - Google Drive files: Drive file `id`.
-  - Local files: content fingerprint + local context metadata (for example: hash of encrypted bytes + file name + file size) used only for matching persisted file metadata.
+  - Local files: content fingerprint + local context metadata (for example: hash of encrypted bytes + file name + file size) used only for matching persisted file metadata and remembered key metadata.
 
 ## Canonical Stores
 
 - Internal App Storage (localStorage)
-  - App-managed persisted state, including file-info fields (`sourceType`, `sourceLocator`, `sourceOptions`, `sourceMode`, `saveStatus`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`) plus remembered key-file metadata (`keyFileName`, `keyFileHash`, file-bound by `fileIdentity`; `keyFileHash` is base64-encoded).
+  - App-managed persisted file-info state only (`sourceType`, `sourceLocator`, `sourceOptions`, `sourceMode`, `saveStatus`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorSummary`, `lastOpenedAt`, `challengeResponseState`), managed by a dedicated KDBX metadata service (for example `src/services/kdbx-metadata.service.ts`).
+- Remembered Key Metadata Store (IndexedDB)
+  - Remembered key-file metadata (`keyFileName`, `keyFileHash`) keyed by strict `fileIdentity` binding.
+  - `keyFileHash` is stored in KeeWeb-compatible base64 hash representation.
+  - Managed by `/repositories/key.repository.ts`.
 - Encrypted Offline Cache (IndexedDB)
   - Encrypted KDBX bytes only (no decrypted values, no plaintext unlock credentials).
 - OAuth Token Store (localStorage)
