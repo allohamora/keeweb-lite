@@ -115,6 +115,11 @@ src/
 ### Code Style
 
 - Write comments only when necessary to clarify complex logic; prefer self-documenting code.
+- Prefer arrow-function constants over function declarations (for example, `const helper = () => {}` instead of `function helper() {}`).
+- Prefer destructuring for object/array field access when it improves clarity.
+- Prefer destructuring in function parameters when values are used immediately (for example, `({ recentFiles }) => {}` instead of `(state) => { const { recentFiles } = state; }`).
+- Prefer TypeScript inference over redundant annotations (for example, `const value = 123` instead of `const value: number = 123`, and `createStore(combine(...))` instead of `createStore<Type>(...)` when inference is sufficient).
+- Add explicit TypeScript annotations only when inference is not sufficient or when defining a stable exported/public API surface.
 - Use `for...of` loops instead of `forEach` for better performance and readability.
 - Avoid single-letter or one-word variable names; use descriptive names that clearly indicate purpose (e.g., `task` instead of `t`, `fileData` instead of `d`).
 - DO NOT use the non-null assertion operator (`!`) in TypeScript; instead, use proper type guards, optional chaining, or refactor to handle null/undefined cases explicitly.
