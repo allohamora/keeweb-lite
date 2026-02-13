@@ -81,13 +81,16 @@ describe('key.repository.ts', () => {
 
   describe('clearAllKeys', () => {
     it('deletes all stored keys', async () => {
-      await setKey(createFileIdentity(), { fileHash: 'hash-5', fileName: 'first.keyx' });
-      await setKey(createFileIdentity(), { fileHash: 'hash-6', fileName: 'second.keyx' });
+      const firstIdentity = createFileIdentity();
+      const secondIdentity = createFileIdentity();
+
+      await setKey(firstIdentity, { fileHash: 'hash-5', fileName: 'first.keyx' });
+      await setKey(secondIdentity, { fileHash: 'hash-6', fileName: 'second.keyx' });
 
       await clearAllKeys();
 
-      expect(await getKey(createFileIdentity())).toBeUndefined();
-      expect(await getKey(createFileIdentity())).toBeUndefined();
+      expect(await getKey(firstIdentity)).toBeUndefined();
+      expect(await getKey(secondIdentity)).toBeUndefined();
     });
   });
 });

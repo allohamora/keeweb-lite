@@ -183,13 +183,16 @@ describe('kdbx.repository.ts', () => {
 
   describe('clearAllKdbxRecords', () => {
     it('deletes all stored kdbx records', async () => {
-      await setKdbxRecord(createFileIdentity(), createRecord());
-      await setKdbxRecord(createFileIdentity(), createRecord());
+      const firstIdentity = createFileIdentity();
+      const secondIdentity = createFileIdentity();
+
+      await setKdbxRecord(firstIdentity, createRecord());
+      await setKdbxRecord(secondIdentity, createRecord());
 
       await clearAllKdbxRecords();
 
-      expect(await getKdbxRecord(createFileIdentity())).toBeUndefined();
-      expect(await getKdbxRecord(createFileIdentity())).toBeUndefined();
+      expect(await getKdbxRecord(firstIdentity)).toBeUndefined();
+      expect(await getKdbxRecord(secondIdentity)).toBeUndefined();
     });
   });
 });
