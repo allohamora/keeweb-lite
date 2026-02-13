@@ -46,7 +46,7 @@ Define a single save pipeline that persists every edit immediately.
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
   - Drive-backed metadata: IndexedDB KDBX metadata via `src/repositories/kdbx.repository.ts`, including `driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, and `lastSyncErrorDetails`; runtime model holds `activeSyncError`
-  - Drive OAuth runtime token data: OAuth Token Store (IndexedDB key `keeweb-lite.oauth.google-drive` in `src/repositories/google-drive.repository.ts`, cleared on `logout` or invalid refresh-token path)
+  - Drive OAuth runtime token data: OAuth Token Store (IndexedDB key `keeweb-lite.google-drive-oauth` in `src/repositories/google-drive.repository.ts`, cleared on `logout` or invalid refresh-token path)
 
 ## Failure Handling
 

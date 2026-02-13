@@ -17,7 +17,7 @@ Drive unlock adds auth and remote file selection complexity. Keeping it separate
 
 1. [ ] Add `Google Drive` option to Unlock source selector and route it to Drive-specific open flow.
 2. [ ] Implement OAuth code flow with PKCE and least-privilege scope (`drive.file`).
-3. [ ] Persist OAuth runtime token envelope in IndexedDB key `keeweb-lite.oauth.google-drive` via `src/repositories/google-drive.repository.ts`.
+3. [ ] Persist OAuth runtime token envelope in IndexedDB key `keeweb-lite.google-drive-oauth` via `src/repositories/google-drive.repository.ts`.
 4. [ ] Implement Drive adapter methods required for unlock/open paths (`list`, `stat`, `load`, `logout` minimum for open flow).
 5. [ ] Build Drive picker/list flow supporting root, shared with me, and shared drives.
 6. [ ] Implement Drive file unlock with password-only and password-plus-key-file options.

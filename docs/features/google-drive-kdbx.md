@@ -77,7 +77,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Keep in Runtime Memory (non-persistent):
   - `activeSyncError` (full active attempt error state)
   - active model sync state and merge/retry flow state
-- Persist OAuth runtime token data in IndexedDB via `src/repositories/google-drive.repository.ts` key `keeweb-lite.oauth.google-drive`.
+- Persist OAuth runtime token data in IndexedDB via `src/repositories/google-drive.repository.ts` key `keeweb-lite.google-drive-oauth`.
   - Stored envelope fields include `refreshToken`, `accessToken`, `expiresAt`, and provider/scope metadata.
   - At-rest expectation: no app-level encryption for token envelope; rely on browser/OS storage protections.
   - Retention: persist across reloads until explicit `logout`, token refresh failure/re-authorization path, or user/browser storage clear.
@@ -98,7 +98,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Use least-privilege scope `drive.file`.
 - Do not log OAuth tokens or plaintext secrets.
 - Persist only minimum metadata required for reopen/sync.
-- `logout` must clear `keeweb-lite.oauth.google-drive` from IndexedDB; optional token revocation is best effort.
+- `logout` must clear `keeweb-lite.google-drive-oauth` from IndexedDB; optional token revocation is best effort.
 
 ## Acceptance Criteria
 
