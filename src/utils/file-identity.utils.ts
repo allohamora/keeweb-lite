@@ -5,5 +5,5 @@ export type FileIdentity = {
 };
 
 export const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
-  return [fingerprint, fileName, fileSize.toString()].join(':');
+  return [fingerprint, fileName, fileSize.toString()].map((part) => encodeURIComponent(part)).join(':');
 };
