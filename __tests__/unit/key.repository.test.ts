@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { get, set } from 'idb-keyval';
-import { clearAllKeys, clearKey, getKey, setKey, keyStore, toStorageKey } from '@/repositories/key.repository';
+import { clearAllKeys, clearKey, getKey, setKey, keyStore } from '@/repositories/key.repository';
+import { toStorageKey } from '@/utils/file-identity.utils';
 import { randomInt } from 'node:crypto';
 
 const createFileIdentity = () => {

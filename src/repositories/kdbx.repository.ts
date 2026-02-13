@@ -1,21 +1,14 @@
 import { clear, createStore, del, get, set } from 'idb-keyval';
 import { z } from 'zod';
+import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
+
+export { toStorageKey } from '@/utils/file-identity.utils';
 
 const KDBX_DATABASE_NAME = 'keeweb-lite';
 const KDBX_STORE_NAME = 'kdbx';
 const KDBX_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.kdbx';
 
 export const kdbxStore = createStore(KDBX_DATABASE_NAME, KDBX_STORE_NAME);
-
-type FileIdentity = {
-  fingerprint: string; // "sha256:9b74c9897bac770ffc029102a200c5de"
-  fileName: string; // "Personal Vault.kdbx"
-  fileSize: number; // 183424
-};
-
-export const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
-  return [fingerprint, fileName, fileSize.toString()].join(':');
-};
 
 const syncErrorDetailsSchema = z.object({
   code: z.string(), // "network_error"

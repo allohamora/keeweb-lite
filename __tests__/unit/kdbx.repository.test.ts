@@ -1,5 +1,6 @@
 import { get, set } from 'idb-keyval';
 import { afterEach, describe, expect, it } from 'vitest';
+import { toStorageKey } from '@/utils/file-identity.utils';
 import {
   type KdbxMetadata,
   clearAllKdbxRecords,
@@ -11,7 +12,6 @@ import {
   setKdbxMetadata,
   setKdbxRecord,
   kdbxStore,
-  toStorageKey,
 } from '@/repositories/kdbx.repository';
 import { randomInt } from 'node:crypto';
 
