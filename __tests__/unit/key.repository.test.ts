@@ -18,7 +18,7 @@ describe('key.repository.ts', () => {
     await clearAllKeys();
   });
 
-  describe('setKey/getKey', () => {
+  describe('setKey', () => {
     it('stores and reads key records', async () => {
       const fileIdentity = createFileIdentity();
       const key = { fileHash: 'hash-1', fileName: 'unlock.keyx' };
@@ -27,6 +27,25 @@ describe('key.repository.ts', () => {
       const persistedKey = await getKey(fileIdentity);
 
       expect(persistedKey).toEqual(key);
+    });
+
+    it('keeps the last value when setKey runs in parallel', async () => {
+      const sharedIdentity = {
+        fileName: 'shared-vault.kdbx',
+        fileSize: 4096,
+        fingerprint: 'sha256:parallel-set-key',
+      };
+      const firstKey = { fileHash: 'hash-a', fileName: 'first.keyx' };
+      const secondKey = { fileHash: 'hash-b', fileName: 'second.keyx' };
+      const thirdKey = { fileHash: 'hash-c', fileName: 'third.keyx' };
+
+      await Promise.all([
+        setKey(sharedIdentity, firstKey),
+        setKey(sharedIdentity, secondKey),
+        setKey(sharedIdentity, thirdKey),
+      ]);
+
+      expect(await getKey(sharedIdentity)).toEqual(thirdKey);
     });
   });
 

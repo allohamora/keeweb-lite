@@ -80,7 +80,7 @@ describe('kdbx.repository.ts', () => {
     });
   });
 
-  describe('setKdbxMetadata/getKdbxMetadata', () => {
+  describe('setKdbxMetadata', () => {
     it('updates metadata while preserving existing encrypted bytes', async () => {
       const fileIdentity = createFileIdentity();
       const initialEncryptedBytes = createEncryptedBytes();
@@ -101,6 +101,34 @@ describe('kdbx.repository.ts', () => {
 
       expect(await getKdbxMetadata(fileIdentity)).toEqual(nextMetadata);
       expect(await getKdbxEncryptedBytes(fileIdentity)).toEqual(initialEncryptedBytes);
+    });
+
+    it('keeps the last value when setKdbxMetadata runs in parallel', async () => {
+      const sharedIdentity = {
+        fileName: 'shared-vault.kdbx',
+        fileSize: 8192,
+        fingerprint: 'sha256:parallel-set-kdbx-metadata',
+      };
+      const firstMetadata = {
+        ...createMetadata(),
+        name: 'first-vault.kdbx',
+      };
+      const secondMetadata = {
+        ...createMetadata(),
+        name: 'second-vault.kdbx',
+      };
+      const thirdMetadata = {
+        ...createMetadata(),
+        name: 'third-vault.kdbx',
+      };
+
+      await Promise.all([
+        setKdbxMetadata(sharedIdentity, firstMetadata),
+        setKdbxMetadata(sharedIdentity, secondMetadata),
+        setKdbxMetadata(sharedIdentity, thirdMetadata),
+      ]);
+
+      expect(await getKdbxMetadata(sharedIdentity)).toEqual(thirdMetadata);
     });
   });
 

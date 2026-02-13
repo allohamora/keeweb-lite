@@ -14,7 +14,7 @@ describe('google-drive.repository.ts', () => {
     await clearGoogleDriveOauthToken();
   });
 
-  describe('setGoogleDriveOauthToken/getGoogleDriveOauthToken', () => {
+  describe('setGoogleDriveOauthToken', () => {
     it('stores and reads oauth token records', async () => {
       const token = {
         accessToken: 'access-token',
@@ -28,6 +28,35 @@ describe('google-drive.repository.ts', () => {
       const persistedToken = await getGoogleDriveOauthToken();
 
       expect(persistedToken).toEqual(token);
+    });
+
+    it('keeps the last value when setGoogleDriveOauthToken runs in parallel', async () => {
+      const firstToken = {
+        accessToken: 'access-token-a',
+        expiresAt: '2026-02-12T20:41:30.000Z',
+        provider: 'google-drive' as const,
+        refreshToken: 'refresh-token-a',
+      };
+      const secondToken = {
+        accessToken: 'access-token-b',
+        expiresAt: '2026-02-12T20:41:31.000Z',
+        provider: 'google-drive' as const,
+        refreshToken: 'refresh-token-b',
+      };
+      const thirdToken = {
+        accessToken: 'access-token-c',
+        expiresAt: '2026-02-12T20:41:32.000Z',
+        provider: 'google-drive' as const,
+        refreshToken: 'refresh-token-c',
+      };
+
+      await Promise.all([
+        setGoogleDriveOauthToken(firstToken),
+        setGoogleDriveOauthToken(secondToken),
+        setGoogleDriveOauthToken(thirdToken),
+      ]);
+
+      expect(await getGoogleDriveOauthToken()).toEqual(thirdToken);
     });
   });
 
