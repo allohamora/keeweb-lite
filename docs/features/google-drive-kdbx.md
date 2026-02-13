@@ -70,6 +70,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 - Persist KDBX metadata for quick reopen in IndexedDB via `src/repositories/kdbx.repository.ts`:
   - `id`, `name`, `sourceType`, `sourceLocator`, `sourceOptions`
+    - `sourceType` values currently implemented in repository schema: `file`, `gdrive`
   - `driveRevisionId` (Drive head revision id)
   - `lastSuccessfulSyncAt` (last successful sync timestamp)
   - `syncStatus`, `lastSyncErrorDetails`, `lastOpenedAt`, `challengeResponseState`
@@ -79,6 +80,8 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - active model sync state and merge/retry flow state
 - Persist OAuth runtime token data in IndexedDB via `src/repositories/google-drive.repository.ts` key `keeweb-lite.google-drive-oauth`.
   - Stored envelope fields include `refreshToken`, `accessToken`, `expiresAt`, and provider/scope metadata.
+  - Provider value currently enforced by repository schema: `google-drive`.
+  - Malformed persisted token envelopes are deleted on read (safe-parse fallback in repository).
   - At-rest expectation: no app-level encryption for token envelope; rely on browser/OS storage protections.
   - Retention: persist across reloads until explicit `logout`, token refresh failure/re-authorization path, or user/browser storage clear.
 - OAuth requests include offline refresh capability (KeeWeb default).

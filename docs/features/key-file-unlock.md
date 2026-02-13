@@ -50,6 +50,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
     - `fileName`
     - `fileSize`
   - if identity does not match exactly, remembered key metadata must not be applied
+  - malformed persisted key metadata is deleted on read (safe-parse fallback in repository)
 - Keep KDBX file metadata/encrypted-byte persistence in separate repository records via `src/repositories/kdbx.repository.ts`; do not couple remembered key metadata to that record.
 - Runtime Memory keeps only transient unlock bytes for active operations.
 - Do not persist raw plaintext key-file bytes.

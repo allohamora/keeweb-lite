@@ -15,24 +15,35 @@ Use these canonical terms consistently across feature specs.
   - `lastSyncErrorDetails` (KDBX metadata): persisted sync error object (`code`, `message`, `timestamp`) used for reopen UI context.
 - File identity (`fileIdentity`)
   - Repository key tuple: `fingerprint` + `fileName` + `fileSize`.
+  - Storage key format in repositories is `encodeURIComponent(fingerprint):encodeURIComponent(fileName):encodeURIComponent(fileSize)`.
   - The same tuple is used in `src/repositories/key.repository.ts` and `src/repositories/kdbx.repository.ts` for matching per-file records.
 
 ## Canonical Stores
 
 - KDBX Record Store (IndexedDB)
   - Managed by `src/repositories/kdbx.repository.ts`.
+  - Access is serialized with Web Locks name `keeweb-lite.repository.kdbx`.
   - Stores per-file KDBX record data keyed by `fileIdentity`, including:
     - `metadata` (`id`, `name`, `sourceType`, `sourceLocator`, `sourceOptions`, `syncStatus`, `driveRevisionId`, `lastSuccessfulSyncAt`, `lastSyncErrorDetails`, `lastOpenedAt`, `challengeResponseState`)
+      - `sourceType` values currently implemented: `file`, `gdrive`
     - optional `encryptedBytes` (encrypted KDBX bytes only)
+  - Invalid persisted records are removed on read (safe-parse fallback returns no value and deletes malformed data).
+  - `encryptedBytes` writes require an existing metadata record first (`setKdbxEncryptedBytes` throws if metadata is not initialized).
+  - `encryptedBytes` input is copied before persistence to avoid external mutation after write.
 - Remembered Key Metadata Store (IndexedDB)
   - Remembered key-file metadata (`fileName`, `fileHash`) keyed by strict `fileIdentity` binding.
   - `fileHash` is stored in KeeWeb-compatible base64 hash representation.
   - Managed by `src/repositories/key.repository.ts`.
+  - Access is serialized with Web Locks name `keeweb-lite.repository.keys`.
+  - Invalid persisted key records are removed on read (safe-parse fallback returns no value and deletes malformed data).
 - Encrypted Offline Cache (IndexedDB)
   - Implemented by `encryptedBytes` in `src/repositories/kdbx.repository.ts` (no decrypted values, no plaintext unlock credentials).
 - OAuth Token Store (IndexedDB)
   - Persistent OAuth runtime token data for Drive integration, stored in `src/repositories/google-drive.repository.ts` using key `keeweb-lite.google-drive-oauth`.
+  - Access is serialized with Web Locks name `keeweb-lite.repository.google-drive-oauth`.
   - Token envelope fields include `refreshToken`, `accessToken`, `expiresAt`, and provider/scope metadata.
+  - Provider value currently enforced by schema: `google-drive`.
+  - Invalid persisted token records are removed on read (safe-parse fallback returns no value and deletes malformed data).
   - At-rest protection expectation: no app-level encryption; relies on browser/OS storage protections.
   - Retention semantics: keep until explicit `logout`, refresh-token invalidation, or user/browser storage clear.
 - Runtime Memory (non-persistent)

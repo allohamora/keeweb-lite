@@ -143,6 +143,6 @@ src/
 
 - Never log secrets (passwords, key file data, decrypted values, OAuth tokens).
 - Never persist plaintext database unlock credentials (passwords, key-file bytes, decrypted values).
-- OAuth runtime tokens for cloud storage are stored in IndexedDB using provider-scoped keys (Google Drive key: `keeweb-lite.oauth.google-drive` in `src/repositories/google-drive.repository.ts`).
+- OAuth runtime tokens for cloud storage are stored in IndexedDB using provider-scoped keys (Google Drive key: `keeweb-lite.google-drive-oauth` in `src/repositories/google-drive.repository.ts`).
 - Prefer least-privilege Drive scopes (`drive.file`).
 - Persist only minimum metadata needed for reopen/sync.

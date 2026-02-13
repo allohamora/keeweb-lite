@@ -34,9 +34,10 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 ## Data and Storage
 
-- Store file metadata in IndexedDB via `src/repositories/kdbx.repository.ts`.
+- Store file metadata in IndexedDB via `src/repositories/kdbx.repository.ts` (`sourceType` currently `file` or `gdrive`; local flow uses `file`).
 - Store remembered key-file metadata in IndexedDB via `src/repositories/key.repository.ts` using KeeWeb `rememberKeyFiles = data` representation (`fileHash` as KeeWeb-compatible base64 hash representation), never raw key-file bytes or local key-file paths.
-- Cache encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB).
+- Cache encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB) via `kdbx.repository` `encryptedBytes`.
+- Repository contract: initialize metadata before writing encrypted bytes (`setKdbxEncryptedBytes` requires existing metadata and throws otherwise).
 - Keep runtime unlocked model in Runtime Memory (non-persistent) while file is open.
 
 ## Failure Handling
