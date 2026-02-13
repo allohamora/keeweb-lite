@@ -39,7 +39,7 @@ const createMetadata = (): KdbxMetadata => {
 };
 
 const createEncryptedBytes = () => {
-  return new Uint8Array(Array.from({ length: 3 }, () => randomInt(1, 1000)));
+  return new Uint8Array(Array.from({ length: 3 }, () => randomInt(0, 256)));
 };
 
 const createRecord = () => {
