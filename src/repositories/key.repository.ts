@@ -5,7 +5,7 @@ const KEY_DATABASE_NAME = 'keeweb-lite';
 const KEY_STORE_NAME = 'keys';
 const KEY_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.keys';
 
-const keyStore = createStore(KEY_DATABASE_NAME, KEY_STORE_NAME);
+export const keyStore = createStore(KEY_DATABASE_NAME, KEY_STORE_NAME);
 
 type FileIdentity = {
   fingerprint: string; // "sha256:9b74c9897bac770ffc029102a200c5de"
@@ -13,7 +13,7 @@ type FileIdentity = {
   fileSize: number; // 183424
 };
 
-const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
+export const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
   return [fingerprint, fileName, fileSize.toString()].join(':');
 };
 

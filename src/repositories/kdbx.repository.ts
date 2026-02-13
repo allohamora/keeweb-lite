@@ -5,7 +5,7 @@ const KDBX_DATABASE_NAME = 'keeweb-lite';
 const KDBX_STORE_NAME = 'kdbx';
 const KDBX_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.kdbx';
 
-const kdbxStore = createStore(KDBX_DATABASE_NAME, KDBX_STORE_NAME);
+export const kdbxStore = createStore(KDBX_DATABASE_NAME, KDBX_STORE_NAME);
 
 type FileIdentity = {
   fingerprint: string; // "sha256:9b74c9897bac770ffc029102a200c5de"
@@ -13,7 +13,7 @@ type FileIdentity = {
   fileSize: number; // 183424
 };
 
-const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
+export const toStorageKey = ({ fingerprint, fileName, fileSize }: FileIdentity) => {
   return [fingerprint, fileName, fileSize.toString()].join(':');
 };
 
