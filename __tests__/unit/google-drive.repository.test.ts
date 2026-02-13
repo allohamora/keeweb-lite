@@ -1,13 +1,12 @@
-import { createStore, get, set } from 'idb-keyval';
+import { get, set } from 'idb-keyval';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   clearGoogleDriveOauthToken,
   getGoogleDriveOauthToken,
   setGoogleDriveOauthToken,
+  googleDriveOauthStore,
+  GOOGLE_DRIVE_OAUTH_STORAGE_KEY,
 } from '@/repositories/google-drive.repository';
-
-const googleDriveOauthStorageKey = 'keeweb-lite.google-drive-oauth';
-const googleDriveOauthStore = createStore('keeweb-lite', 'google-drive-oauth');
 
 describe('google-drive.repository.ts', () => {
   afterEach(async () => {
@@ -63,7 +62,7 @@ describe('google-drive.repository.ts', () => {
   describe('getGoogleDriveOauthToken', () => {
     it('returns undefined and removes invalid token records', async () => {
       await set(
-        googleDriveOauthStorageKey,
+        GOOGLE_DRIVE_OAUTH_STORAGE_KEY,
         {
           accessToken: 'access-token',
           expiresAt: '2026-02-12T20:41:30.000Z',
@@ -74,7 +73,7 @@ describe('google-drive.repository.ts', () => {
       );
 
       const token = await getGoogleDriveOauthToken();
-      const rawStoredValue = await get(googleDriveOauthStorageKey, googleDriveOauthStore);
+      const rawStoredValue = await get(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, googleDriveOauthStore);
 
       expect(token).toBeUndefined();
       expect(rawStoredValue).toBeUndefined();

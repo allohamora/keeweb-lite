@@ -4,7 +4,7 @@ import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
 
 export { toStorageKey } from '@/utils/file-identity.utils';
 
-const KEY_DATABASE_NAME = 'keeweb-lite';
+const KEY_DATABASE_NAME = 'keeweb-lite.keys';
 const KEY_STORE_NAME = 'keys';
 const KEY_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.keys';
 

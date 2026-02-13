@@ -1,13 +1,13 @@
 import { createStore, del, get, set } from 'idb-keyval';
 import { z } from 'zod';
 
-const GOOGLE_DRIVE_OAUTH_STORAGE_KEY = 'keeweb-lite.google-drive-oauth';
+export const GOOGLE_DRIVE_OAUTH_STORAGE_KEY = 'keeweb-lite.google-drive-oauth';
 const GOOGLE_DRIVE_OAUTH_LOCK_NAME = 'keeweb-lite.repository.google-drive-oauth';
 
-const GOOGLE_DRIVE_OAUTH_DATABASE_NAME = 'keeweb-lite';
+const GOOGLE_DRIVE_OAUTH_DATABASE_NAME = 'keeweb-lite.google-drive-oauth';
 const GOOGLE_DRIVE_OAUTH_STORE_NAME = 'google-drive-oauth';
 
-const googleDriveOauthStore = createStore(GOOGLE_DRIVE_OAUTH_DATABASE_NAME, GOOGLE_DRIVE_OAUTH_STORE_NAME);
+export const googleDriveOauthStore = createStore(GOOGLE_DRIVE_OAUTH_DATABASE_NAME, GOOGLE_DRIVE_OAUTH_STORE_NAME);
 
 const googleDriveOauthTokenSchema = z.object({
   refreshToken: z.string(), // "1//0gExampleRefreshToken"

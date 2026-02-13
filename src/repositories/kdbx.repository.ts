@@ -4,7 +4,7 @@ import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
 
 export { toStorageKey } from '@/utils/file-identity.utils';
 
-const KDBX_DATABASE_NAME = 'keeweb-lite';
+const KDBX_DATABASE_NAME = 'keeweb-lite.kdbx';
 const KDBX_STORE_NAME = 'kdbx';
 const KDBX_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.kdbx';
 
