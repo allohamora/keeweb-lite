@@ -28,14 +28,16 @@ export const clearGoogleDriveOauthToken = async () => {
 export const getGoogleDriveOauthToken = async () => {
   return navigator.locks.request(GOOGLE_DRIVE_OAUTH_LOCK_NAME, async () => {
     const indexedDbTokenCandidate = await get<unknown>(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, googleDriveOauthStore);
-    const indexedDbTokenResult = googleDriveOauthTokenSchema.safeParse(indexedDbTokenCandidate);
+    if (!indexedDbTokenCandidate) {
+      return;
+    }
 
+    const indexedDbTokenResult = googleDriveOauthTokenSchema.safeParse(indexedDbTokenCandidate);
     if (indexedDbTokenResult.success) {
       return indexedDbTokenResult.data;
     }
 
     await del(GOOGLE_DRIVE_OAUTH_STORAGE_KEY, googleDriveOauthStore);
-    return undefined;
   });
 };
 

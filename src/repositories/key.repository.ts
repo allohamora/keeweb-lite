@@ -28,14 +28,16 @@ export const getKey = async (fileIdentity: FileIdentity) => {
   return navigator.locks.request(KEY_REPOSITORY_LOCK_NAME, async () => {
     const storageKey = toStorageKey(fileIdentity);
     const value = await get<unknown>(storageKey, keyStore);
-    const result = keySchema.safeParse(value);
+    if (!value) {
+      return;
+    }
 
+    const result = keySchema.safeParse(value);
     if (result.success) {
       return result.data;
     }
 
     await del(storageKey, keyStore);
-    return undefined;
   });
 };
 

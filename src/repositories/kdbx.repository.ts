@@ -48,14 +48,16 @@ export type KdbxRecord = z.infer<typeof kdbxRecordSchema>;
 
 const getKdbxRecordByStorageKey = async (storageKey: string) => {
   const value = await get<unknown>(storageKey, kdbxStore);
-  const result = kdbxRecordSchema.safeParse(value);
+  if (!value) {
+    return;
+  }
 
+  const result = kdbxRecordSchema.safeParse(value);
   if (result.success) {
     return result.data;
   }
 
   await del(storageKey, kdbxStore);
-  return undefined;
 };
 
 const setKdbxRecordByStorageKey = async (storageKey: string, record: KdbxRecord) => {
