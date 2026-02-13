@@ -18,7 +18,7 @@ Drive render/sync adds conflict states, remote metadata, and retry behavior that
 1. [ ] Add Drive-mode top-bar UI: sync status circle, `Sync` button, sync metadata text, and error summary display.
 2. [ ] Implement canonical sync status rendering (`idle`, `pending`, `syncing`, `conflict`, `error`) with text and color.
 3. [ ] Extend save pipeline for Drive-backed files so edits trigger sync attempts after local mutation.
-4. [ ] Implement Drive `save` path with revision tracking (`driveRevisionId`) and persisted sync metadata (`lastSuccessfulSyncAt`, `lastSyncErrorSummary`).
+4. [ ] Implement Drive `save` path with revision tracking (`driveRevisionId`) and persisted sync metadata (`lastSuccessfulSyncAt`, `lastSyncErrorDetails`).
 5. [ ] Preserve previous successful sync timestamp when new sync attempts fail.
 6. [ ] Implement conflict-aware sync flow with revision checks, remote load, merge (`db.merge(remoteDb)`), and merged save-back when needed. Document and enforce merge semantics: entry-level merge only (match by Entry UUID + last-modified timestamp, newer entry wins), preserve overwritten older version in that Entry's History (do not discard), track deletions with tombstones so deleted entries do not reappear, and surface delete-vs-edit conflicts (deleted on one side, edited on the other) for explicit user resolution. State clearly that merge is not field-level (concurrent edits to different fields are not unioned) and recommend using Entry History UI for manual reconciliation.
 7. [ ] Limit sync load/merge retry loops to 3 attempts per cycle with exponential backoff between retries.

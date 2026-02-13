@@ -7,7 +7,7 @@ Define a single save pipeline that persists every edit immediately.
 ## Scope
 
 - Entry/group edits.
-- Local file-input source (`sourceMode = local-cache`) and Drive-backed sources (`sourceMode = drive-sync`).
+- Local file-input source and Drive-backed sources.
 
 ## Functional Requirements
 
@@ -24,7 +24,7 @@ Define a single save pipeline that persists every edit immediately.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
   - `local-cache` fallback mode: update encrypted cache/export state
-  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update sync fields (`driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, `activeSyncError`, `lastSyncErrorSummary`)
+  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update sync fields (`driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, `activeSyncError`, `lastSyncErrorDetails`)
 
 ## UI Requirements
 
@@ -45,8 +45,8 @@ Define a single save pipeline that persists every edit immediately.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed metadata: Internal App Storage (localStorage) file-info fields, including `driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, and `lastSyncErrorSummary`; runtime model holds `activeSyncError`
-  - Drive OAuth runtime token data: OAuth Token Store (`localStorage` key `keeweb-lite.oauth.google-drive`, cleared on `logout` or invalid refresh-token path)
+  - Drive-backed metadata: IndexedDB KDBX metadata via `src/repositories/kdbx.repository.ts`, including `driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, and `lastSyncErrorDetails`; runtime model holds `activeSyncError`
+  - Drive OAuth runtime token data: OAuth Token Store (IndexedDB key `keeweb-lite.google-drive-oauth` in `src/repositories/google-drive.repository.ts`, cleared on `logout` or invalid refresh-token path)
 
 ## Failure Handling
 

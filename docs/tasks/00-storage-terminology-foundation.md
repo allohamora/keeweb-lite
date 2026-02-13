@@ -16,10 +16,10 @@ If state models and storage contracts are inconsistent early, unlock/render logi
 
 ## Checklist
 
-1. [ ] Create shared domain types for `sourceMode`, `saveStatus`, `syncStatus`, `fileIdentity`, and sync error summaries.
-2. [ ] Define typed persisted file-record schema with local fields first and optional Drive fields for later extension.
-3. [ ] Implement Internal App Storage service (localStorage) with safe parse/fallback behavior.
-4. [ ] Implement Encrypted Offline Cache adapter (IndexedDB) that stores encrypted KDBX bytes only.
+1. [ ] Create shared domain types for `syncStatus`, `fileIdentity`, and sync error summaries.
+2. [x] Define typed persisted file-record schema with local fields first and optional Drive fields for later extension.
+3. [x] Implement/extend `src/repositories/kdbx.repository.ts` (IndexedDB) with safe parse/fallback behavior for metadata records.
+4. [x] Implement Encrypted Offline Cache adapter (IndexedDB) that stores encrypted KDBX bytes only.
 5. [ ] Implement runtime-memory state container for unlocked model, transient password/key buffers, save queue state, and runtime-only sync errors.
 6. [ ] Add shared status mapping helpers for UI labels/colors and `aria-live` status text.
-7. [ ] Add schema/storage tests for roundtrip behavior, malformed localStorage fallback, and identity matching.
+7. [x] Add schema/storage tests for roundtrip behavior, malformed persisted-record fallback, and identity matching.

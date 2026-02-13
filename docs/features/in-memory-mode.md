@@ -12,7 +12,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 ## Functional Requirements
 
-- Lite defaults to `sourceMode = local-cache` behavior for local file-input sources.
+- Lite defaults to local-cache behavior for local file-input sources.
 - This mode defines database persistence behavior; key-file remember defaults are still defined by Key File Unlock (`rememberKeyFiles = data`, hash-based metadata parity).
 - Keep unlocked database model in Runtime Memory (non-persistent) while session is active.
 - Apply edits immediately to the active in-memory model.
@@ -30,7 +30,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 - Runtime Memory (non-persistent): unlocked model and transient editing state.
 - Encrypted Offline Cache (IndexedDB): encrypted KDBX bytes only.
-- Internal App Storage (localStorage): recent-file metadata for the Recent files list.
+- IndexedDB KDBX metadata store (`src/repositories/kdbx.repository.ts`): persisted file metadata and source descriptors.
 
 ## Failure Handling
 

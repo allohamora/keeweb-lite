@@ -20,10 +20,9 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - Unlock screen includes:
   - password input and enter/open action
   - optional key file control
-  - Recent files list
   - password generator action
   - inline unlock message area
-- Selecting a Recent files item pre-fills file context and focuses unlock.
+- Selecting source/file context pre-fills unlock context and focuses unlock.
 - Successful unlock closes the Unlock screen and shows workspace.
 - If files are already open, the Unlock screen can be toggled without closing workspace files.
 - Workspace page contains:
@@ -45,8 +44,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 ## UI Requirements
 
 - Keyboard support on Unlock screen:
-  - `Enter` opens selected file
-  - `Up` and `Down` move Recent files selection
+  - `Enter` submits unlock for the selected source/file context
 - `Esc` closes the Unlock screen and returns to entries only when files are already open.
 - Save and sync state must be visible without developer tools.
 - Save and sync indicators must include color + text labels (not color-only).
@@ -55,18 +53,17 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - `Download` must be visible at top of opened DB view.
 - `Sync` must be visible for Drive-backed files at top of opened DB view.
 - Sync metadata must be visible at top of opened DB view.
-- Drive-backed sync state uses canonical status model semantics (`syncStatus`, `saveStatus`, `lastSyncErrorSummary`) for status-circle rendering.
+- Drive-backed sync state uses canonical status model semantics (`syncStatus`, `lastSyncErrorDetails`) for status-circle rendering.
 - Source selector labels must use canonical names: `Local` and `Google Drive`.
 
 ## Data and Storage
 
-- Recent files list is populated from recent-file metadata in Internal App Storage (localStorage).
 - Entered password and raw key bytes remain in Runtime Memory (non-persistent) only.
 
 ## Failure Handling
 
 - Unlock errors keep user on the Unlock screen with actionable feedback.
-- Missing/revoked Recent files targets can be removed or reselected.
+- Missing/revoked source targets can be reselected.
 
 ## Security and Privacy
 
@@ -75,7 +72,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 
 ## Acceptance Criteria
 
-- Unlock screen is sufficient for both first open and quick reopen.
+- Unlock screen is sufficient for both first open and reopen.
 - Workspace page reliably renders KeeWeb-like menu/list/details edit structure.
 - Opened DB view shows two status circles, download button, and sync metadata at top.
 - Navigation between Unlock screen and workspace is clear and predictable.
