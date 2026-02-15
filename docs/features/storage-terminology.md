@@ -27,14 +27,14 @@ Use these canonical terms consistently across feature specs.
   - Local record shape:
     - `id`
     - `type = local`
-    - `kdbx` (`name`, optional `encryptedBytes`)
+    - `kdbx` (`name`, `encryptedBytes`)
     - optional `key` (`name`, `hash`)
     - optional `lastOpenedAt`
   - Google Drive record shape:
     - `id`
     - `type = google-drive`
     - `source` (`id`, optional `locator`, optional `options`)
-    - `kdbx` (`name`, optional `encryptedBytes`)
+    - `kdbx` (`name`, `encryptedBytes`)
     - optional `key` (`name`, `hash`)
     - optional `oauth` (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
     - optional `sync` (`status`, optional `revisionId`, optional `lastSuccessfulAt`, optional `lastError`)

@@ -71,7 +71,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Persist Drive-backed file records in IndexedDB via `src/repositories/record.repository.ts` with `type = google-drive`:
   - `id`
   - `source` (`id`, optional `locator`, optional `options`)
-  - `kdbx` (`name`, optional `encryptedBytes`)
+  - `kdbx` (`name`, `encryptedBytes`)
   - optional `key` (`name`, `hash`) for remember-key behavior
   - optional `sync` (`status`, optional `revisionId`, optional `lastSuccessfulAt`, optional `lastError`)
   - optional `oauth` (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)

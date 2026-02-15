@@ -36,7 +36,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 - Store local records in IndexedDB via `src/repositories/record.repository.ts`:
   - `type = local`
-  - `kdbx.name` and optional `kdbx.encryptedBytes`
+  - `kdbx` (`name`, `encryptedBytes`)
   - optional `key` metadata (`name`, `hash`) for remember-key behavior
   - optional `lastOpenedAt`
 - Encrypted Offline Cache is represented by `record.kdbx.encryptedBytes` in `record.repository` records.
