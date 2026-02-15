@@ -46,7 +46,7 @@ export const clearKey = async (fileIdentity: FileIdentity) => {
   });
 };
 
-export const clearAllKeys = async () => {
+export const clearKeys = async () => {
   await navigator.locks.request(KEY_REPOSITORY_LOCK_NAME, async () => {
     await clear(keyStore);
   });

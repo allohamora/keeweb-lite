@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { get, set } from 'idb-keyval';
-import { clearAllKeys, clearKey, getKey, setKey, keyStore } from '@/repositories/key.repository';
+import { clearKey, clearKeys, getKey, setKey, keyStore } from '@/repositories/key.repository';
 import { toStorageKey } from '@/utils/file-identity.utils';
 import { randomInt } from 'node:crypto';
 
@@ -16,7 +16,7 @@ const createFileIdentity = () => {
 
 describe('key.repository.ts', () => {
   afterEach(async () => {
-    await clearAllKeys();
+    await clearKeys();
   });
 
   describe('setKey', () => {
@@ -79,7 +79,7 @@ describe('key.repository.ts', () => {
     });
   });
 
-  describe('clearAllKeys', () => {
+  describe('clearKeys', () => {
     it('deletes all stored keys', async () => {
       const firstIdentity = createFileIdentity();
       const secondIdentity = createFileIdentity();
@@ -87,7 +87,7 @@ describe('key.repository.ts', () => {
       await setKey(firstIdentity, { fileHash: 'hash-5', fileName: 'first.keyx' });
       await setKey(secondIdentity, { fileHash: 'hash-6', fileName: 'second.keyx' });
 
-      await clearAllKeys();
+      await clearKeys();
 
       expect(await getKey(firstIdentity)).toBeUndefined();
       expect(await getKey(secondIdentity)).toBeUndefined();
