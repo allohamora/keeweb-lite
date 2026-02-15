@@ -1,6 +1,7 @@
 import { get, set } from 'idb-keyval';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  RECORDS_STORAGE_KEY,
   clearRecords,
   createRecord,
   getRecords,
@@ -8,8 +9,6 @@ import {
   setRecords,
   updateRecord,
 } from '@/repositories/record.repository';
-
-const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
 
 describe('record.repository.ts', () => {
   afterEach(async () => {

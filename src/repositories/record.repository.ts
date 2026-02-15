@@ -2,7 +2,7 @@ import { del, get, update } from 'idb-keyval';
 import { z } from 'zod';
 import { Lock } from '@/utils/lock.utils';
 
-const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
+export const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
 
 const lock = new Lock('record.repository');
 
