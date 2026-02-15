@@ -7,7 +7,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 ## Scope
 
 - Unlock screen (startup, unlock, reopen).
-- Detailed startup screen spec: [`docs/screens/home-screen.md`](../screens/home-screen.md).
+- Detailed startup screen spec: [`docs/screens/unlock-screen.md`](../screens/unlock-screen.md).
 - Workspace page (KeeWeb-like render/edit layout).
 - Password generator access in Unlock screen and workspace contexts.
 
