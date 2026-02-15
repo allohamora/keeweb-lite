@@ -139,6 +139,13 @@ src/
 
 - After changes, update tests and docs when needed to keep behavior and documentation aligned.
 
+### Testing Style
+
+- Prefer nested test suites grouped by module and method.
+- Repository tests should use this shape:
+  - `describe('something.repo', () => { describe('getRecords', () => { it('something', () => {}) }) })`
+- Keep each `it(...)` focused on one behavior.
+
 ## Security and Privacy Baseline
 
 - Never log secrets (passwords, key file data, decrypted values, OAuth tokens).
