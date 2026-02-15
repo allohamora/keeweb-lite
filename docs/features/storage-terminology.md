@@ -39,7 +39,7 @@ Use these canonical terms consistently across feature specs.
     - optional `oauth` (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
     - optional `sync` (`status`, optional `revisionId`, optional `lastSuccessfulAt`, optional `lastError`)
     - optional `lastOpenedAt`
-  - Invalid persisted records are removed on read (safe-parse fallback deletes malformed value).
+  - If the persisted records array fails validation on read (via `getRecords` with `safeParse`), the entire store is cleared and an empty array is returned.
 - Encrypted Offline Cache (IndexedDB)
   - Implemented by `record.kdbx.encryptedBytes` in Records Store.
   - Stores encrypted KDBX bytes only (no decrypted values, no plaintext unlock credentials).
