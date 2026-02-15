@@ -1,15 +1,10 @@
-import { del, delMany, get, keys, update } from 'idb-keyval';
+import { del, get, update } from 'idb-keyval';
 import { z } from 'zod';
-import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
 import { Lock } from '@/utils/lock.utils';
 
-const RECORD_STORAGE_KEY_PREFIX = 'keeweb-lite.records:';
+const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
 
 const lock = new Lock('record.repository');
-
-export const toRecordStorageKey = (fileIdentity: FileIdentity) => {
-  return `${RECORD_STORAGE_KEY_PREFIX}${toStorageKey(fileIdentity)}`;
-};
 
 const keySchema = z.object({
   hash: z.string(),
@@ -67,57 +62,37 @@ const googleDriveFileRecordSchema = z.object({
 });
 
 const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, googleDriveFileRecordSchema]);
+const fileRecordsSchema = z.array(fileRecordSchema);
 
 export type FileRecord = z.infer<typeof fileRecordSchema>;
 
-export const getFileRecord = async (fileIdentity: FileIdentity) => {
+export const getRecords = async () => {
   return lock.runInLock(async () => {
-    const storageKey = toRecordStorageKey(fileIdentity);
-    const value = await get<unknown>(storageKey);
+    const value = await get<unknown>(RECORDS_STORAGE_KEY);
     if (!value) {
-      return;
+      return [];
     }
 
-    const result = fileRecordSchema.safeParse(value);
+    const result = fileRecordsSchema.safeParse(value);
     if (result.success) {
       return result.data;
     }
 
-    await del(storageKey);
+    await del(RECORDS_STORAGE_KEY);
+    return [];
   });
 };
 
-export const setFileRecord = async (fileIdentity: FileIdentity, record: FileRecord) => {
+export const setRecords = async (records: FileRecord[]) => {
   await lock.runInLock(async () => {
-    const storageKey = toRecordStorageKey(fileIdentity);
-    const parsedRecord = fileRecordSchema.parse(record);
-    const normalizedRecord: FileRecord = {
-      ...parsedRecord,
-      kdbx: {
-        ...parsedRecord.kdbx,
-        encryptedBytes: parsedRecord.kdbx.encryptedBytes ? new Uint8Array(parsedRecord.kdbx.encryptedBytes) : undefined,
-      },
-    };
+    const parsedRecords = fileRecordsSchema.parse(records);
 
-    await update(storageKey, () => normalizedRecord);
+    await update(RECORDS_STORAGE_KEY, () => parsedRecords);
   });
 };
 
-export const clearFileRecord = async (fileIdentity: FileIdentity) => {
+export const clearRecords = async () => {
   await lock.runInLock(async () => {
-    await del(toRecordStorageKey(fileIdentity));
-  });
-};
-
-export const clearFileRecords = async () => {
-  await lock.runInLock(async () => {
-    const storedKeys = await keys<string>();
-    const recordStorageKeys = storedKeys.filter((storedKey) => {
-      return typeof storedKey === 'string' && storedKey.startsWith(RECORD_STORAGE_KEY_PREFIX);
-    });
-
-    if (recordStorageKeys.length > 0) {
-      await delMany(recordStorageKeys);
-    }
+    await del(RECORDS_STORAGE_KEY);
   });
 };
