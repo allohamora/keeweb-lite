@@ -1,4 +1,4 @@
-import { clear, createStore, del, get, set } from 'idb-keyval';
+import { clear as clearStore, createStore, del, get as getValue, set as setValue } from 'idb-keyval';
 import { z } from 'zod';
 import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
 
@@ -16,9 +16,10 @@ const syncErrorDetailsSchema = z.object({
   timestamp: z.string(), // "2026-02-12T20:41:30.000Z"
 });
 
-const metadataSchema = z.object({
+const kdbxRecordSchema = z.object({
   id: z.string().optional(), // "1AbCdEfGhIjKlMnOp"
   name: z.string().optional(), // "Personal Vault.kdbx"
+  encryptedBytes: z.instanceof(Uint8Array).optional(),
   sourceType: z.enum(['file', 'gdrive']),
   sourceLocator: z.string().optional(), // "gdrive:fileId=1AbCdEfGhIjKlMnOp"
   sourceOptions: z.record(z.string(), z.unknown()).optional(), // { "driveId": "0AExampleDrive", "supportsAllDrives": true }
@@ -30,17 +31,16 @@ const metadataSchema = z.object({
   challengeResponseState: z.string().optional(), // "required"
 });
 
-const kdbxRecordSchema = z.object({
-  encryptedBytes: z.instanceof(Uint8Array).optional(),
-  metadata: metadataSchema,
-});
+const kdbxMetadataSchema = kdbxRecordSchema.omit({ encryptedBytes: true });
+const kdbxRecordPatchSchema = kdbxRecordSchema.partial();
 
 export type KdbxSyncErrorDetails = z.infer<typeof syncErrorDetailsSchema>;
-export type KdbxMetadata = z.infer<typeof metadataSchema>;
+export type KdbxMetadata = z.infer<typeof kdbxMetadataSchema>;
 export type KdbxRecord = z.infer<typeof kdbxRecordSchema>;
+export type KdbxRecordPatch = z.infer<typeof kdbxRecordPatchSchema>;
 
 const getKdbxRecordByStorageKey = async (storageKey: string) => {
-  const value = await get<unknown>(storageKey, kdbxStore);
+  const value = await getValue<unknown>(storageKey, kdbxStore);
   if (!value) {
     return;
   }
@@ -54,7 +54,13 @@ const getKdbxRecordByStorageKey = async (storageKey: string) => {
 };
 
 const setKdbxRecordByStorageKey = async (storageKey: string, record: KdbxRecord) => {
-  await set(storageKey, kdbxRecordSchema.parse(record), kdbxStore);
+  const parsedRecord = kdbxRecordSchema.parse(record);
+  const normalizedRecord = {
+    ...parsedRecord,
+    encryptedBytes: parsedRecord.encryptedBytes ? new Uint8Array(parsedRecord.encryptedBytes) : undefined,
+  };
+
+  await setValue(storageKey, normalizedRecord, kdbxStore);
 };
 
 export const getKdbxRecord = async (fileIdentity: FileIdentity) => {
@@ -69,63 +75,23 @@ export const setKdbxRecord = async (fileIdentity: FileIdentity, record: KdbxReco
   });
 };
 
-export const getKdbxMetadata = async (fileIdentity: FileIdentity) => {
+export const patchKdbxRecord = async (fileIdentity: FileIdentity, patch: KdbxRecordPatch) => {
   return navigator.locks.request(KDBX_REPOSITORY_LOCK_NAME, async () => {
     const storageKey = toStorageKey(fileIdentity);
-    const record = await getKdbxRecordByStorageKey(storageKey);
-    return record?.metadata;
-  });
-};
-
-export const setKdbxMetadata = async (fileIdentity: FileIdentity, metadata: KdbxMetadata) => {
-  await navigator.locks.request(KDBX_REPOSITORY_LOCK_NAME, async () => {
-    const storageKey = toStorageKey(fileIdentity);
     const existingRecord = await getKdbxRecordByStorageKey(storageKey);
-    const nextRecord: KdbxRecord = {
-      encryptedBytes: existingRecord?.encryptedBytes,
-      metadata: metadataSchema.parse(metadata),
-    };
+    const normalizedPatch = kdbxRecordPatchSchema.parse(patch);
+    const nextRecord: KdbxRecord = kdbxRecordSchema.parse({
+      ...existingRecord,
+      ...normalizedPatch,
+    });
 
     await setKdbxRecordByStorageKey(storageKey, nextRecord);
+    return nextRecord;
   });
 };
 
-export const getKdbxEncryptedBytes = async (fileIdentity: FileIdentity) => {
-  return navigator.locks.request(KDBX_REPOSITORY_LOCK_NAME, async () => {
-    const storageKey = toStorageKey(fileIdentity);
-    const record = await getKdbxRecordByStorageKey(storageKey);
-    return record?.encryptedBytes;
-  });
-};
-
-export const setKdbxEncryptedBytes = async (fileIdentity: FileIdentity, encryptedBytes: Uint8Array) => {
+export const clearKdbxRecords = async () => {
   await navigator.locks.request(KDBX_REPOSITORY_LOCK_NAME, async () => {
-    const storageKey = toStorageKey(fileIdentity);
-    const existingRecord = await getKdbxRecordByStorageKey(storageKey);
-
-    if (existingRecord === undefined) {
-      throw new Error('Cannot store encrypted KDBX bytes before metadata is initialized.');
-    }
-
-    const normalizedEncryptedBytes = new Uint8Array(encryptedBytes);
-
-    const nextRecord: KdbxRecord = {
-      encryptedBytes: normalizedEncryptedBytes,
-      metadata: existingRecord.metadata,
-    };
-
-    await setKdbxRecordByStorageKey(storageKey, nextRecord);
-  });
-};
-
-export const clearKdbxRecord = async (fileIdentity: FileIdentity) => {
-  await navigator.locks.request(KDBX_REPOSITORY_LOCK_NAME, async () => {
-    await del(toStorageKey(fileIdentity), kdbxStore);
-  });
-};
-
-export const clearAllKdbxRecords = async () => {
-  await navigator.locks.request(KDBX_REPOSITORY_LOCK_NAME, async () => {
-    await clear(kdbxStore);
+    await clearStore(kdbxStore);
   });
 };

@@ -1,17 +1,13 @@
-import { get, set } from 'idb-keyval';
+import { get as getValue, set as setValue } from 'idb-keyval';
 import { afterEach, describe, expect, it } from 'vitest';
 import { toStorageKey } from '@/utils/file-identity.utils';
 import {
+  clearKdbxRecords,
   type KdbxMetadata,
-  clearAllKdbxRecords,
-  clearKdbxRecord,
-  getKdbxEncryptedBytes,
-  getKdbxMetadata,
   getKdbxRecord,
-  setKdbxEncryptedBytes,
-  setKdbxMetadata,
-  setKdbxRecord,
   kdbxStore,
+  patchKdbxRecord,
+  setKdbxRecord,
 } from '@/repositories/kdbx.repository';
 import { randomInt } from 'node:crypto';
 
@@ -45,13 +41,13 @@ const createEncryptedBytes = () => {
 const createRecord = () => {
   return {
     encryptedBytes: createEncryptedBytes(),
-    metadata: createMetadata(),
+    ...createMetadata(),
   };
 };
 
 describe('kdbx.repository.ts', () => {
   afterEach(async () => {
-    await clearAllKdbxRecords();
+    await clearKdbxRecords();
   });
 
   describe('setKdbxRecord/getKdbxRecord', () => {
@@ -71,16 +67,16 @@ describe('kdbx.repository.ts', () => {
       const fileIdentity = createFileIdentity();
       const storageKey = toStorageKey(fileIdentity);
 
-      await set(storageKey, { metadata: { syncStatus: 'idle' } }, kdbxStore);
+      await setValue(storageKey, { syncStatus: 'idle' }, kdbxStore);
       const record = await getKdbxRecord(fileIdentity);
-      const rawStoredValue = await get(storageKey, kdbxStore);
+      const rawStoredValue = await getValue(storageKey, kdbxStore);
 
       expect(record).toBeUndefined();
       expect(rawStoredValue).toBeUndefined();
     });
   });
 
-  describe('setKdbxMetadata', () => {
+  describe('patchKdbxRecord', () => {
     it('updates metadata while preserving existing encrypted bytes', async () => {
       const fileIdentity = createFileIdentity();
       const initialEncryptedBytes = createEncryptedBytes();
@@ -88,7 +84,7 @@ describe('kdbx.repository.ts', () => {
 
       await setKdbxRecord(fileIdentity, {
         encryptedBytes: initialEncryptedBytes,
-        metadata,
+        ...metadata,
       });
 
       const nextMetadata = {
@@ -97,17 +93,20 @@ describe('kdbx.repository.ts', () => {
         syncStatus: 'pending' as const,
       };
 
-      await setKdbxMetadata(fileIdentity, nextMetadata);
+      await patchKdbxRecord(fileIdentity, nextMetadata);
 
-      expect(await getKdbxMetadata(fileIdentity)).toEqual(nextMetadata);
-      expect(await getKdbxEncryptedBytes(fileIdentity)).toEqual(initialEncryptedBytes);
+      const persistedRecord = await getKdbxRecord(fileIdentity);
+      expect(persistedRecord).toEqual({
+        encryptedBytes: initialEncryptedBytes,
+        ...nextMetadata,
+      });
     });
 
-    it('keeps the last value when setKdbxMetadata runs in parallel', async () => {
+    it('keeps the last value when patchKdbxRecord runs in parallel', async () => {
       const sharedIdentity = {
         fileName: 'shared-vault.kdbx',
         fileSize: 8192,
-        fingerprint: 'sha256:parallel-set-kdbx-metadata',
+        fingerprint: 'sha256:parallel-partial-set-kdbx',
       };
       const firstMetadata = {
         ...createMetadata(),
@@ -123,76 +122,40 @@ describe('kdbx.repository.ts', () => {
       };
 
       await Promise.all([
-        setKdbxMetadata(sharedIdentity, firstMetadata),
-        setKdbxMetadata(sharedIdentity, secondMetadata),
-        setKdbxMetadata(sharedIdentity, thirdMetadata),
+        patchKdbxRecord(sharedIdentity, firstMetadata),
+        patchKdbxRecord(sharedIdentity, secondMetadata),
+        patchKdbxRecord(sharedIdentity, thirdMetadata),
       ]);
 
-      expect(await getKdbxMetadata(sharedIdentity)).toEqual(thirdMetadata);
+      expect(await getKdbxRecord(sharedIdentity)).toEqual(thirdMetadata);
     });
-  });
 
-  describe('setKdbxEncryptedBytes/getKdbxEncryptedBytes', () => {
     it('stores encrypted bytes after metadata initialization', async () => {
       const fileIdentity = createFileIdentity();
       const encryptedBytes = createEncryptedBytes();
 
-      await setKdbxMetadata(fileIdentity, createMetadata());
-      await setKdbxEncryptedBytes(fileIdentity, encryptedBytes);
+      await patchKdbxRecord(fileIdentity, createMetadata());
+      await patchKdbxRecord(fileIdentity, { encryptedBytes });
 
-      expect(await getKdbxEncryptedBytes(fileIdentity)).toEqual(encryptedBytes);
+      expect((await getKdbxRecord(fileIdentity))?.encryptedBytes).toEqual(encryptedBytes);
     });
 
     it('copies encrypted bytes before storing them', async () => {
       const fileIdentity = createFileIdentity();
       const encryptedBytes = new Uint8Array([10, 11, 12]);
 
-      await setKdbxMetadata(fileIdentity, createMetadata());
-      await setKdbxEncryptedBytes(fileIdentity, encryptedBytes);
+      await patchKdbxRecord(fileIdentity, createMetadata());
+      await patchKdbxRecord(fileIdentity, { encryptedBytes });
 
       encryptedBytes[0] = 99;
 
-      expect(await getKdbxEncryptedBytes(fileIdentity)).toEqual(new Uint8Array([10, 11, 12]));
+      expect((await getKdbxRecord(fileIdentity))?.encryptedBytes).toEqual(new Uint8Array([10, 11, 12]));
     });
 
-    it('throws when metadata does not exist yet', async () => {
+    it('throws when patch cannot produce a valid record', async () => {
       const fileIdentity = createFileIdentity();
 
-      await expect(setKdbxEncryptedBytes(fileIdentity, createEncryptedBytes())).rejects.toThrow(
-        'Cannot store encrypted KDBX bytes before metadata is initialized.',
-      );
-    });
-  });
-
-  describe('clearKdbxRecord', () => {
-    it('deletes only the selected record', async () => {
-      const targetIdentity = createFileIdentity();
-      const otherIdentity = createFileIdentity();
-
-      const otherRecord = createRecord();
-
-      await setKdbxRecord(targetIdentity, createRecord());
-      await setKdbxRecord(otherIdentity, otherRecord);
-
-      await clearKdbxRecord(targetIdentity);
-
-      expect(await getKdbxRecord(targetIdentity)).toBeUndefined();
-      expect(await getKdbxRecord(otherIdentity)).toEqual(otherRecord);
-    });
-  });
-
-  describe('clearAllKdbxRecords', () => {
-    it('deletes all stored kdbx records', async () => {
-      const firstIdentity = createFileIdentity();
-      const secondIdentity = createFileIdentity();
-
-      await setKdbxRecord(firstIdentity, createRecord());
-      await setKdbxRecord(secondIdentity, createRecord());
-
-      await clearAllKdbxRecords();
-
-      expect(await getKdbxRecord(firstIdentity)).toBeUndefined();
-      expect(await getKdbxRecord(secondIdentity)).toBeUndefined();
+      await expect(patchKdbxRecord(fileIdentity, { encryptedBytes: createEncryptedBytes() })).rejects.toThrow();
     });
   });
 });
