@@ -33,6 +33,16 @@ const sourceSchema = z.discriminatedUnion('type', [
     .strict(),
 ]);
 
+const oauthSchema = z
+  .object({
+    accessToken: z.string(),
+    expiresAt: z.string(),
+    provider: z.literal('google-drive'),
+    refreshToken: z.string(),
+    scope: z.array(z.string()).optional(),
+  })
+  .strict();
+
 const syncErrorSchema = z
   .object({
     code: z.string(),
@@ -64,6 +74,7 @@ const fileRecordSchema = z
     kdbx: kdbxSchema,
     key: keySchema.optional(),
     lastOpenedAt: z.string().optional(),
+    oauth: oauthSchema.optional(),
     source: sourceSchema.optional(),
     sync: syncSchema.optional(),
   })
