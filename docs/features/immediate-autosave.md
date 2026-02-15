@@ -24,7 +24,7 @@ Define a single save pipeline that persists every edit immediately.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
   - `local-cache` fallback mode: update encrypted cache/export state
-  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update sync fields (`driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, `activeSyncError`, `lastSyncErrorDetails`)
+  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update record sync fields (`sync.revisionId`, `sync.lastSuccessfulAt`, `sync.status`, runtime `activeSyncError`, `sync.lastError`)
 
 ## UI Requirements
 
@@ -40,20 +40,20 @@ Define a single save pipeline that persists every edit immediately.
 
 ## Data and Storage
 
-- Queue/save state is maintained in Runtime Memory (non-persistent).
+- Queue/save state is maintained in runtime app state (Zustand-style, non-persistent).
 - Save queue state includes lock/queue indicators used for status rendering.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed metadata: IndexedDB KDBX metadata via `src/repositories/kdbx.repository.ts`, including `driveRevisionId`, `lastSuccessfulSyncAt`, `syncStatus`, and `lastSyncErrorDetails`; runtime model holds `activeSyncError`
-  - Drive OAuth runtime token data: OAuth Token Store (IndexedDB key `keeweb-lite.google-drive-oauth` in `src/repositories/google-drive.repository.ts`, cleared on `logout` or invalid refresh-token path)
+  - Drive-backed metadata: persisted in `src/repositories/record.repository.ts` on Drive records (`sync.status`, `sync.revisionId`, `sync.lastSuccessfulAt`, `sync.lastError`); runtime store holds `activeSyncError`
+  - Drive OAuth runtime token data: persisted in Drive records as optional `oauth` field (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
 
 ## Failure Handling
 
 - Save errors keep unsaved/error indicators visible.
 - Retry path must exist (auto-retry and/or explicit user action).
 - Failed save must never be marked as successful.
-- Failed Drive sync retries must preserve previous successful `lastSuccessfulSyncAt` value.
+- Failed Drive sync retries must preserve previous successful `sync.lastSuccessfulAt` value.
 
 ## Security and Privacy
 
