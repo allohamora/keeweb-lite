@@ -10,75 +10,62 @@ const RECORD_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.records';
 
 export const fileRecordStore = createStore(RECORD_DATABASE_NAME, RECORD_STORE_NAME);
 
-const keySchema = z
-  .object({
-    hash: z.string(),
-    name: z.string(),
-  })
-  .strict();
+const keySchema = z.object({
+  hash: z.string(),
+  name: z.string(),
+});
 
-const sourceSchema = z.discriminatedUnion('type', [
-  z
-    .object({
-      type: z.literal('file'),
-    })
-    .strict(),
-  z
-    .object({
-      id: z.string(),
-      locator: z.string().optional(),
-      options: z.record(z.string(), z.unknown()).optional(),
-      type: z.literal('gdrive'),
-    })
-    .strict(),
-]);
+const sourceSchema = z.object({
+  id: z.string(),
+  locator: z.string().optional(),
+  options: z.record(z.string(), z.unknown()).optional(),
+});
 
-const oauthSchema = z
-  .object({
-    accessToken: z.string(),
-    expiresAt: z.string(),
-    provider: z.literal('google-drive'),
-    refreshToken: z.string(),
-    scope: z.array(z.string()).optional(),
-  })
-  .strict();
+const oauthSchema = z.object({
+  accessToken: z.string(),
+  expiresAt: z.string(),
+  refreshToken: z.string(),
+  scope: z.array(z.string()).optional(),
+});
 
-const syncErrorSchema = z
-  .object({
-    code: z.string(),
-    message: z.string(),
-    timestamp: z.string(),
-  })
-  .strict();
+const syncErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  timestamp: z.string(),
+});
 
 const syncStatusSchema = z.enum(['idle', 'pending', 'syncing', 'conflict', 'error']);
 
-const syncSchema = z
-  .object({
-    lastError: syncErrorSchema.optional(),
-    lastSuccessfulAt: z.string().optional(),
-    revisionId: z.string().optional(),
-    status: syncStatusSchema,
-  })
-  .strict();
+const syncSchema = z.object({
+  lastError: syncErrorSchema.optional(),
+  lastSuccessfulAt: z.string().optional(),
+  revisionId: z.string().optional(),
+  status: syncStatusSchema,
+});
 
-const kdbxSchema = z
-  .object({
-    encryptedBytes: z.instanceof(Uint8Array).optional(),
-    name: z.string().optional(),
-  })
-  .strict();
+const kdbxSchema = z.object({
+  encryptedBytes: z.instanceof(Uint8Array).optional(),
+  name: z.string().optional(),
+});
 
-const fileRecordSchema = z
-  .object({
-    kdbx: kdbxSchema,
-    key: keySchema.optional(),
-    lastOpenedAt: z.string().optional(),
-    oauth: oauthSchema.optional(),
-    source: sourceSchema.optional(),
-    sync: syncSchema.optional(),
-  })
-  .strict();
+const localFileRecordSchema = z.object({
+  kdbx: kdbxSchema,
+  key: keySchema.optional(),
+  lastOpenedAt: z.string().optional(),
+  type: z.literal('local'),
+});
+
+const googleDriveFileRecordSchema = z.object({
+  kdbx: kdbxSchema,
+  key: keySchema.optional(),
+  lastOpenedAt: z.string().optional(),
+  oauth: oauthSchema.optional(),
+  source: sourceSchema,
+  sync: syncSchema.optional(),
+  type: z.literal('google-drive'),
+});
+
+const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, googleDriveFileRecordSchema]);
 
 export type FileRecord = z.infer<typeof fileRecordSchema>;
 
