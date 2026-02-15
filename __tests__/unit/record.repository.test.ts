@@ -1,13 +1,7 @@
 import { get, set } from 'idb-keyval';
 import { randomInt } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  clearFileRecords,
-  fileRecordStore,
-  getFileRecord,
-  setFileRecord,
-  toStorageKey,
-} from '@/repositories/record.repository';
+import { clearFileRecords, getFileRecord, setFileRecord, toRecordStorageKey } from '@/repositories/record.repository';
 
 const createFileIdentity = () => {
   const seed = randomInt(1, 1000);
@@ -130,26 +124,22 @@ describe('record.repository.ts', () => {
 
   it('returns undefined and removes invalid oauth payloads missing refresh token', async () => {
     const fileIdentity = createFileIdentity();
-    const storageKey = toStorageKey(fileIdentity);
+    const storageKey = toRecordStorageKey(fileIdentity);
 
-    await set(
-      storageKey,
-      {
-        type: 'google-drive',
-        kdbx: { name: 'vault.kdbx' },
-        oauth: {
-          accessToken: 'access-token',
-          expiresAt: '2026-02-12T20:41:30.000Z',
-        },
-        source: {
-          id: '1AbCdEfGhIjKlMnOp',
-        },
+    await set(storageKey, {
+      type: 'google-drive',
+      kdbx: { name: 'vault.kdbx' },
+      oauth: {
+        accessToken: 'access-token',
+        expiresAt: '2026-02-12T20:41:30.000Z',
       },
-      fileRecordStore,
-    );
+      source: {
+        id: '1AbCdEfGhIjKlMnOp',
+      },
+    });
 
     const record = await getFileRecord(fileIdentity);
-    const rawStoredValue = await get(storageKey, fileRecordStore);
+    const rawStoredValue = await get(storageKey);
 
     expect(record).toBeUndefined();
     expect(rawStoredValue).toBeUndefined();
@@ -183,20 +173,16 @@ describe('record.repository.ts', () => {
 
   it('returns undefined and removes invalid google-drive source payloads without id', async () => {
     const fileIdentity = createFileIdentity();
-    const storageKey = toStorageKey(fileIdentity);
+    const storageKey = toRecordStorageKey(fileIdentity);
 
-    await set(
-      storageKey,
-      {
-        type: 'google-drive',
-        kdbx: { name: 'vault.kdbx' },
-        source: {},
-      },
-      fileRecordStore,
-    );
+    await set(storageKey, {
+      type: 'google-drive',
+      kdbx: { name: 'vault.kdbx' },
+      source: {},
+    });
 
     const record = await getFileRecord(fileIdentity);
-    const rawStoredValue = await get(storageKey, fileRecordStore);
+    const rawStoredValue = await get(storageKey);
 
     expect(record).toBeUndefined();
     expect(rawStoredValue).toBeUndefined();
@@ -252,6 +238,31 @@ describe('record.repository.ts', () => {
       source: {
         id: '1AbCdEfGhIjKlMnOp',
       },
+    });
+  });
+
+  it('clears only namespaced record keys and keeps unrelated default-store keys', async () => {
+    const fileIdentity = createFileIdentity();
+    const recordStorageKey = toRecordStorageKey(fileIdentity);
+    const unrelatedKey = 'keeweb-lite.google-drive-oauth';
+
+    await set(recordStorageKey, {
+      type: 'local',
+      kdbx: { name: 'vault.kdbx' },
+    });
+    await set(unrelatedKey, {
+      accessToken: 'access-token',
+      expiresAt: '2026-02-12T20:41:30.000Z',
+      refreshToken: 'refresh-token',
+    });
+
+    await clearFileRecords();
+
+    expect(await get(recordStorageKey)).toBeUndefined();
+    expect(await get(unrelatedKey)).toEqual({
+      accessToken: 'access-token',
+      expiresAt: '2026-02-12T20:41:30.000Z',
+      refreshToken: 'refresh-token',
     });
   });
 });

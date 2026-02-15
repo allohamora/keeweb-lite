@@ -1,14 +1,15 @@
-import { clear as clearStore, createStore, del, get as getValue, set as setValue } from 'idb-keyval';
+import { del, delMany, get as getValue, keys, update } from 'idb-keyval';
 import { z } from 'zod';
 import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
 
 export { toStorageKey } from '@/utils/file-identity.utils';
 
-const RECORD_DATABASE_NAME = 'keeweb-lite.records';
-const RECORD_STORE_NAME = 'records';
+const RECORD_STORAGE_KEY_PREFIX = 'keeweb-lite.records:';
 const RECORD_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.records';
 
-export const fileRecordStore = createStore(RECORD_DATABASE_NAME, RECORD_STORE_NAME);
+export const toRecordStorageKey = (fileIdentity: FileIdentity) => {
+  return `${RECORD_STORAGE_KEY_PREFIX}${toStorageKey(fileIdentity)}`;
+};
 
 const keySchema = z.object({
   hash: z.string(),
@@ -71,8 +72,8 @@ export type FileRecord = z.infer<typeof fileRecordSchema>;
 
 export const getFileRecord = async (fileIdentity: FileIdentity) => {
   return navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
-    const storageKey = toStorageKey(fileIdentity);
-    const value = await getValue<unknown>(storageKey, fileRecordStore);
+    const storageKey = toRecordStorageKey(fileIdentity);
+    const value = await getValue<unknown>(storageKey);
     if (!value) {
       return;
     }
@@ -82,13 +83,13 @@ export const getFileRecord = async (fileIdentity: FileIdentity) => {
       return result.data;
     }
 
-    await del(storageKey, fileRecordStore);
+    await del(storageKey);
   });
 };
 
 export const setFileRecord = async (fileIdentity: FileIdentity, record: FileRecord) => {
   await navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
-    const storageKey = toStorageKey(fileIdentity);
+    const storageKey = toRecordStorageKey(fileIdentity);
     const parsedRecord = fileRecordSchema.parse(record);
     const normalizedRecord: FileRecord = {
       ...parsedRecord,
@@ -98,18 +99,25 @@ export const setFileRecord = async (fileIdentity: FileIdentity, record: FileReco
       },
     };
 
-    await setValue(storageKey, normalizedRecord, fileRecordStore);
+    await update(storageKey, () => normalizedRecord);
   });
 };
 
 export const clearFileRecord = async (fileIdentity: FileIdentity) => {
   await navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
-    await del(toStorageKey(fileIdentity), fileRecordStore);
+    await del(toRecordStorageKey(fileIdentity));
   });
 };
 
 export const clearFileRecords = async () => {
   await navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
-    await clearStore(fileRecordStore);
+    const storedKeys = await keys<string>();
+    const recordStorageKeys = storedKeys.filter((storedKey) => {
+      return typeof storedKey === 'string' && storedKey.startsWith(RECORD_STORAGE_KEY_PREFIX);
+    });
+
+    if (recordStorageKeys.length > 0) {
+      await delMany(recordStorageKeys);
+    }
   });
 };
