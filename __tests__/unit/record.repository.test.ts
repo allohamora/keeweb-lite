@@ -81,6 +81,38 @@ describe('record.repository', () => {
 
       expect(await getRecords()).toEqual([]);
     });
+
+    it('returns an empty array when storage is empty', async () => {
+      expect(await getRecords()).toEqual([]);
+    });
+
+    it('stores and reads mixed record types', async () => {
+      const records = [
+        {
+          id: 'local-record-1',
+          type: 'local' as const,
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'local-vault.kdbx',
+          },
+        },
+        {
+          id: 'google-drive-record-1',
+          type: 'google-drive' as const,
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'drive-vault.kdbx',
+          },
+          source: {
+            id: '1AbCdEfGhIjKlMnOp',
+          },
+        },
+      ];
+
+      await setRecords(records);
+
+      expect(await getRecords()).toEqual(records);
+    });
   });
 
   describe('setRecords', () => {
@@ -260,6 +292,23 @@ describe('record.repository', () => {
         },
       ]);
     });
+
+    it('sets an empty array and clears existing records', async () => {
+      await setRecords([
+        {
+          id: 'local-record-1',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
+        },
+      ]);
+
+      await setRecords([]);
+
+      expect(await getRecords()).toEqual([]);
+    });
   });
 
   describe('clearRecords', () => {
@@ -378,6 +427,66 @@ describe('record.repository', () => {
         },
       ]);
     });
+
+    it('creates a google-drive record with all fields', async () => {
+      const createdRecord = await createRecord({
+        id: 'google-drive-record-1',
+        type: 'google-drive',
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault.kdbx',
+        },
+        key: {
+          hash: 'hash-123',
+          name: 'unlock.keyx',
+        },
+        oauth: {
+          accessToken: 'access-token',
+          expiresAt: '2026-02-12T20:41:30.000Z',
+          refreshToken: 'refresh-token',
+          scope: ['https://www.googleapis.com/auth/drive.file'],
+        },
+        source: {
+          id: '1AbCdEfGhIjKlMnOp',
+          locator: 'gdrive:fileId=1AbCdEfGhIjKlMnOp',
+          options: { supportsAllDrives: true },
+        },
+        sync: {
+          revisionId: '0123456789',
+          status: 'idle',
+        },
+      });
+
+      expect(createdRecord.id).toBe('google-drive-record-1');
+      expect(createdRecord.type).toBe('google-drive');
+      expect(await getRecords()).toHaveLength(1);
+    });
+
+    it('creates multiple records concurrently with different ids', async () => {
+      const record1Promise = createRecord({
+        id: 'concurrent-record-1',
+        type: 'local',
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault-1.kdbx',
+        },
+      });
+
+      const record2Promise = createRecord({
+        id: 'concurrent-record-2',
+        type: 'local',
+        kdbx: {
+          encryptedBytes: new Uint8Array([4, 5, 6]),
+          name: 'vault-2.kdbx',
+        },
+      });
+
+      const [record1, record2] = await Promise.all([record1Promise, record2Promise]);
+
+      expect(record1.id).toBe('concurrent-record-1');
+      expect(record2.id).toBe('concurrent-record-2');
+      expect(await getRecords()).toHaveLength(2);
+    });
   });
 
   describe('removeRecord', () => {
@@ -420,6 +529,43 @@ describe('record.repository', () => {
           kdbx: {
             encryptedBytes: new Uint8Array([4, 5, 6]),
             name: 'vault-2.kdbx',
+          },
+        },
+      ]);
+    });
+
+    it('removes a google-drive record and keeps local records', async () => {
+      await setRecords([
+        {
+          id: 'local-record-1',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-local.kdbx',
+          },
+        },
+        {
+          id: 'google-drive-record-1',
+          type: 'google-drive',
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-drive.kdbx',
+          },
+          source: {
+            id: '1AbCdEfGhIjKlMnOp',
+          },
+        },
+      ]);
+
+      await removeRecord('google-drive-record-1');
+
+      expect(await getRecords()).toEqual([
+        {
+          id: 'local-record-1',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-local.kdbx',
           },
         },
       ]);
@@ -506,6 +652,86 @@ describe('record.repository', () => {
           },
         },
       ]);
+    });
+
+    it('updates a google-drive record with oauth and sync fields', async () => {
+      await setRecords([
+        {
+          id: 'google-drive-record-1',
+          type: 'google-drive',
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
+          source: {
+            id: '1AbCdEfGhIjKlMnOp',
+          },
+        },
+      ]);
+
+      await updateRecord({
+        id: 'google-drive-record-1',
+        type: 'google-drive',
+        kdbx: {
+          encryptedBytes: new Uint8Array([4, 5, 6]),
+          name: 'vault-updated.kdbx',
+        },
+        oauth: {
+          accessToken: 'new-access-token',
+          expiresAt: '2026-02-15T20:41:30.000Z',
+          refreshToken: 'new-refresh-token',
+        },
+        source: {
+          id: '1AbCdEfGhIjKlMnOp',
+        },
+        sync: {
+          revisionId: 'new-revision',
+          status: 'syncing',
+        },
+      });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        id: 'google-drive-record-1',
+        type: 'google-drive',
+        oauth: {
+          accessToken: 'new-access-token',
+          expiresAt: '2026-02-15T20:41:30.000Z',
+          refreshToken: 'new-refresh-token',
+        },
+        sync: {
+          revisionId: 'new-revision',
+          status: 'syncing',
+        },
+      });
+    });
+
+    it('updates lastOpenedAt field', async () => {
+      await setRecords([
+        {
+          id: 'local-record-1',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
+        },
+      ]);
+
+      const timestamp = '2026-02-15T12:00:00.000Z';
+      await updateRecord({
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault.kdbx',
+        },
+        lastOpenedAt: timestamp,
+      });
+
+      const records = await getRecords();
+      expect(records[0].lastOpenedAt).toBe(timestamp);
     });
   });
 });
