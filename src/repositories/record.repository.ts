@@ -1,4 +1,4 @@
-import { del, delMany, get as getValue, keys, update } from 'idb-keyval';
+import { del, delMany, get, keys, update } from 'idb-keyval';
 import { z } from 'zod';
 import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
 
@@ -73,7 +73,7 @@ export type FileRecord = z.infer<typeof fileRecordSchema>;
 export const getFileRecord = async (fileIdentity: FileIdentity) => {
   return navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
     const storageKey = toRecordStorageKey(fileIdentity);
-    const value = await getValue<unknown>(storageKey);
+    const value = await get<unknown>(storageKey);
     if (!value) {
       return;
     }
