@@ -45,6 +45,7 @@ const kdbxSchema = z.object({
 });
 
 const localFileRecordSchema = z.object({
+  id: z.string(),
   kdbx: kdbxSchema,
   key: keySchema.optional(),
   lastOpenedAt: z.string().optional(),
@@ -52,6 +53,7 @@ const localFileRecordSchema = z.object({
 });
 
 const googleDriveFileRecordSchema = z.object({
+  id: z.string(),
   kdbx: kdbxSchema,
   key: keySchema.optional(),
   lastOpenedAt: z.string().optional(),
@@ -73,9 +75,9 @@ export const getRecords = async () => {
       return [];
     }
 
-    const result = fileRecordsSchema.safeParse(value);
-    if (result.success) {
-      return result.data;
+    const parseResult = fileRecordsSchema.safeParse(value);
+    if (parseResult.success) {
+      return parseResult.data;
     }
 
     await del(RECORDS_STORAGE_KEY);
@@ -91,8 +93,44 @@ export const setRecords = async (records: FileRecord[]) => {
   });
 };
 
+const updateRecords = async (updater: (oldRecords: FileRecord[]) => FileRecord[]) => {
+  await lock.runInLock(async () => {
+    await update(RECORDS_STORAGE_KEY, (oldValue) => {
+      const parseResult = fileRecordsSchema.safeParse(oldValue);
+      const oldRecords = parseResult.success ? parseResult.data : [];
+
+      return updater(oldRecords);
+    });
+  });
+};
+
 export const clearRecords = async () => {
   await lock.runInLock(async () => {
     await del(RECORDS_STORAGE_KEY);
   });
+};
+
+export const createRecord = async (record: FileRecord) => {
+  const parsedRecord = fileRecordSchema.parse(record);
+  await updateRecords((oldRecords) => [...oldRecords, parsedRecord]);
+
+  return parsedRecord;
+};
+
+export const removeRecord = async (recordId: string) => {
+  await updateRecords((oldRecords) => oldRecords.filter(({ id }) => id !== recordId));
+};
+
+export const updateRecord = async (record: FileRecord) => {
+  const parsedRecord = fileRecordSchema.parse(record);
+
+  await updateRecords((oldRecords) =>
+    oldRecords.map((currentRecord) => {
+      if (currentRecord.id !== parsedRecord.id) {
+        return currentRecord;
+      }
+
+      return parsedRecord;
+    }),
+  );
 };

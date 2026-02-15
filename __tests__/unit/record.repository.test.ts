@@ -1,6 +1,13 @@
 import { get, set } from 'idb-keyval';
 import { afterEach, describe, expect, it } from 'vitest';
-import { clearRecords, getRecords, setRecords } from '@/repositories/record.repository';
+import {
+  clearRecords,
+  createRecord,
+  getRecords,
+  removeRecord,
+  setRecords,
+  updateRecord,
+} from '@/repositories/record.repository';
 
 const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
 
@@ -12,6 +19,7 @@ describe('record.repository.ts', () => {
   it('stores and reads local records', async () => {
     const records = [
       {
+        id: 'local-record-1',
         type: 'local' as const,
         kdbx: {
           name: 'vault.kdbx',
@@ -28,6 +36,7 @@ describe('record.repository.ts', () => {
     const encryptedBytes = new Uint8Array([1, 2, 3]);
     const records = [
       {
+        id: 'google-drive-record-1',
         type: 'google-drive' as const,
         kdbx: {
           encryptedBytes,
@@ -72,6 +81,7 @@ describe('record.repository.ts', () => {
   it('keeps the last value when setRecords runs in parallel', async () => {
     const firstRecords = [
       {
+        id: 'first-google-drive-record',
         type: 'google-drive' as const,
         kdbx: { name: 'vault.kdbx' },
         oauth: {
@@ -86,6 +96,7 @@ describe('record.repository.ts', () => {
     ];
     const secondRecords = [
       {
+        id: 'second-google-drive-record',
         type: 'google-drive' as const,
         kdbx: { name: 'vault.kdbx' },
         oauth: {
@@ -100,6 +111,7 @@ describe('record.repository.ts', () => {
     ];
     const thirdRecords = [
       {
+        id: 'third-google-drive-record',
         type: 'google-drive' as const,
         kdbx: { name: 'vault.kdbx' },
         oauth: {
@@ -121,6 +133,7 @@ describe('record.repository.ts', () => {
   it('returns an empty array and removes invalid oauth payloads missing refresh token', async () => {
     await set(RECORDS_STORAGE_KEY, [
       {
+        id: 'google-drive-record-1',
         type: 'google-drive',
         kdbx: { name: 'vault.kdbx' },
         oauth: {
@@ -143,6 +156,7 @@ describe('record.repository.ts', () => {
   it('strips drive-only fields from local records', async () => {
     const records = [
       {
+        id: 'local-record-1',
         type: 'local' as const,
         kdbx: { name: 'vault.kdbx' },
         oauth: {
@@ -163,6 +177,7 @@ describe('record.repository.ts', () => {
 
     expect(await getRecords()).toEqual([
       {
+        id: 'local-record-1',
         type: 'local',
         kdbx: { name: 'vault.kdbx' },
       },
@@ -172,6 +187,7 @@ describe('record.repository.ts', () => {
   it('returns an empty array and removes invalid google-drive source payloads without id', async () => {
     await set(RECORDS_STORAGE_KEY, [
       {
+        id: 'google-drive-record-1',
         type: 'google-drive',
         kdbx: { name: 'vault.kdbx' },
         source: {},
@@ -188,6 +204,7 @@ describe('record.repository.ts', () => {
   it('replaces all records when setRecords is called again', async () => {
     await setRecords([
       {
+        id: 'local-record-1',
         type: 'local' as const,
         kdbx: {
           name: 'vault.kdbx',
@@ -197,6 +214,7 @@ describe('record.repository.ts', () => {
 
     await setRecords([
       {
+        id: 'google-drive-record-1',
         type: 'google-drive' as const,
         kdbx: { name: 'vault.kdbx' },
         source: {
@@ -207,6 +225,7 @@ describe('record.repository.ts', () => {
         },
       },
       {
+        id: 'local-record-2',
         type: 'local' as const,
         kdbx: {
           name: 'vault-2.kdbx',
@@ -216,6 +235,7 @@ describe('record.repository.ts', () => {
 
     expect(await getRecords()).toEqual([
       {
+        id: 'google-drive-record-1',
         type: 'google-drive',
         kdbx: { name: 'vault.kdbx' },
         source: {
@@ -226,6 +246,7 @@ describe('record.repository.ts', () => {
         },
       },
       {
+        id: 'local-record-2',
         type: 'local',
         kdbx: {
           name: 'vault-2.kdbx',
@@ -237,6 +258,7 @@ describe('record.repository.ts', () => {
   it('strips unknown keys instead of rejecting records', async () => {
     await setRecords([
       {
+        id: 'google-drive-record-1',
         type: 'google-drive',
         kdbx: { name: 'vault.kdbx', unknownNested: 'ignored' },
         source: {
@@ -249,6 +271,7 @@ describe('record.repository.ts', () => {
 
     expect(await getRecords()).toEqual([
       {
+        id: 'google-drive-record-1',
         type: 'google-drive',
         kdbx: { name: 'vault.kdbx' },
         source: {
@@ -261,7 +284,7 @@ describe('record.repository.ts', () => {
   it('clears only the records key and keeps unrelated default-store keys', async () => {
     const unrelatedKey = 'keeweb-lite.google-drive-oauth';
 
-    await set(RECORDS_STORAGE_KEY, [{ type: 'local', kdbx: { name: 'vault.kdbx' } }]);
+    await set(RECORDS_STORAGE_KEY, [{ id: 'local-record-1', type: 'local', kdbx: { name: 'vault.kdbx' } }]);
     await set(unrelatedKey, {
       accessToken: 'access-token',
       expiresAt: '2026-02-12T20:41:30.000Z',
@@ -276,5 +299,115 @@ describe('record.repository.ts', () => {
       expiresAt: '2026-02-12T20:41:30.000Z',
       refreshToken: 'refresh-token',
     });
+  });
+
+  it('creates a record with provided id', async () => {
+    const createdRecord = await createRecord({
+      id: 'local-record-created',
+      type: 'local',
+      kdbx: { name: 'vault.kdbx' },
+    });
+
+    expect(createdRecord).toEqual({
+      id: 'local-record-created',
+      type: 'local',
+      kdbx: { name: 'vault.kdbx' },
+    });
+    expect(await getRecords()).toEqual([
+      {
+        id: 'local-record-created',
+        type: 'local',
+        kdbx: { name: 'vault.kdbx' },
+      },
+    ]);
+  });
+
+  it('removes a record by id', async () => {
+    await setRecords([
+      {
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: { name: 'vault-1.kdbx' },
+      },
+      {
+        id: 'local-record-2',
+        type: 'local',
+        kdbx: { name: 'vault-2.kdbx' },
+      },
+    ]);
+
+    await removeRecord('local-record-1');
+    expect(await getRecords()).toEqual([
+      {
+        id: 'local-record-2',
+        type: 'local',
+        kdbx: { name: 'vault-2.kdbx' },
+      },
+    ]);
+    await removeRecord('missing-record-id');
+    expect(await getRecords()).toEqual([
+      {
+        id: 'local-record-2',
+        type: 'local',
+        kdbx: { name: 'vault-2.kdbx' },
+      },
+    ]);
+  });
+
+  it('updates a record by id', async () => {
+    await setRecords([
+      {
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: { name: 'vault-1.kdbx' },
+      },
+      {
+        id: 'local-record-2',
+        type: 'local',
+        kdbx: { name: 'vault-2.kdbx' },
+      },
+    ]);
+
+    await updateRecord({
+      id: 'local-record-2',
+      type: 'local',
+      kdbx: { name: 'vault-2-updated.kdbx' },
+    });
+
+    expect(await getRecords()).toEqual([
+      {
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: { name: 'vault-1.kdbx' },
+      },
+      {
+        id: 'local-record-2',
+        type: 'local',
+        kdbx: { name: 'vault-2-updated.kdbx' },
+      },
+    ]);
+  });
+
+  it('does not change records when updateRecord is called with a missing id', async () => {
+    await setRecords([
+      {
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: { name: 'vault-1.kdbx' },
+      },
+    ]);
+
+    await updateRecord({
+      id: 'missing-record-id',
+      type: 'local',
+      kdbx: { name: 'vault-does-not-exist.kdbx' },
+    });
+    expect(await getRecords()).toEqual([
+      {
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: { name: 'vault-1.kdbx' },
+      },
+    ]);
   });
 });
