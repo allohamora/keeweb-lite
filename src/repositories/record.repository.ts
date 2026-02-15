@@ -1,9 +1,11 @@
 import { del, delMany, get, keys, update } from 'idb-keyval';
 import { z } from 'zod';
 import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
+import { Lock } from '@/utils/lock.utils';
 
 const RECORD_STORAGE_KEY_PREFIX = 'keeweb-lite.records:';
-const RECORD_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.records';
+
+const lock = new Lock('record.repository');
 
 export const toRecordStorageKey = (fileIdentity: FileIdentity) => {
   return `${RECORD_STORAGE_KEY_PREFIX}${toStorageKey(fileIdentity)}`;
@@ -69,7 +71,7 @@ const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, go
 export type FileRecord = z.infer<typeof fileRecordSchema>;
 
 export const getFileRecord = async (fileIdentity: FileIdentity) => {
-  return navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
+  return lock.runInLock(async () => {
     const storageKey = toRecordStorageKey(fileIdentity);
     const value = await get<unknown>(storageKey);
     if (!value) {
@@ -86,7 +88,7 @@ export const getFileRecord = async (fileIdentity: FileIdentity) => {
 };
 
 export const setFileRecord = async (fileIdentity: FileIdentity, record: FileRecord) => {
-  await navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
+  await lock.runInLock(async () => {
     const storageKey = toRecordStorageKey(fileIdentity);
     const parsedRecord = fileRecordSchema.parse(record);
     const normalizedRecord: FileRecord = {
@@ -102,13 +104,13 @@ export const setFileRecord = async (fileIdentity: FileIdentity, record: FileReco
 };
 
 export const clearFileRecord = async (fileIdentity: FileIdentity) => {
-  await navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
+  await lock.runInLock(async () => {
     await del(toRecordStorageKey(fileIdentity));
   });
 };
 
 export const clearFileRecords = async () => {
-  await navigator.locks.request(RECORD_REPOSITORY_LOCK_NAME, async () => {
+  await lock.runInLock(async () => {
     const storedKeys = await keys<string>();
     const recordStorageKeys = storedKeys.filter((storedKey) => {
       return typeof storedKey === 'string' && storedKey.startsWith(RECORD_STORAGE_KEY_PREFIX);
