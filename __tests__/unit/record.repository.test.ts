@@ -22,6 +22,7 @@ describe('record.repository', () => {
           id: 'local-record-1',
           type: 'local' as const,
           kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
             name: 'vault.kdbx',
           },
         },
@@ -88,7 +89,10 @@ describe('record.repository', () => {
         {
           id: 'first-google-drive-record',
           type: 'google-drive' as const,
-          kdbx: { name: 'vault.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
           oauth: {
             accessToken: 'access-token-a',
             expiresAt: '2026-02-12T20:41:30.000Z',
@@ -103,7 +107,10 @@ describe('record.repository', () => {
         {
           id: 'second-google-drive-record',
           type: 'google-drive' as const,
-          kdbx: { name: 'vault.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault.kdbx',
+          },
           oauth: {
             accessToken: 'access-token-b',
             expiresAt: '2026-02-12T20:41:31.000Z',
@@ -118,7 +125,10 @@ describe('record.repository', () => {
         {
           id: 'third-google-drive-record',
           type: 'google-drive' as const,
-          kdbx: { name: 'vault.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([7, 8, 9]),
+            name: 'vault.kdbx',
+          },
           oauth: {
             accessToken: 'access-token-c',
             expiresAt: '2026-02-12T20:41:32.000Z',
@@ -186,7 +196,10 @@ describe('record.repository', () => {
         {
           id: 'local-record-1',
           type: 'local' as const,
-          kdbx: { name: 'vault.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
           oauth: {
             accessToken: 'access-token',
             expiresAt: '2026-02-12T20:41:30.000Z',
@@ -207,7 +220,10 @@ describe('record.repository', () => {
         {
           id: 'local-record-1',
           type: 'local',
-          kdbx: { name: 'vault.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
         },
       ]);
     });
@@ -217,7 +233,11 @@ describe('record.repository', () => {
         {
           id: 'google-drive-record-1',
           type: 'google-drive',
-          kdbx: { name: 'vault.kdbx', unknownNested: 'ignored' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+            unknownNested: 'ignored',
+          },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
             unexpected: true,
@@ -230,7 +250,10 @@ describe('record.repository', () => {
         {
           id: 'google-drive-record-1',
           type: 'google-drive',
-          kdbx: { name: 'vault.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
           },
@@ -243,7 +266,16 @@ describe('record.repository', () => {
     it('clears only the records key and keeps unrelated default-store keys', async () => {
       const unrelatedKey = 'keeweb-lite.google-drive-oauth';
 
-      await setRecords([{ id: 'local-record-1', type: 'local', kdbx: { name: 'vault.kdbx' } }]);
+      await setRecords([
+        {
+          id: 'local-record-1',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
+        },
+      ]);
       await set(unrelatedKey, {
         accessToken: 'access-token',
         expiresAt: '2026-02-12T20:41:30.000Z',
@@ -266,19 +298,83 @@ describe('record.repository', () => {
       const createdRecord = await createRecord({
         id: 'local-record-created',
         type: 'local',
-        kdbx: { name: 'vault.kdbx' },
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault.kdbx',
+        },
       });
 
       expect(createdRecord).toEqual({
         id: 'local-record-created',
         type: 'local',
-        kdbx: { name: 'vault.kdbx' },
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault.kdbx',
+        },
       });
       expect(await getRecords()).toEqual([
         {
           id: 'local-record-created',
           type: 'local',
-          kdbx: { name: 'vault.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault.kdbx',
+          },
+        },
+      ]);
+    });
+
+    it('throws an error when creating a record with a duplicate id', async () => {
+      await createRecord({
+        id: 'duplicate-id',
+        type: 'local',
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault-1.kdbx',
+        },
+      });
+
+      await expect(
+        createRecord({
+          id: 'duplicate-id',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-2.kdbx',
+          },
+        }),
+      ).rejects.toThrow('Record with id duplicate-id already exists');
+    });
+
+    it('does not create a record when a duplicate id error is thrown', async () => {
+      await createRecord({
+        id: 'duplicate-id-check',
+        type: 'local',
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault-original.kdbx',
+        },
+      });
+
+      await expect(
+        createRecord({
+          id: 'duplicate-id-check',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-duplicate.kdbx',
+          },
+        }),
+      ).rejects.toThrow();
+
+      expect(await getRecords()).toEqual([
+        {
+          id: 'duplicate-id-check',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-original.kdbx',
+          },
         },
       ]);
     });
@@ -290,12 +386,18 @@ describe('record.repository', () => {
         {
           id: 'local-record-1',
           type: 'local',
-          kdbx: { name: 'vault-1.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-1.kdbx',
+          },
         },
         {
           id: 'local-record-2',
           type: 'local',
-          kdbx: { name: 'vault-2.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-2.kdbx',
+          },
         },
       ]);
 
@@ -304,7 +406,10 @@ describe('record.repository', () => {
         {
           id: 'local-record-2',
           type: 'local',
-          kdbx: { name: 'vault-2.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-2.kdbx',
+          },
         },
       ]);
       await removeRecord('missing-record-id');
@@ -312,7 +417,10 @@ describe('record.repository', () => {
         {
           id: 'local-record-2',
           type: 'local',
-          kdbx: { name: 'vault-2.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-2.kdbx',
+          },
         },
       ]);
     });
@@ -324,31 +432,46 @@ describe('record.repository', () => {
         {
           id: 'local-record-1',
           type: 'local',
-          kdbx: { name: 'vault-1.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-1.kdbx',
+          },
         },
         {
           id: 'local-record-2',
           type: 'local',
-          kdbx: { name: 'vault-2.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-2.kdbx',
+          },
         },
       ]);
 
       await updateRecord({
         id: 'local-record-2',
         type: 'local',
-        kdbx: { name: 'vault-2-updated.kdbx' },
+        kdbx: {
+          encryptedBytes: new Uint8Array([7, 8, 9]),
+          name: 'vault-2-updated.kdbx',
+        },
       });
 
       expect(await getRecords()).toEqual([
         {
           id: 'local-record-1',
           type: 'local',
-          kdbx: { name: 'vault-1.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-1.kdbx',
+          },
         },
         {
           id: 'local-record-2',
           type: 'local',
-          kdbx: { name: 'vault-2-updated.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([7, 8, 9]),
+            name: 'vault-2-updated.kdbx',
+          },
         },
       ]);
     });
@@ -358,20 +481,29 @@ describe('record.repository', () => {
         {
           id: 'local-record-1',
           type: 'local',
-          kdbx: { name: 'vault-1.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-1.kdbx',
+          },
         },
       ]);
 
       await updateRecord({
         id: 'missing-record-id',
         type: 'local',
-        kdbx: { name: 'vault-does-not-exist.kdbx' },
+        kdbx: {
+          encryptedBytes: new Uint8Array([4, 5, 6]),
+          name: 'vault-does-not-exist.kdbx',
+        },
       });
       expect(await getRecords()).toEqual([
         {
           id: 'local-record-1',
           type: 'local',
-          kdbx: { name: 'vault-1.kdbx' },
+          kdbx: {
+            encryptedBytes: new Uint8Array([1, 2, 3]),
+            name: 'vault-1.kdbx',
+          },
         },
       ]);
     });

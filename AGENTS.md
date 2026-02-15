@@ -122,6 +122,7 @@ src/
 - Prefer TypeScript inference over redundant annotations (for example, `const value = 123` instead of `const value: number = 123`, and `createStore(combine(...))` instead of `createStore<Type>(...)` when inference is sufficient).
 - Add explicit TypeScript annotations only when inference is not sufficient or when defining a stable exported/public API surface.
 - Use `for...of` loops instead of `forEach` for better performance and readability.
+- DO NOT use one-letter variables; use descriptive names that clearly indicate purpose.
 - Avoid single-letter or one-word variable names; use descriptive names that clearly indicate purpose (e.g., `task` instead of `t`, `fileData` instead of `d`).
 - DO NOT use the non-null assertion operator (`!`) in TypeScript; instead, use proper type guards, optional chaining, or refactor to handle null/undefined cases explicitly.
 

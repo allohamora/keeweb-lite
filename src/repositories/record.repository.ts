@@ -110,7 +110,14 @@ export const clearRecords = async () => {
 
 export const createRecord = async (record: FileRecord) => {
   const parsedRecord = fileRecordSchema.parse(record);
-  await updateRecords((oldRecords) => [...oldRecords, parsedRecord]);
+  await updateRecords((oldRecords) => {
+    const existingRecord = oldRecords.find(({ id }) => id === parsedRecord.id);
+    if (existingRecord) {
+      throw new Error(`Record with id ${parsedRecord.id} already exists`);
+    }
+
+    return [...oldRecords, parsedRecord];
+  });
 
   return parsedRecord;
 };
