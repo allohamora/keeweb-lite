@@ -30,18 +30,16 @@ const syncErrorSchema = z.object({
   timestamp: z.string(),
 });
 
-const syncStatusSchema = z.enum(['idle', 'pending', 'syncing', 'conflict', 'error']);
-
 const syncSchema = z.object({
   lastError: syncErrorSchema.optional(),
   lastSuccessfulAt: z.string().optional(),
   revisionId: z.string().optional(),
-  status: syncStatusSchema,
+  status: z.enum(['idle', 'pending', 'syncing', 'conflict', 'error']),
 });
 
 const kdbxSchema = z.object({
-  encryptedBytes: z.instanceof(Uint8Array).optional(),
-  name: z.string().optional(),
+  encryptedBytes: z.instanceof(Uint8Array),
+  name: z.string(),
 });
 
 const localFileRecordSchema = z.object({
