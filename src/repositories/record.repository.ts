@@ -2,8 +2,6 @@ import { del, delMany, get, keys, update } from 'idb-keyval';
 import { z } from 'zod';
 import { toStorageKey, type FileIdentity } from '@/utils/file-identity.utils';
 
-export { toStorageKey } from '@/utils/file-identity.utils';
-
 const RECORD_STORAGE_KEY_PREFIX = 'keeweb-lite.records:';
 const RECORD_REPOSITORY_LOCK_NAME = 'keeweb-lite.repository.records';
 
