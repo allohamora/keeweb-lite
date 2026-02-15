@@ -14,7 +14,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - Unlock supports:
   - password only
   - password + key file
-- Key file is selected from local file input and loaded into Runtime Memory for unlock.
+- Key file is selected from local file input and loaded into runtime memory for unlock.
 - Unlock sequence:
   1. user selects database source/file
   2. user optionally selects key file (loaded into memory)
@@ -24,14 +24,16 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - KeeWeb upstream default is currently `rememberKeyFiles = path`; lite intentionally overrides this to `data` while keeping KeeWeb `data`-mode hash semantics.
 - Selected key-file bytes are used for unlock and then cleared from raw runtime buffers (best effort).
 - Persisted remember-key data is enabled by default in lite.
-- Remembered key storage is file-scoped, not global-single-slot: metadata is stored by `fileIdentity` in a dedicated IndexedDB store.
-- Remembered-key `data` mode stores `fileName` and `fileHash` from KeeWeb credentials state, not local key-file paths.
-- `fileHash` is stored as KeeWeb base64 hash representation (`bytesToBase64(hash.getBinary())` parity).
+- Remembered key storage is record-scoped, not global-single-slot: metadata is stored on each record in `record.repository`.
+- Remembered-key `data` mode stores KeeWeb-compatible key metadata as `record.key`:
+  - `name` (key file display name)
+  - `hash` (KeeWeb-compatible base64 hash representation; `bytesToBase64(hash.getBinary())` parity)
+  - no local key-file paths
 - Lite does not use key-file-path remember mode.
-- On reopen, if a matching file has remembered `fileHash`, app reconstructs unlock key material using KeeWeb-compatible hash-to-key transform (`createKeyFileWithHash`: base64 hash bytes -> hex string bytes) and uses that transient key data for unlock.
+- On reopen, if selected record has remembered `key.hash`, app reconstructs unlock key material using KeeWeb-compatible hash-to-key transform (`createKeyFileWithHash`: base64 hash bytes -> hex string bytes) and uses that transient key data for unlock.
 - User should not need to re-select key file on same-session reopen or after reload when remembered key data is available.
 - When user switches to a different database file, current key-file selection must be cleared first.
-- After file switch, key-file state may be re-populated only if remembered metadata matches that selected file context.
+- After record switch, key-file state may be re-populated only if remembered metadata exists on the selected record.
 
 ## UI Requirements
 
@@ -42,17 +44,13 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 
 ## Data and Storage
 
-- Persist remembered key-file metadata in IndexedDB via `src/repositories/key.repository.ts`:
-  - `fileName`
-  - `fileHash` (KeeWeb-compatible base64 hash representation)
-  - strict `fileIdentity` binding using repository key tuple:
-    - `fingerprint`
-    - `fileName`
-    - `fileSize`
-  - if identity does not match exactly, remembered key metadata must not be applied
-  - malformed persisted key metadata is deleted on read (safe-parse fallback in repository)
-- Keep KDBX file metadata/encrypted-byte persistence in separate repository records via `src/repositories/kdbx.repository.ts`; do not couple remembered key metadata to that record.
-- Runtime Memory keeps only transient unlock bytes for active operations.
+- Persist remembered key-file metadata in IndexedDB via `src/repositories/record.repository.ts` record `key` field:
+  - `name`
+  - `hash` (KeeWeb-compatible base64 hash representation)
+  - scoped to each record entry (`record.id`) and applied only for the selected record context
+  - malformed persisted records are deleted on read (safe-parse fallback in repository)
+- KDBX metadata/encrypted-byte persistence lives in the same record entry (`record.kdbx`), not in separate repositories.
+- Runtime app state keeps only transient unlock bytes for active operations and the unlocked session model.
 - Do not persist raw plaintext key-file bytes.
 - Do not persist key-file local path in lite.
 
@@ -60,7 +58,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 
 - Invalid key material returns unlock error without changing current file state.
 - Missing/cleared remembered key data prompts key-file re-selection.
-- Key-file metadata mismatch for selected file must not be reused from another file context.
+- Key-file metadata from one record must not be reused for a different selected record.
 - If hash-derived remembered key material fails unlock, error is explicit and user can re-select key file and overwrite remembered metadata for that file.
 
 ## Security and Privacy
@@ -71,7 +69,7 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - Treat zeroization as best-effort in browser/JS runtimes: keep key material in `Uint8Array`/`ArrayBuffer`, avoid unnecessary copies/string conversions, and overwrite buffers immediately after unlock attempts (success or failure).
 - Zeroization cannot be fully guaranteed in browser/JS environments due to GC/runtime copies; treat this as risk reduction, not an absolute guarantee.
 - Persist only KeeWeb-style remembered hash representation; never persist raw key-file bytes.
-- Persisted `fileHash` is credential-derived data; treat it as sensitive metadata and provide explicit per-file clear action.
+- Persisted `key.hash` is credential-derived data; treat it as sensitive metadata and provide explicit per-file clear action.
 
 ## Acceptance Criteria
 
@@ -80,6 +78,6 @@ Define key-file-assisted unlock behavior for the lite profile using KeeWeb-style
 - Reload/new-session reopen works with password-only when remembered key data exists.
 - Clear-remembered-key action forces key-file re-selection on next unlock.
 - Selecting another database file clears previous file key-file selection before unlock.
-- Multiple files may each have remembered key metadata, and metadata is applied only to matching file context.
-- Lite remember behavior matches KeeWeb `rememberKeyFiles = data` semantics (persisted `fileHash` metadata in base64 representation, no path mode).
+- Multiple records may each have remembered key metadata, and metadata is applied only to selected record context.
+- Lite remember behavior matches KeeWeb `rememberKeyFiles = data` semantics (persisted `key.hash` metadata in base64 representation, no path mode).
 - No plaintext key material is persisted.

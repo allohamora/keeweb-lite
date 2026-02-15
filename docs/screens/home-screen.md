@@ -221,4 +221,4 @@ Unlock-success runtime state contract:
 
 - Creating a brand-new empty vault file.
 - Workspace layout/details behavior after unlock (covered by feature-level interface docs).
-- Migration to split repository model (`kdbx.repository`, `key.repository`, `google-drive.repository`).
+- Introducing additional persistence repositories beyond `record.repository`.

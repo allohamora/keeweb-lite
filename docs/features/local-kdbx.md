@@ -21,7 +21,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
   - after each edit, keep latest encrypted state in Encrypted Offline Cache (IndexedDB)
   - do not write back to originally selected local file path
 - Provide `Download` action to export current encrypted `.kdbx` bytes.
-- On selecting a different `.kdbx`, previously selected key-file state is cleared unless remembered key metadata exists for that exact `fileIdentity`.
+- On selecting a different local record/file context, previously selected key-file state is cleared unless remembered key metadata exists for the selected record.
 
 ## UI Requirements
 
@@ -34,11 +34,13 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 
 ## Data and Storage
 
-- Store file metadata in IndexedDB via `src/repositories/kdbx.repository.ts` (`sourceType` currently `file` or `gdrive`; local flow uses `file`).
-- Store remembered key-file metadata in IndexedDB via `src/repositories/key.repository.ts` using KeeWeb `rememberKeyFiles = data` representation (`fileHash` as KeeWeb-compatible base64 hash representation), never raw key-file bytes or local key-file paths.
-- Cache encrypted KDBX bytes in Encrypted Offline Cache (IndexedDB) via `kdbx.repository` `encryptedBytes`.
-- Repository contract: initialize metadata before writing encrypted bytes (`setKdbxEncryptedBytes` requires existing metadata and throws otherwise).
-- Keep runtime unlocked model in Runtime Memory (non-persistent) while file is open.
+- Store local records in IndexedDB via `src/repositories/record.repository.ts`:
+  - `type = local`
+  - `kdbx.name` and optional `kdbx.encryptedBytes`
+  - optional `key` metadata (`name`, `hash`) for remember-key behavior
+  - optional `lastOpenedAt`
+- Encrypted Offline Cache is represented by `record.kdbx.encryptedBytes` in `record.repository` records.
+- Keep unlocked model and active file session in runtime app state (Zustand-style, non-persistent) while file is open.
 
 ## Failure Handling
 

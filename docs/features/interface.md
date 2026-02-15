@@ -7,6 +7,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 ## Scope
 
 - Unlock screen (startup, unlock, reopen).
+- Detailed startup screen spec: [`docs/screens/home-screen.md`](../screens/home-screen.md).
 - Workspace page (KeeWeb-like render/edit layout).
 - Password generator access in Unlock screen and workspace contexts.
 
@@ -24,6 +25,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
   - inline unlock message area
 - Selecting source/file context pre-fills unlock context and focuses unlock.
 - Successful unlock closes the Unlock screen and shows workspace.
+- Successful unlock hydrates runtime app state with unlocked session data (Zustand-style in-memory store, non-persistent).
 - If files are already open, the Unlock screen can be toggled without closing workspace files.
 - Workspace page contains:
   - top workspace status bar
@@ -53,12 +55,13 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - `Download` must be visible at top of opened DB view.
 - `Sync` must be visible for Drive-backed files at top of opened DB view.
 - Sync metadata must be visible at top of opened DB view.
-- Drive-backed sync state uses canonical status model semantics (`syncStatus`, `lastSyncErrorDetails`) for status-circle rendering.
+- Drive-backed sync state uses canonical status model semantics (`sync.status`, `sync.lastError`) for status-circle rendering.
 - Source selector labels must use canonical names: `Local` and `Google Drive`.
 
 ## Data and Storage
 
-- Entered password and raw key bytes remain in Runtime Memory (non-persistent) only.
+- Entered password and raw key bytes remain in runtime memory (inside runtime app state, non-persistent) only.
+- Unlocked session data is stored in runtime app state (Zustand-style, non-persistent) and cleared on lock/logout/close-file.
 
 ## Failure Handling
 
