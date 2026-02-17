@@ -40,7 +40,7 @@ const hash = async (options: {
 };
 
 // Mock the argon2-browser module
-vi.mock('argon2-browser', () => ({
+vi.mock('argon2-browser/dist/argon2-bundled.min.js', () => ({
   default: { hash },
   hash,
 }));

@@ -1,5 +1,5 @@
-import kdbxweb from 'kdbxweb';
-import argon2 from 'argon2-browser';
+import * as kdbxweb from 'kdbxweb';
+import argon2 from 'argon2-browser/dist/argon2-bundled.min.js';
 
 const asArrayBuffer = (bytes: Uint8Array) => {
   const copy = new Uint8Array(bytes.byteLength);

@@ -1,4 +1,4 @@
-import kdbxweb from 'kdbxweb';
+import * as kdbxweb from 'kdbxweb';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { saveKdbx, unlockKdbx } from '@/services/kdbx.service';
 
