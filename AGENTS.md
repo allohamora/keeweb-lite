@@ -96,6 +96,8 @@ src/
 
 - Install new dependencies using npm install commands.
 - DO NOT manually edit `package.json` or `package-lock.json`.
+- Prefer well-maintained, widely adopted npm libraries for robust task requirements instead of building custom implementations from scratch.
+- Only build custom implementations when no suitable library exists or project constraints require it.
 
 ### Code Style
 
