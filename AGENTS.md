@@ -121,6 +121,11 @@ src/
 - Keep the app static and client-side only.
 - Do not add API routes, Astro Actions, server endpoints, or other server runtime boundaries.
 
+### Clarification
+
+- If any requirement, constraint, or expected outcome is unclear, ask the user clarifying questions until the task is fully clear before implementation.
+- Prefer the ask/question tool for clarifications when it is available.
+
 ### Maintenance
 
 - After changes, update [tests](__tests__/), [docs](docs/) and [AGENTS.md](AGENTS.md) when needed to keep behavior and documentation aligned.
