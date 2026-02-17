@@ -102,6 +102,9 @@ src/
 ### Code Style
 
 - Write comments only when necessary to clarify complex logic; prefer self-documenting code.
+- Prioritize readability, maintainability, and elegant code structure.
+- Keep code easy to test with clear boundaries and small, composable units.
+- Do not introduce architectural ceremony by default (for example mandatory Clean Architecture layers, DI containers) unless the task explicitly requires it.
 - Prefer arrow-function constants over function declarations (for example, `const helper = () => {}` instead of `function helper() {}`).
 - Exception: in shadcn-derived code, keep upstream-friendly structure and style.
 - Prefer destructuring for object/array field access when it improves clarity.
