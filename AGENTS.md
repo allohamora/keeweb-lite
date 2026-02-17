@@ -125,6 +125,9 @@ src/
 
 - If any requirement, constraint, or expected outcome is unclear, ask the user clarifying questions until the task is fully clear before implementation.
 - Prefer the ask/question tool for clarifications when it is available.
+- Start with the simplest primitive solution that satisfies the explicit request.
+- Before adding extra complexity, ask follow-up questions such as: "Do we need to handle old browsers?", "Do we need to migrate this data?", and "Do we need to set up cache here?"
+- Do not add overengineering or unrequested scope without explicit user confirmation.
 
 ### Maintenance
 
