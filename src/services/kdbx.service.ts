@@ -30,21 +30,9 @@ const asUint8Array = (bytes: ArrayBuffer) => {
   return new Uint8Array(bytes);
 };
 
-const zeroizeBytes = (bytes?: Uint8Array | null) => {
-  if (!bytes) {
-    return;
-  }
-
-  // Best-effort memory hygiene: clear sensitive bytes after use.
-  // This does not guarantee complete erasure in JS runtimes, but reduces exposure time.
-  bytes.fill(0);
-};
-
 const createKeyFileBytesWithHash = (hashBase64: string) => {
   const hashBytes = kdbxweb.ByteUtils.base64ToBytes(hashBase64);
   const hexHash = kdbxweb.ByteUtils.bytesToHex(hashBytes);
-  // Remembered hash bytes are sensitive key material derivatives; wipe temporary buffer.
-  zeroizeBytes(hashBytes);
 
   return kdbxweb.ByteUtils.stringToBytes(hexHash);
 };
@@ -57,16 +45,10 @@ export type UnlockKdbxInput = {
 
 export const unlockKdbx = async ({ encryptedBytes, keyFileHashBase64, password }: UnlockKdbxInput) => {
   const keyfile = keyFileHashBase64 ? createKeyFileBytesWithHash(keyFileHashBase64) : undefined;
+  const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyfile);
+  await credentials.ready;
 
-  try {
-    const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyfile);
-    await credentials.ready;
-
-    return await kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
-  } finally {
-    // Remembered hash bytes are sensitive key material derivatives; wipe temporary buffer.
-    zeroizeBytes(keyfile);
-  }
+  return await kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
 };
 
 export const saveKdbx = async (db: kdbxweb.Kdbx) => {
