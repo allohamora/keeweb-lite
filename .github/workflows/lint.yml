@@ -1,4 +1,4 @@
-name: build
+name: lint
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - "**"
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     env:
       CI: true
@@ -20,5 +20,9 @@ jobs:
           node-version-file: ".nvmrc"
       - name: Install dependencies
         run: npm i
-      - name: Run build
-        run: npm run build
+      - name: Run format
+        run: npm run format
+      - name: Run lint
+        run: npm run lint
+      - name: Run check
+        run: npm run check
