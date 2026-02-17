@@ -1,16 +1,7 @@
 import * as kdbxweb from 'kdbxweb';
 import argon2 from 'argon2-browser/dist/argon2-bundled.min.js';
 
-const asArrayBuffer = (bytes: Uint8Array) => {
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  return copy.buffer;
-};
-
-const asUint8Array = (bytes: ArrayBuffer) => {
-  return new Uint8Array(bytes);
-};
-
+// https://www.npmjs.com/package/kdbxweb#kdbx4
 kdbxweb.CryptoEngine.setArgon2Impl(async (password, salt, memory, iterations, length, parallelism, type, version) => {
   if (version !== 0x13) {
     throw new Error(`Argon2 version ${version} is not supported by argon2-browser`);
@@ -28,6 +19,16 @@ kdbxweb.CryptoEngine.setArgon2Impl(async (password, salt, memory, iterations, le
 
   return asArrayBuffer(hash);
 });
+
+const asArrayBuffer = (bytes: Uint8Array) => {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+};
+
+const asUint8Array = (bytes: ArrayBuffer) => {
+  return new Uint8Array(bytes);
+};
 
 const zeroizeBytes = (bytes?: Uint8Array | null) => {
   if (!bytes) {
