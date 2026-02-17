@@ -88,7 +88,7 @@ src/
 - Prefer putting browser persistence logic in `src/repositories/*.repository.ts`.
 - Prefer putting custom app UI in `src/components/**/*.component.tsx`.
 - Shadcn-derived code means `src/components/ui/*` and `src/lib/utils.ts`.
-- These are guidance defaults, not hard constraints; small pragmatic deviations are acceptable when they improve clarity.
+- Keep layering lightweight and pragmatic; avoid adding extra architectural ceremony (for example unnecessary abstraction layers, classes, or DI containers) when it does not improve clarity or testability.
 
 ## Development Guidelines
 
@@ -97,6 +97,8 @@ src/
 - Install new dependencies using npm install commands.
 - DO NOT manually edit `package.json` or `package-lock.json`.
 - Prefer well-maintained, widely adopted npm libraries for robust task requirements instead of building custom implementations from scratch.
+  - Baseline requirements: package was published to npm within the last 2 years and has 100k+ npm weekly downloads.
+  - If a library does not meet this baseline but covers all required capabilities for the task with only minor integration code, treat it as an exception candidate and ask the user whether to use it before proceeding.
 - Only build custom implementations when no suitable library exists or project constraints require it.
 
 ### Code Style
@@ -104,7 +106,6 @@ src/
 - Write comments only when necessary to clarify complex logic; prefer self-documenting code.
 - Prioritize readability, maintainability, and elegant code structure.
 - Keep code easy to test with clear boundaries and small, composable units.
-- Do not introduce architectural ceremony by default (for example mandatory Clean Architecture layers, DI containers) unless the task explicitly requires it.
 - Prefer arrow-function constants over function declarations (for example, `const helper = () => {}` instead of `function helper() {}`).
 - Exception: in shadcn-derived code, keep upstream-friendly structure and style.
 - Prefer destructuring for object/array field access when it improves clarity.
@@ -128,10 +129,11 @@ src/
 
 ### Clarification
 
-- If any requirement, constraint, or expected outcome is unclear, ask the user clarifying questions until the task is fully clear before implementation.
-- Prefer the ask/question tool for clarifications when it is available.
 - Start with the simplest primitive solution that satisfies the explicit request.
-- Before adding extra complexity, ask follow-up questions such as: "Do we need to handle old browsers?", "Do we need to migrate this data?", and "Do we need to set up cache here?"
+- Ask clarifying questions first only for requirements that block building a correct primitive solution.
+- If unclear points are non-blocking edge cases, implement the primitive solution first, then ask follow-up questions before adding complexity.
+- Prefer the ask/question tool for clarifications when it is available.
+- After delivering the primitive solution, ask follow-up questions such as: "Do we need to handle old browsers?", "Do we need to migrate this data?", and "Do we need to set up cache here?"
 - Do not add overengineering or unrequested scope without explicit user confirmation.
 
 ### Maintenance
