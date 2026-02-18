@@ -534,7 +534,7 @@ describe('record.service', () => {
       await createLocalRecord({ databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')) });
 
       const [record] = await getRecords();
-      const { database } = await unlockForSession({ password, selectedRecord: record });
+      const { database } = await unlockForSession({ password, record });
 
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');
@@ -557,7 +557,7 @@ describe('record.service', () => {
       });
 
       const [record] = await getRecords();
-      const { database } = await unlockForSession({ password, selectedRecord: record });
+      const { database } = await unlockForSession({ password, record });
 
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');

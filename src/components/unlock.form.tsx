@@ -44,14 +44,14 @@ export const UnlockForm = ({ recordsReloadToken }: UnlockFormProps) => {
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     try {
-      const selectedRecord = records.find(({ id }) => id === selectedRecordId);
-      if (!selectedRecord) {
+      const record = records.find(({ id }) => id === selectedRecordId);
+      if (!record) {
         throw new Error('Selected record not found.');
       }
 
       const session = await unlockForSession({
+        record,
         password,
-        selectedRecord,
       });
 
       setSession({ session });

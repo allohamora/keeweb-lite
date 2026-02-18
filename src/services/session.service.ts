@@ -23,15 +23,9 @@ export const useSessionStore = create(
   })),
 );
 
-export const unlockForSession = async ({
-  password,
-  selectedRecord,
-}: {
-  password: string;
-  selectedRecord: FileRecord;
-}) => {
-  const encryptedBytes = selectedRecord.kdbx.encryptedBytes;
-  const keyFileHashBase64 = selectedRecord.key?.hash;
+export const unlockForSession = async ({ record, password }: { record: FileRecord; password: string }) => {
+  const encryptedBytes = record.kdbx.encryptedBytes;
+  const keyFileHashBase64 = record.key?.hash;
   const unlockedAt = new Date().toISOString();
 
   const database = await unlockKdbx({
@@ -41,15 +35,15 @@ export const unlockForSession = async ({
   });
 
   await updateRecord({
-    ...selectedRecord,
+    ...record,
     lastOpenedAt: unlockedAt,
   });
 
   return {
     database,
-    recordId: selectedRecord.id,
-    recordName: selectedRecord.kdbx.name,
-    recordType: selectedRecord.type,
+    recordId: record.id,
+    recordName: record.kdbx.name,
+    recordType: record.type,
     unlockedAt,
   };
 };

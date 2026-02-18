@@ -99,7 +99,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const result = await unlockForSession({ password, selectedRecord: record });
+      const result = await unlockForSession({ password, record });
 
       expect(result.recordId).toBe('test-record');
       expect(result.recordName).toBe('vault.kdbx');
@@ -116,7 +116,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const { unlockedAt } = await unlockForSession({ password, selectedRecord: record });
+      const { unlockedAt } = await unlockForSession({ password, record });
 
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'test-record');
@@ -131,7 +131,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      await expect(unlockForSession({ password: 'wrong-password', selectedRecord: record })).rejects.toThrow();
+      await expect(unlockForSession({ password: 'wrong-password', record })).rejects.toThrow();
     });
 
     it('returns a usable database with the correct entries', async () => {
@@ -149,7 +149,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const result = await unlockForSession({ password: 'test-password', selectedRecord: record });
+      const result = await unlockForSession({ password: 'test-password', record });
 
       const testGroup = result.database.getDefaultGroup().groups.find((g) => g.name === 'My Group');
       expect(testGroup).toBeDefined();
@@ -170,7 +170,7 @@ describe('session.service', () => {
         key: keyFileHashBase64 ? { hash: keyFileHashBase64, name: 'key.keyx' } : undefined,
       });
 
-      const result = await unlockForSession({ password, selectedRecord: record });
+      const result = await unlockForSession({ password, record });
 
       expect(result.database).toBeDefined();
       expect(result.recordId).toBe('test-record');
