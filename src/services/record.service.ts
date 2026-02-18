@@ -94,7 +94,6 @@ export const createLocalRecord = async ({ databaseFile, keyFile }: { databaseFil
     id,
     kdbx,
     key,
-    lastOpenedAt: new Date().toISOString(),
     type: 'local',
   });
 };

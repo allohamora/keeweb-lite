@@ -1,6 +1,8 @@
 import kdbx from '@/lib/kdbx.lib';
-import { describe, expect, it } from 'vitest';
-import { saveKdbx, unlockKdbx } from '@/services/record.service';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createLocalRecord, getRecords, saveKdbx, unlockKdbx } from '@/services/record.service';
+import { unlockForSession } from '@/services/session.service';
+import { clearRecords, createRecord } from '@/repositories/record.repository';
 
 type DatabaseRecordInput = {
   name: string;
@@ -374,6 +376,192 @@ describe('record.service', () => {
 
       expect(reloadedDatabase.meta.name).toBe('Updated Database Name');
       expect(reloadedDatabase.meta.desc).toBe('Test Description');
+    });
+  });
+
+  describe('getRecords', () => {
+    afterEach(async () => {
+      await clearRecords();
+    });
+
+    it('returns an empty array when there are no records', async () => {
+      expect(await getRecords()).toEqual([]);
+    });
+
+    it('sorts records by lastOpenedAt in descending order', async () => {
+      await createRecord({
+        id: 'older-record',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'older.kdbx' },
+        lastOpenedAt: '2026-01-01T00:00:00.000Z',
+      });
+      await createRecord({
+        id: 'newer-record',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([4, 5, 6]), name: 'newer.kdbx' },
+        lastOpenedAt: '2026-02-01T00:00:00.000Z',
+      });
+
+      const records = await getRecords();
+
+      expect(records[0].id).toBe('newer-record');
+      expect(records[1].id).toBe('older-record');
+    });
+
+    it('places records without lastOpenedAt at the end', async () => {
+      await createRecord({
+        id: 'no-timestamp-record',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'no-timestamp.kdbx' },
+      });
+      await createRecord({
+        id: 'with-timestamp-record',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([4, 5, 6]), name: 'with-timestamp.kdbx' },
+        lastOpenedAt: '2026-01-01T00:00:00.000Z',
+      });
+
+      const records = await getRecords();
+
+      expect(records[0].id).toBe('with-timestamp-record');
+      expect(records[1].id).toBe('no-timestamp-record');
+    });
+
+    it('places multiple records without lastOpenedAt after all timestamped records', async () => {
+      await createRecord({
+        id: 'no-timestamp-1',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault-1.kdbx' },
+      });
+      await createRecord({
+        id: 'with-timestamp',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([4, 5, 6]), name: 'vault-2.kdbx' },
+        lastOpenedAt: '2026-01-15T00:00:00.000Z',
+      });
+      await createRecord({
+        id: 'no-timestamp-2',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([7, 8, 9]), name: 'vault-3.kdbx' },
+      });
+
+      const records = await getRecords();
+
+      expect(records[0].id).toBe('with-timestamp');
+      const tailIds = records.slice(1).map(({ id }) => id);
+      expect(tailIds).toContain('no-timestamp-1');
+      expect(tailIds).toContain('no-timestamp-2');
+    });
+  });
+
+  describe('createLocalRecord', () => {
+    afterEach(async () => {
+      await clearRecords();
+    });
+
+    const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
+
+    it('creates a local record with the database file name and encrypted bytes', async () => {
+      const encryptedBytes = new Uint8Array([1, 2, 3, 4, 5]);
+      const dbFile = new File([encryptedBytes], 'vault.kdbx');
+
+      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+      expect(records[0].type).toBe('local');
+      expect(records[0].kdbx.name).toBe('vault.kdbx');
+      expect(records[0].kdbx.encryptedBytes).toEqual(encryptedBytes);
+    });
+
+    it('creates a local record without a key when keyFile is not provided', async () => {
+      const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
+
+      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeUndefined();
+    });
+
+    it('creates a local record with a key when keyFile is provided', async () => {
+      const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
+      const keyFile = new File([new Uint8Array([10, 20, 30])], 'vault.keyx');
+
+      await createLocalRecord({
+        databaseFile: createFileList(dbFile),
+        keyFile: createFileList(keyFile),
+      });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeDefined();
+      expect(records[0].key?.name).toBe('vault.keyx');
+      expect(typeof records[0].key?.hash).toBe('string');
+    });
+
+    it('does not set lastOpenedAt on creation', async () => {
+      const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
+
+      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+
+      const records = await getRecords();
+      expect(records[0].lastOpenedAt).toBeUndefined();
+    });
+
+    it('generates a unique id for each record', async () => {
+      const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault-1.kdbx');
+      const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault-2.kdbx');
+
+      await createLocalRecord({ databaseFile: createFileList(dbFile1) });
+      await createLocalRecord({ databaseFile: createFileList(dbFile2) });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(2);
+      expect(records[0].id).not.toBe(records[1].id);
+    });
+
+    it('throws when the database FileList is empty', async () => {
+      const emptyFileList = { 0: undefined, length: 0 } as unknown as FileList;
+
+      await expect(createLocalRecord({ databaseFile: emptyFileList })).rejects.toThrow('No database file selected.');
+    });
+
+    it('unlocks after creation without a key file and entries are accessible', async () => {
+      const { encryptedBytes, password } = await createDatabase({
+        keyFileContent: null,
+        records: [{ name: 'Test Entry', password: 'entry-pass', username: 'test-user' }],
+      });
+
+      await createLocalRecord({ databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')) });
+
+      const [record] = await getRecords();
+      const { database } = await unlockForSession({ password, selectedRecord: record });
+
+      const testGroup = getGroupByName(database, 'Test Group');
+      const entry = getRecordByTitle(testGroup, 'Test Entry');
+      expect(getFieldText(entry, 'UserName')).toBe('test-user');
+    });
+
+    it('unlocks after creation with a key file and entries are accessible', async () => {
+      const keyFileContent = 'test-key-file-content';
+      const keyFileHashBase64 = await createKeyFileHashBase64(keyFileContent);
+      const keyFileBytes = kdbx.ByteUtils.base64ToBytes(keyFileHashBase64);
+
+      const { encryptedBytes, password } = await createDatabase({
+        keyFileContent,
+        records: [{ name: 'Test Entry', password: 'entry-pass', username: 'test-user' }],
+      });
+
+      await createLocalRecord({
+        databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')),
+        keyFile: createFileList(new File([new Uint8Array(keyFileBytes)], 'vault.keyx')),
+      });
+
+      const [record] = await getRecords();
+      const { database } = await unlockForSession({ password, selectedRecord: record });
+
+      const testGroup = getGroupByName(database, 'Test Group');
+      const entry = getRecordByTitle(testGroup, 'Test Entry');
+      expect(getFieldText(entry, 'UserName')).toBe('test-user');
     });
   });
 });
