@@ -22,31 +22,14 @@ export const saveKdbx = async (db: kdbx.Kdbx) => {
   return asUint8Array(await db.save());
 };
 
-const parseTimestamp = (timestamp: string | undefined) => {
-  if (!timestamp) {
-    return null;
-  }
-
-  const timestampMs = Date.parse(timestamp);
-  return Number.isNaN(timestampMs) ? null : timestampMs;
-};
-
 const sortRecordsByLastOpened = <RecordType extends { lastOpenedAt?: string }>(records: RecordType[]) => {
   return records
     .map((record) => ({
       record,
-      timestampMs: parseTimestamp(record.lastOpenedAt),
+      lastOpenedAtMs: record.lastOpenedAt ? Date.parse(record.lastOpenedAt) : 0,
     }))
     .toSorted((left, right) => {
-      if (left.timestampMs === null) {
-        return 1;
-      }
-
-      if (right.timestampMs === null) {
-        return -1;
-      }
-
-      return right.timestampMs - left.timestampMs;
+      return right.lastOpenedAtMs - left.lastOpenedAtMs;
     })
     .map(({ record }) => record);
 };
