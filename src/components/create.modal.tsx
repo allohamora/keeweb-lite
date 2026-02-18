@@ -24,14 +24,14 @@ export type CreateModalProps = {
 
 const createModalSchema = z.object({
   databaseFile: z
-    .instanceof(FileList)
+    .instanceof(FileList, { message: 'Select a .kdbx file to create a record.' })
     .refine((files) => files.length > 0, {
       message: 'Select a .kdbx file to create a record.',
     })
-    .refine((files) => files[0]?.name.toLowerCase().endsWith('.kdbx'), {
+    .refine((files) => files.length === 0 || files[0]?.name.toLowerCase().endsWith('.kdbx'), {
       message: 'Only .kdbx files are supported.',
     }),
-  keyFile: z.instanceof(FileList).optional(),
+  keyFile: z.instanceof(FileList, { message: 'Select a key file.' }).optional(),
 });
 
 type CreateModalFormValues = z.infer<typeof createModalSchema>;
