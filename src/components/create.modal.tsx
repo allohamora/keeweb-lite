@@ -36,21 +36,14 @@ const createModalSchema = z.object({
 
 type CreateModalFormValues = z.infer<typeof createModalSchema>;
 
-const DEFAULT_VALUES: Partial<CreateModalFormValues> = {
-  databaseFile: undefined,
-  keyFile: undefined,
-};
-
 export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const {
     control,
     formState: { isSubmitting },
     handleSubmit,
-    reset,
   } = useForm<CreateModalFormValues>({
     resolver: zodResolver(createModalSchema),
-    defaultValues: DEFAULT_VALUES,
   });
 
   const handleCreateRecordSubmit = handleSubmit(async ({ databaseFile, keyFile }) => {
@@ -58,7 +51,6 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
       await createLocalRecord({ databaseFile, keyFile });
 
       await onRecordCreated();
-      reset(DEFAULT_VALUES);
       setIsOpen(false);
 
       toast.success('Record has been created.');
