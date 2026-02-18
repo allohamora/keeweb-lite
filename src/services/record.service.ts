@@ -86,10 +86,21 @@ const toKey = async (keyFile?: FileList | undefined) => {
 };
 
 export const createLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {
+  const id = crypto.randomUUID();
+
+  const database = await toKdbx(databaseFile);
+  const records = await getRepositoryRecords();
+
+  if (records.some((record) => record.type === 'local' && record.kdbx.name === database.name)) {
+    throw new Error(`A record named "${database.name}" already exists.`);
+  }
+
+  const key = await toKey(keyFile);
+
   await createRecord({
-    id: crypto.randomUUID(),
-    kdbx: await toKdbx(databaseFile),
-    key: await toKey(keyFile),
+    id,
+    kdbx: database,
+    key,
     type: 'local',
   });
 };

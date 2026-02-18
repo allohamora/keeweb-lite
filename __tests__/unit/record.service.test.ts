@@ -525,6 +525,54 @@ describe('record.service', () => {
       await expect(createLocalRecord({ databaseFile: emptyFileList })).rejects.toThrow('No database file selected.');
     });
 
+    it('throws when a record with the same kdbx name already exists', async () => {
+      const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
+
+      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+
+      const duplicate = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
+      await expect(createLocalRecord({ databaseFile: createFileList(duplicate) })).rejects.toThrow(
+        'A record named "vault.kdbx" already exists.',
+      );
+    });
+
+    it('does not store the duplicate record when the name already exists', async () => {
+      const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
+      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+
+      const duplicate = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
+      await createLocalRecord({ databaseFile: createFileList(duplicate) }).catch(() => undefined);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
+    it('allows records with different kdbx names', async () => {
+      const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault-a.kdbx');
+      const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault-b.kdbx');
+
+      await createLocalRecord({ databaseFile: createFileList(dbFile1) });
+      await createLocalRecord({ databaseFile: createFileList(dbFile2) });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(2);
+    });
+
+    it('allows a local record when a google-drive record with the same name already exists', async () => {
+      await createRecord({
+        id: 'google-drive-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      const dbFile = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
+      await expect(createLocalRecord({ databaseFile: createFileList(dbFile) })).resolves.toBeUndefined();
+
+      const records = await getRecords();
+      expect(records).toHaveLength(2);
+    });
+
     it('unlocks after creation without a key file and entries are accessible', async () => {
       const { encryptedBytes, password } = await createDatabase({
         keyFileContent: null,
