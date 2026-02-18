@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { loadLocalUnlockRecords, unlockSelectedRecordForSession } from '@/services/kdbx.service';
-import { useSessionStore } from '@/services/session.service';
+import { unlockForSession, useSessionStore } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
+import { getRecords } from '@/services/record.service';
+import { toast } from 'sonner';
 
 const unlockFormSchema = z.object({
   selectedRecordId: z.string().min(1, 'Create or select a file before unlocking.'),
@@ -24,11 +25,8 @@ export type UnlockFormProps = {
 export const UnlockForm = ({ recordsReloadToken }: UnlockFormProps) => {
   const {
     control,
-    clearErrors,
     formState: { isSubmitting },
     handleSubmit,
-    setError,
-    setValue,
   } = useForm<UnlockFormValues>({
     defaultValues: {
       password: '',
@@ -39,43 +37,31 @@ export const UnlockForm = ({ recordsReloadToken }: UnlockFormProps) => {
   const {
     error: recordsLoadError,
     loading: isLoadingRecords,
-    value: loadedRecords,
-  } = useAsync(async () => {
-    const recordsResult = await loadLocalUnlockRecords();
+    value: records = [],
+  } = useAsync(async () => await getRecords(), [recordsReloadToken]);
 
-    setValue('selectedRecordId', recordsResult.selectedRecordId ?? '', {
-      shouldDirty: false,
-      shouldTouch: false,
-    });
+  const setSession = useSessionStore((state) => state.setSession);
 
-    return recordsResult;
-  }, [recordsReloadToken, setValue]);
-  const records = loadedRecords?.records ?? [];
-
-  const handleUnlockSubmit = handleSubmit(async ({ password: unlockPassword, selectedRecordId: selectedId }) => {
-    const recordToUnlock = records.find(({ id }) => id === selectedId);
-    if (!recordToUnlock) {
-      setError('selectedRecordId', {
-        message: 'Create or select a file before unlocking.',
-        type: 'manual',
-      });
-      return;
-    }
-
-    clearErrors('password');
-
+  const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     try {
-      const { session } = await unlockSelectedRecordForSession({
-        password: unlockPassword,
-        selectedRecord: recordToUnlock,
+      const selectedRecord = records.find(({ id }) => id === selectedRecordId);
+      if (!selectedRecord) {
+        throw new Error('Selected record not found.');
+      }
+
+      const session = await unlockForSession({
+        password,
+        selectedRecord,
       });
 
-      useSessionStore.getState().setSession({ session });
+      setSession({ session });
     } catch (error) {
-      setError('password', {
-        message: getErrorMessage({ error, fallback: 'Unlock failed. Check your password.' }),
-        type: 'manual',
-      });
+      toast.error(
+        getErrorMessage({
+          error,
+          fallback: 'Failed to unlock the database. Please check your password and try again.',
+        }),
+      );
     }
   });
 
@@ -125,12 +111,20 @@ export const UnlockForm = ({ recordsReloadToken }: UnlockFormProps) => {
                   className="h-10 w-full text-xs"
                   id="unlock-selected-file"
                 >
-                  <SelectValue placeholder={isLoadingRecords ? 'Loading records...' : 'No records available'} />
+                  <SelectValue
+                    placeholder={
+                      isLoadingRecords
+                        ? 'Loading records...'
+                        : records.length === 0
+                          ? 'No records available'
+                          : 'Select a file'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {records.map((record) => (
                     <SelectItem key={record.id} value={record.id}>
-                      {record.kdbx.name}
+                      {record.kdbx.name} ({record.type === 'google-drive' ? 'Google Drive' : 'Local'})
                     </SelectItem>
                   ))}
                 </SelectContent>

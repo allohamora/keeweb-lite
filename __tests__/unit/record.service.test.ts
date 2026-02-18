@@ -1,6 +1,6 @@
-import * as kdbxweb from 'kdbxweb';
+import kdbx from '@/lib/kdbx.lib';
 import { describe, expect, it } from 'vitest';
-import { saveKdbx, unlockKdbx } from '@/services/kdbx.service';
+import { saveKdbx, unlockKdbx } from '@/services/record.service';
 
 type DatabaseRecordInput = {
   name: string;
@@ -16,12 +16,12 @@ type CreateDatabaseInput = {
   records?: DatabaseRecordInput[];
 };
 
-describe('kdbx.service', () => {
+describe('record.service', () => {
   const createKeyFileHashBase64 = async (keyFileContent: string) => {
-    const keyFileBytes = kdbxweb.ByteUtils.stringToBytes(keyFileContent);
-    const keyFileHash = await kdbxweb.CryptoEngine.sha256(keyFileBytes.buffer as ArrayBuffer);
+    const keyFileBytes = kdbx.ByteUtils.stringToBytes(keyFileContent);
+    const keyFileHash = await kdbx.CryptoEngine.sha256(keyFileBytes.buffer as ArrayBuffer);
 
-    return kdbxweb.ByteUtils.bytesToBase64(new Uint8Array(keyFileHash));
+    return kdbx.ByteUtils.bytesToBase64(new Uint8Array(keyFileHash));
   };
 
   const createDatabase = async ({
@@ -38,23 +38,23 @@ describe('kdbx.service', () => {
     ],
   }: Partial<CreateDatabaseInput> = {}) => {
     const keyFileHashBase64 = keyFileContent ? await createKeyFileHashBase64(keyFileContent) : undefined;
-    const keyFileHashBytes = keyFileHashBase64 ? kdbxweb.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
+    const keyFileHashBytes = keyFileHashBase64 ? kdbx.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
 
-    const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyFileHashBytes);
+    const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyFileHashBytes);
     await credentials.ready;
 
-    const database = kdbxweb.Kdbx.create(credentials, databaseName);
+    const database = kdbx.Kdbx.create(credentials, databaseName);
 
     if (records.length > 0) {
       const group = database.createGroup(database.getDefaultGroup(), groupName);
 
       for (const { name, password: entryPassword, username } of records) {
         const entry = database.createEntry(group);
-        entry.fields.set('Title', kdbxweb.ProtectedValue.fromString(name));
-        entry.fields.set('Password', kdbxweb.ProtectedValue.fromString(entryPassword));
+        entry.fields.set('Title', kdbx.ProtectedValue.fromString(name));
+        entry.fields.set('Password', kdbx.ProtectedValue.fromString(entryPassword));
 
         if (username) {
-          entry.fields.set('UserName', kdbxweb.ProtectedValue.fromString(username));
+          entry.fields.set('UserName', kdbx.ProtectedValue.fromString(username));
         }
       }
     }
@@ -69,7 +69,7 @@ describe('kdbx.service', () => {
     };
   };
 
-  const getGroupByName = (database: kdbxweb.Kdbx, groupName: string) => {
+  const getGroupByName = (database: kdbx.Kdbx, groupName: string) => {
     const group = database.getDefaultGroup().groups.find((group) => group.name === groupName);
     expect(group).toBeDefined();
     if (!group) {
@@ -79,11 +79,11 @@ describe('kdbx.service', () => {
     return group;
   };
 
-  const getFieldText = (entry: kdbxweb.KdbxEntry, fieldName: string) => {
-    return (entry.fields.get(fieldName) as kdbxweb.ProtectedValue | undefined)?.getText();
+  const getFieldText = (entry: kdbx.KdbxEntry, fieldName: string) => {
+    return (entry.fields.get(fieldName) as kdbx.ProtectedValue | undefined)?.getText();
   };
 
-  const getRecordByTitle = (group: kdbxweb.KdbxGroup, title: string) => {
+  const getRecordByTitle = (group: kdbx.KdbxGroup, title: string) => {
     const record = group.entries.find((entry) => getFieldText(entry, 'Title') === title);
     expect(record).toBeDefined();
     if (!record) {
@@ -194,9 +194,9 @@ describe('kdbx.service', () => {
       const testGroup = getGroupByName(unlockedDatabase, 'Test Group');
       const { entries } = testGroup;
       expect(entries).toHaveLength(1);
-      expect((entries[0].fields.get('Title') as kdbxweb.ProtectedValue)?.getText()).toBe('Test Entry');
-      expect((entries[0].fields.get('UserName') as kdbxweb.ProtectedValue)?.getText()).toBe('test-user');
-      expect((entries[0].fields.get('Password') as kdbxweb.ProtectedValue)?.getText()).toBe('test-entry-password');
+      expect((entries[0].fields.get('Title') as kdbx.ProtectedValue)?.getText()).toBe('Test Entry');
+      expect((entries[0].fields.get('UserName') as kdbx.ProtectedValue)?.getText()).toBe('test-user');
+      expect((entries[0].fields.get('Password') as kdbx.ProtectedValue)?.getText()).toBe('test-entry-password');
     });
 
     it('accepts null for keyFileHashBase64', async () => {
@@ -270,13 +270,13 @@ describe('kdbx.service', () => {
       const entryToRename = getRecordByTitle(testGroup, 'Rename Me');
 
       unlockedDatabase.remove(entryToDelete);
-      entryToRename.fields.set('Title', kdbxweb.ProtectedValue.fromString('Renamed Entry'));
-      entryToRename.fields.set('UserName', kdbxweb.ProtectedValue.fromString('renamed-user'));
+      entryToRename.fields.set('Title', kdbx.ProtectedValue.fromString('Renamed Entry'));
+      entryToRename.fields.set('UserName', kdbx.ProtectedValue.fromString('renamed-user'));
 
       const createdEntry = unlockedDatabase.createEntry(testGroup);
-      createdEntry.fields.set('Title', kdbxweb.ProtectedValue.fromString('Created Entry'));
-      createdEntry.fields.set('UserName', kdbxweb.ProtectedValue.fromString('created-user'));
-      createdEntry.fields.set('Password', kdbxweb.ProtectedValue.fromString('created-password'));
+      createdEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Created Entry'));
+      createdEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('created-user'));
+      createdEntry.fields.set('Password', kdbx.ProtectedValue.fromString('created-password'));
 
       const savedBytes = await saveKdbx(unlockedDatabase);
       const reloadedDatabase = await unlockKdbx({
@@ -311,8 +311,8 @@ describe('kdbx.service', () => {
       // Modify the database
       const newGroup = unlockedDatabase.createGroup(unlockedDatabase.getDefaultGroup(), 'New Group');
       const newEntry = unlockedDatabase.createEntry(newGroup);
-      newEntry.fields.set('Title', kdbxweb.ProtectedValue.fromString('New Entry'));
-      newEntry.fields.set('UserName', kdbxweb.ProtectedValue.fromString('new-user'));
+      newEntry.fields.set('Title', kdbx.ProtectedValue.fromString('New Entry'));
+      newEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('new-user'));
 
       const savedBytes = await saveKdbx(unlockedDatabase);
 
@@ -328,10 +328,8 @@ describe('kdbx.service', () => {
 
       const newGroupReloaded = getGroupByName(reloadedDatabase, 'New Group');
       expect(newGroupReloaded.entries).toHaveLength(1);
-      expect((newGroupReloaded.entries[0].fields.get('Title') as kdbxweb.ProtectedValue)?.getText()).toBe('New Entry');
-      expect((newGroupReloaded.entries[0].fields.get('UserName') as kdbxweb.ProtectedValue)?.getText()).toBe(
-        'new-user',
-      );
+      expect((newGroupReloaded.entries[0].fields.get('Title') as kdbx.ProtectedValue)?.getText()).toBe('New Entry');
+      expect((newGroupReloaded.entries[0].fields.get('UserName') as kdbx.ProtectedValue)?.getText()).toBe('new-user');
     });
 
     it('produces different bytes after database modification', async () => {
@@ -347,7 +345,7 @@ describe('kdbx.service', () => {
 
       // Modify the database
       const newEntry = unlockedDatabase.createEntry(unlockedDatabase.getDefaultGroup());
-      newEntry.fields.set('Title', kdbxweb.ProtectedValue.fromString('Modified Entry'));
+      newEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Modified Entry'));
 
       const savedBytesAfterModification = await saveKdbx(unlockedDatabase);
 

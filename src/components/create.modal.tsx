@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,17 +15,30 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { hashKeyFileBytesToBase64 } from '@/services/kdbx.service';
-import { createLocalRecordForUnlock, validateLocalKdbxFile } from '@/services/kdbx.service';
 import { getErrorMessage } from '@/utils/error.utils';
+import { createLocalRecord } from '@/services/record.service';
 
 export type CreateModalProps = {
   onRecordCreated: () => Promise<void>;
 };
 
-type CreateModalFormValues = {
-  createDatabaseFile?: FileList;
-  createKeyFile?: FileList;
+const createModalSchema = z.object({
+  databaseFile: z
+    .instanceof(FileList)
+    .refine((files) => files.length > 0, {
+      message: 'Select a .kdbx file to create a record.',
+    })
+    .refine((files) => files[0]?.name.toLowerCase().endsWith('.kdbx'), {
+      message: 'Only .kdbx files are supported.',
+    }),
+  keyFile: z.instanceof(FileList).optional(),
+});
+
+type CreateModalFormValues = z.infer<typeof createModalSchema>;
+
+const DEFAULT_VALUES: Partial<CreateModalFormValues> = {
+  databaseFile: undefined,
+  keyFile: undefined,
 };
 
 export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
@@ -33,69 +48,22 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
     formState: { isSubmitting },
     handleSubmit,
     reset,
-    setError,
   } = useForm<CreateModalFormValues>({
-    defaultValues: {
-      createDatabaseFile: undefined,
-      createKeyFile: undefined,
-    },
+    resolver: zodResolver(createModalSchema),
+    defaultValues: DEFAULT_VALUES,
   });
 
-  const handleCreateRecordSubmit = handleSubmit(async ({ createDatabaseFile, createKeyFile }) => {
-    const selectedDatabaseFile = createDatabaseFile?.item(0);
-    if (!selectedDatabaseFile) {
-      setError('createDatabaseFile', {
-        message: 'Select a .kdbx file to create a record.',
-        type: 'manual',
-      });
-      return;
-    }
-
-    const localKdbxValidationResult = validateLocalKdbxFile({ name: selectedDatabaseFile.name });
-    if (!localKdbxValidationResult.isValid) {
-      setError('createDatabaseFile', {
-        message: localKdbxValidationResult.error,
-        type: 'manual',
-      });
-      return;
-    }
-
-    let createKeyFileHashBase64: string | undefined;
-    let createKeyFileName: string | undefined;
-    const selectedKeyFile = createKeyFile?.item(0);
-    if (selectedKeyFile) {
-      const keyFileBytes = new Uint8Array(await selectedKeyFile.arrayBuffer());
-      try {
-        createKeyFileHashBase64 = await hashKeyFileBytesToBase64({ keyFileBytes });
-        createKeyFileName = selectedKeyFile.name;
-      } catch (error) {
-        setError('createKeyFile', {
-          message: getErrorMessage({ error, fallback: 'Failed to read create key file.' }),
-          type: 'manual',
-        });
-        return;
-      }
-    }
-
+  const handleCreateRecordSubmit = handleSubmit(async ({ databaseFile, keyFile }) => {
     try {
-      const encryptedBytes = new Uint8Array(await selectedDatabaseFile.arrayBuffer());
-
-      await createLocalRecordForUnlock({
-        createDatabaseFileName: selectedDatabaseFile.name,
-        createKeyFileHashBase64,
-        createKeyFileName,
-        encryptedBytes,
-      });
+      await createLocalRecord({ databaseFile, keyFile });
 
       await onRecordCreated();
-      reset({ createDatabaseFile: undefined, createKeyFile: undefined });
+      reset(DEFAULT_VALUES);
       setIsOpen(false);
-      toast.success(`${selectedDatabaseFile.name} created and selected.`);
+
+      toast.success('Record has been created.');
     } catch (error) {
-      setError('createDatabaseFile', {
-        message: getErrorMessage({ error, fallback: 'Failed to create record.' }),
-        type: 'manual',
-      });
+      toast.error(getErrorMessage({ error, fallback: 'An unexpected error occurred.' }));
     }
   });
 
@@ -122,7 +90,7 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
         >
           <Controller
             control={control}
-            name="createDatabaseFile"
+            name="databaseFile"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="create-database-file">File</FieldLabel>
@@ -142,7 +110,7 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
 
           <Controller
             control={control}
-            name="createKeyFile"
+            name="keyFile"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="create-key-file">Key file (optional)</FieldLabel>
