@@ -86,14 +86,10 @@ const toKey = async (keyFile?: FileList | undefined) => {
 };
 
 export const createLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {
-  const id = crypto.randomUUID();
-  const kdbx = await toKdbx(databaseFile);
-  const key = await toKey(keyFile);
-
   await createRecord({
-    id,
-    kdbx,
-    key,
+    id: crypto.randomUUID(),
+    kdbx: await toKdbx(databaseFile),
+    key: await toKey(keyFile),
     type: 'local',
   });
 };
