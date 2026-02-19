@@ -1,7 +1,8 @@
 ---
 import Layout from '@/layouts/layout.astro';
+import { App } from '@/components/app';
 ---
 
-<Layout title="Home">
-  <h1 class="text-3xl font-bold underline">Keeweb Lite</h1>
+<Layout title="Unlock">
+  <App client:only="react" />
 </Layout>
