@@ -1,6 +1,6 @@
 import kdbx from '@/lib/kdbx.lib';
 import { describe, expect, it } from 'vitest';
-import { getAllGroups, getEntriesForList, getFieldText } from '@/services/workspace.service';
+import { getAllGroups, getAllTags, getEntriesForList, getFieldText } from '@/services/workspace.service';
 
 describe('workspace.service', () => {
   const createDatabase = async () => {
@@ -35,7 +35,7 @@ describe('workspace.service', () => {
       const selectedGroup = database.createGroup(root, 'Selected');
       const entry = database.createEntry(selectedGroup);
 
-      const result = getEntriesForList({ database, selectedGroup });
+      const result = getEntriesForList({ database, selectFilter: selectedGroup });
 
       expect(result).toEqual([entry]);
     });
@@ -48,9 +48,59 @@ describe('workspace.service', () => {
       const firstEntry = database.createEntry(first);
       const secondEntry = database.createEntry(second);
 
-      const result = getEntriesForList({ database, selectedGroup: null });
+      const result = getEntriesForList({ database, selectFilter: null });
 
       expect(result).toEqual([firstEntry, secondEntry]);
+    });
+
+    it('returns entries matching a selected tag using case-insensitive trimmed comparison', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const second = database.createGroup(root, 'Second');
+      const matchingEntry = database.createEntry(first);
+      const otherEntry = database.createEntry(second);
+      matchingEntry.tags = [' Work ', 'Shared'];
+      otherEntry.tags = ['Personal'];
+
+      const result = getEntriesForList({ database, selectFilter: 'work' });
+
+      expect(result).toEqual([matchingEntry]);
+    });
+
+    it('returns all entries when the selected tag is blank after trimming', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const second = database.createGroup(root, 'Second');
+      const firstEntry = database.createEntry(first);
+      const secondEntry = database.createEntry(second);
+      firstEntry.tags = ['one'];
+      secondEntry.tags = ['two'];
+
+      const result = getEntriesForList({ database, selectFilter: '   ' });
+
+      expect(result).toEqual([firstEntry, secondEntry]);
+    });
+  });
+
+  describe('getAllTags', () => {
+    it('returns unique normalized tags from all groups and excludes blank tags', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const nested = database.createGroup(first, 'Nested');
+      const second = database.createGroup(root, 'Second');
+      const firstEntry = database.createEntry(first);
+      const nestedEntry = database.createEntry(nested);
+      const secondEntry = database.createEntry(second);
+      firstEntry.tags = [' Work ', 'Shared'];
+      nestedEntry.tags = ['work', '   '];
+      secondEntry.tags = ['Personal', 'shared'];
+
+      const result = getAllTags(database);
+
+      expect(result).toEqual(['work', 'shared', 'personal']);
     });
   });
 

@@ -28,7 +28,8 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Shows `Sync` action when current record type is `google-drive`.
    - Shows sync metadata (last successful sync and last error context when present).
 2. Left menu pane
-   - Displays workspace navigation (groups, smart filters, and similar navigation items).
+   - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
+   - Tag items are clickable and sort the entry list by the selected tag.
 3. Entry list pane
    - Displays entries for the selected navigation context.
    - Supports selection and search/sort controls.
@@ -81,6 +82,8 @@ View-state transitions:
 2. Navigate and select
    - User selects a group/filter in menu.
    - Entry list updates to selected context.
+   - User clicks a tag in menu.
+   - Entry list is sorted to prioritize entries with the selected tag.
    - User selects an entry and details panel updates.
 3. Edit and save feedback
    - User edits selected entry fields.

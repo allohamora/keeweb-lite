@@ -1,6 +1,7 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState } from 'react';
 import type { UnlockSession } from '@/services/session.service';
+import type { SelectFilter } from '@/services/workspace.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
@@ -10,16 +11,16 @@ type WorkspacePageProps = {
 };
 
 export const WorkspacePage = ({ session: { database } }: WorkspacePageProps) => {
-  const [selectedGroup, setSelectedGroup] = useState<kdbx.KdbxGroup | null>(null);
+  const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntry, setSelectedEntry] = useState<kdbx.KdbxEntry | null>(null);
-
-  const handleSelectGroup = (group: kdbx.KdbxGroup | null) => {
-    setSelectedGroup(group);
-    setSelectedEntry(null);
-  };
 
   const handleSelectEntry = (entry: kdbx.KdbxEntry) => {
     setSelectedEntry(entry);
+  };
+
+  const handleSelectFilter = (nextSelectFilter: SelectFilter) => {
+    setSelectFilter(nextSelectFilter);
+    setSelectedEntry(null);
   };
 
   return (
@@ -28,14 +29,14 @@ export const WorkspacePage = ({ session: { database } }: WorkspacePageProps) => 
         <MenuPane
           className="flex"
           database={database}
-          onSelectGroup={handleSelectGroup}
-          selectedGroup={selectedGroup}
+          onSelectFilter={handleSelectFilter}
+          selectFilter={selectFilter}
         />
         <EntryList
           className="flex"
           database={database}
           onSelectEntry={handleSelectEntry}
-          selectedGroup={selectedGroup}
+          selectFilter={selectFilter}
           selectedEntry={selectedEntry}
         />
         <EntryDetails className="flex" selectedEntry={selectedEntry} />

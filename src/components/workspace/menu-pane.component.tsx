@@ -2,13 +2,13 @@ import type kdbx from '@/lib/kdbx.lib';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
-import { getAllGroups } from '@/services/workspace.service';
+import { getAllGroups, getAllTags, type SelectFilter } from '@/services/workspace.service';
 
 type MenuPaneProps = {
   className?: string;
   database: kdbx.Kdbx;
-  selectedGroup: kdbx.KdbxGroup | null;
-  onSelectGroup: (group: kdbx.KdbxGroup | null) => void;
+  selectFilter: SelectFilter;
+  onSelectFilter: (selectFilter: SelectFilter) => void;
 };
 
 const navItemClass = (isSelected: boolean) => {
@@ -18,8 +18,9 @@ const navItemClass = (isSelected: boolean) => {
   );
 };
 
-export const MenuPane = ({ className, database, selectedGroup, onSelectGroup }: MenuPaneProps) => {
+export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: MenuPaneProps) => {
   const groups = getAllGroups(database.groups);
+  const tags = getAllTags(database);
 
   return (
     <nav className={cn('flex h-full w-60 min-w-0 flex-col border-r border-border bg-card', className)}>
@@ -30,9 +31,9 @@ export const MenuPane = ({ className, database, selectedGroup, onSelectGroup }: 
       <div aria-label="Workspace groups" className="flex min-h-0 flex-1 flex-col" role="listbox">
         <div className="p-2 pb-1">
           <button
-            aria-selected={selectedGroup === null}
-            className={navItemClass(selectedGroup === null)}
-            onClick={() => onSelectGroup(null)}
+            aria-selected={selectFilter === null}
+            className={navItemClass(selectFilter === null)}
+            onClick={() => onSelectFilter(null)}
             role="option"
             type="button"
           >
@@ -42,15 +43,36 @@ export const MenuPane = ({ className, database, selectedGroup, onSelectGroup }: 
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2 pt-1">
+          {tags.length > 0 ? (
+            <div className="mb-2">
+              <div className="mb-1 px-2 text-[11px] text-muted-foreground">Tags</div>
+              <div aria-label="Workspace tags" className="flex flex-col gap-0.5">
+                {tags.map((tag) => (
+                  <button
+                    aria-selected={selectFilter === tag}
+                    className={navItemClass(selectFilter === tag)}
+                    key={tag}
+                    onClick={() => onSelectFilter(tag)}
+                    role="option"
+                    type="button"
+                  >
+                    <HugeiconsIcon className="shrink-0" icon={Tag01Icon} size={14} strokeWidth={1.5} />
+                    <span className="truncate">{tag}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mb-1 px-2 text-[11px] text-muted-foreground">Collections</div>
           <div className="flex flex-col gap-0.5">
             {groups.map((group) => {
               return (
                 <button
-                  aria-selected={group === selectedGroup}
-                  className={navItemClass(group === selectedGroup)}
+                  aria-selected={group === selectFilter}
+                  className={navItemClass(group === selectFilter)}
                   key={group.uuid.toString()}
-                  onClick={() => onSelectGroup(group)}
+                  onClick={() => onSelectFilter(group)}
                   role="option"
                   type="button"
                 >

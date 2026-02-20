@@ -1,17 +1,17 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { cn } from '@/lib/utils';
-import { getEntriesForList, getFieldText } from '@/services/workspace.service';
+import { getEntriesForList, getFieldText, type SelectFilter } from '@/services/workspace.service';
 
 type EntryListProps = {
   className?: string;
   database: kdbx.Kdbx;
-  selectedGroup: kdbx.KdbxGroup | null;
+  selectFilter: SelectFilter;
   selectedEntry: kdbx.KdbxEntry | null;
   onSelectEntry: (entry: kdbx.KdbxEntry) => void;
 };
 
-export const EntryList = ({ className, database, selectedGroup, selectedEntry, onSelectEntry }: EntryListProps) => {
-  const entries = getEntriesForList({ database, selectedGroup });
+export const EntryList = ({ className, database, selectFilter, selectedEntry, onSelectEntry }: EntryListProps) => {
+  const entries = getEntriesForList({ database, selectFilter });
 
   return (
     <aside className={cn('flex h-full w-72 min-w-0 flex-col border-r border-border bg-background', className)}>
