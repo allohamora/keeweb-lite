@@ -1,8 +1,8 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
+import { Delete01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
-import { getAllGroups, getAllTags, type SelectFilter } from '@/services/workspace.service';
+import { getAllTags, filterGroups, type SelectFilter } from '@/services/workspace.service';
 
 type MenuPaneProps = {
   className?: string;
@@ -19,7 +19,7 @@ const navItemClass = (isSelected: boolean) => {
 };
 
 export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: MenuPaneProps) => {
-  const groups = getAllGroups(database.groups);
+  const { groups, trash } = filterGroups(database);
   const tags = getAllTags(database);
 
   return (
@@ -83,6 +83,21 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
             })}
           </div>
         </div>
+
+        {trash && (
+          <div className="border-t border-border p-2">
+            <button
+              aria-selected={trash === selectFilter}
+              className={navItemClass(trash === selectFilter)}
+              onClick={() => onSelectFilter(trash)}
+              role="option"
+              type="button"
+            >
+              <HugeiconsIcon className="shrink-0" icon={Delete01Icon} size={14} strokeWidth={1.5} />
+              <span className="truncate">{trash.name}</span>
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

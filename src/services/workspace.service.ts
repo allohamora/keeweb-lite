@@ -44,3 +44,20 @@ export const getAllTags = ({ groups }: Pick<kdbx.Kdbx, 'groups'>): string[] => {
 
   return [...new Set(normalizedTags.filter((tag) => tag.length > 0))];
 };
+
+export const filterGroups = (database: Pick<kdbx.Kdbx, 'groups'> & { meta: Pick<kdbx.KdbxMeta, 'recycleBinUuid'> }) => {
+  const recycleBinUuidString = database.meta.recycleBinUuid?.toString();
+
+  return getAllGroups(database.groups).reduce<{ groups: kdbx.KdbxGroup[]; trash: kdbx.KdbxGroup | null }>(
+    (state, group) => {
+      if (recycleBinUuidString && group.uuid.toString() === recycleBinUuidString) {
+        state.trash = group;
+      } else {
+        state.groups.push(group);
+      }
+
+      return state;
+    },
+    { groups: [], trash: null },
+  );
+};
