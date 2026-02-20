@@ -29,23 +29,23 @@ describe('workspace.service', () => {
   });
 
   describe('filterGroups', () => {
-    it('returns visible groups and trash when recycle bin exists', async () => {
+    it('returns visible groups and recycle bin group when recycle bin exists', async () => {
       const database = await createDatabase();
       const root = database.getDefaultGroup();
       const first = database.createGroup(root, 'First');
-      const trash = database.createGroup(root, 'Trash');
+      const recycleBin = database.createGroup(root, 'Trash');
       const second = database.createGroup(root, 'Second');
 
       const result = filterGroups({
-        groups: [first, trash, second],
-        meta: { recycleBinUuid: trash.uuid },
+        groups: [first, recycleBin, second],
+        meta: { recycleBinUuid: recycleBin.uuid },
       });
 
-      expect(result.trash).toBe(trash);
+      expect(result.recycleBinGroup).toBe(recycleBin);
       expect(result.groups).toEqual([first, second]);
     });
 
-    it('returns all groups and no trash when recycle bin uuid is absent', async () => {
+    it('returns all groups and no recycle bin group when recycle bin uuid is absent', async () => {
       const database = await createDatabase();
       const root = database.getDefaultGroup();
       const first = database.createGroup(root, 'First');
@@ -56,7 +56,7 @@ describe('workspace.service', () => {
         meta: { recycleBinUuid: undefined },
       });
 
-      expect(result.trash).toBeNull();
+      expect(result.recycleBinGroup).toBeNull();
       expect(result.groups).toEqual([first, second]);
     });
   });
@@ -78,12 +78,21 @@ describe('workspace.service', () => {
       const root = database.getDefaultGroup();
       const first = database.createGroup(root, 'First');
       const second = database.createGroup(root, 'Second');
+      const recycleBin = database.createGroup(root, 'Trash');
       const firstEntry = database.createEntry(first);
       const secondEntry = database.createEntry(second);
+      const recycleBinEntry = database.createEntry(recycleBin);
 
-      const result = getEntriesForList({ database, selectFilter: null });
+      const result = getEntriesForList({
+        database: {
+          groups: [first, second, recycleBin],
+          meta: { recycleBinUuid: recycleBin.uuid },
+        },
+        selectFilter: null,
+      });
 
       expect(result).toEqual([firstEntry, secondEntry]);
+      expect(result).not.toContain(recycleBinEntry);
     });
 
     it('returns entries matching a selected tag using case-insensitive trimmed comparison', async () => {
@@ -91,14 +100,65 @@ describe('workspace.service', () => {
       const root = database.getDefaultGroup();
       const first = database.createGroup(root, 'First');
       const second = database.createGroup(root, 'Second');
+      const recycleBin = database.createGroup(root, 'Trash');
       const matchingEntry = database.createEntry(first);
       const otherEntry = database.createEntry(second);
+      const recycleBinEntry = database.createEntry(recycleBin);
       matchingEntry.tags = [' Work ', 'Shared'];
       otherEntry.tags = ['Personal'];
+      recycleBinEntry.tags = ['work'];
 
-      const result = getEntriesForList({ database, selectFilter: 'work' });
+      const result = getEntriesForList({
+        database: {
+          groups: [first, second, recycleBin],
+          meta: { recycleBinUuid: recycleBin.uuid },
+        },
+        selectFilter: 'work',
+      });
 
       expect(result).toEqual([matchingEntry]);
+    });
+
+    it('returns no entries when selected tag exists only in recycle bin', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const activeEntry = database.createEntry(first);
+      const recycleBinEntry = database.createEntry(recycleBin);
+      activeEntry.tags = ['personal'];
+      recycleBinEntry.tags = ['archived'];
+
+      const result = getEntriesForList({
+        database: {
+          groups: [first, recycleBin],
+          meta: { recycleBinUuid: recycleBin.uuid },
+        },
+        selectFilter: 'archived',
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns all recycle bin entries when recycle bin is selected', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const otherGroupEntry = database.createEntry(first);
+      const recycleBinFirstEntry = database.createEntry(recycleBin);
+      const recycleBinSecondEntry = database.createEntry(recycleBin);
+
+      const result = getEntriesForList({
+        database: {
+          groups: [first, recycleBin],
+          meta: { recycleBinUuid: recycleBin.uuid },
+        },
+        selectFilter: recycleBin,
+      });
+
+      expect(result).toEqual([recycleBinFirstEntry, recycleBinSecondEntry]);
+      expect(result).not.toContain(otherGroupEntry);
     });
 
     it('returns all entries when the selected tag is blank after trimming', async () => {
@@ -124,14 +184,20 @@ describe('workspace.service', () => {
       const first = database.createGroup(root, 'First');
       const nested = database.createGroup(first, 'Nested');
       const second = database.createGroup(root, 'Second');
+      const recycleBin = database.createGroup(root, 'Trash');
       const firstEntry = database.createEntry(first);
       const nestedEntry = database.createEntry(nested);
       const secondEntry = database.createEntry(second);
+      const recycleBinEntry = database.createEntry(recycleBin);
       firstEntry.tags = [' Work ', 'Shared'];
       nestedEntry.tags = ['work', '   '];
       secondEntry.tags = ['Personal', 'shared'];
+      recycleBinEntry.tags = ['Deleted'];
 
-      const result = getAllTags(database);
+      const result = getAllTags({
+        groups: [first, second, recycleBin],
+        meta: { recycleBinUuid: recycleBin.uuid },
+      });
 
       expect(result).toEqual(['work', 'shared', 'personal']);
     });

@@ -19,7 +19,7 @@ const navItemClass = (isSelected: boolean) => {
 };
 
 export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: MenuPaneProps) => {
-  const { groups, trash } = filterGroups(database);
+  const { groups, recycleBinGroup } = filterGroups(database);
   const tags = getAllTags(database);
 
   return (
@@ -84,17 +84,17 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
           </div>
         </div>
 
-        {trash && (
+        {recycleBinGroup && (
           <div className="border-t border-border p-2">
             <button
-              aria-selected={trash === selectFilter}
-              className={navItemClass(trash === selectFilter)}
-              onClick={() => onSelectFilter(trash)}
+              aria-selected={recycleBinGroup === selectFilter}
+              className={navItemClass(recycleBinGroup === selectFilter)}
+              onClick={() => onSelectFilter(recycleBinGroup)}
               role="option"
               type="button"
             >
               <HugeiconsIcon className="shrink-0" icon={Delete01Icon} size={14} strokeWidth={1.5} />
-              <span className="truncate">{trash.name}</span>
+              <span className="truncate">{recycleBinGroup.name}</span>
             </button>
           </div>
         )}

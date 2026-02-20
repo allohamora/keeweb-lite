@@ -30,6 +30,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
 2. Left menu pane
    - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
    - Tag items are clickable and sort the entry list by the selected tag.
+   - Recycle Bin is shown as a dedicated navigation item and is not included in `All Items`, tag-derived filters, or the standard collections list.
 3. Entry list pane
    - Displays entries for the selected navigation context.
    - Supports selection and search/sort controls.
@@ -105,6 +106,7 @@ View-state transitions:
 - Workspace actions requiring an opened record are blocked when no unlocked session exists.
 - Entry-edit actions are blocked when no entry is selected.
 - `Sync` action is available only when current record type is `google-drive`.
+- Recycle Bin entries are excluded from `All Items` and tag-derived entry lists unless Recycle Bin itself is explicitly selected.
 - Save/sync status must always include text labels alongside color indicators.
 - Drive sync state rendering must use canonical sync status semantics:
   - `idle`
