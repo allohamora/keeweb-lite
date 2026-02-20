@@ -17,7 +17,9 @@ export const EntryList = ({ className, database, selectedGroup, selectedEntry, o
     <aside className={cn('flex h-full w-72 min-w-0 flex-col border-r border-border bg-background', className)}>
       <div className="border-b border-border px-3 py-2">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-foreground">Records</p>
+          <p className="truncate text-xs font-medium text-foreground">
+            Records <span className="opacity-60">({entries.length})</span>
+          </p>
         </div>
       </div>
 
