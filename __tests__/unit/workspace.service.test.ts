@@ -1,6 +1,6 @@
 import kdbx from '@/lib/kdbx.lib';
 import { describe, expect, it } from 'vitest';
-import { filterGroups, getAllGroups, getEntriesForList, getFieldText } from '@/services/workspace.service';
+import { getAllGroups, getEntriesForList, getFieldText } from '@/services/workspace.service';
 
 describe('workspace.service', () => {
   const createDatabase = async () => {
@@ -25,39 +25,6 @@ describe('workspace.service', () => {
 
     it('returns an empty array when no groups are provided', () => {
       expect(getAllGroups([])).toEqual([]);
-    });
-  });
-
-  describe('filterGroups', () => {
-    it('returns visible groups and trash when recycle bin exists', async () => {
-      const database = await createDatabase();
-      const root = database.getDefaultGroup();
-      const first = database.createGroup(root, 'First');
-      const trash = database.createGroup(root, 'Trash');
-      const second = database.createGroup(root, 'Second');
-
-      const result = filterGroups({
-        groups: [first, trash, second],
-        meta: { recycleBinUuid: trash.uuid },
-      });
-
-      expect(result.trash).toBe(trash);
-      expect(result.groups).toEqual([first, second]);
-    });
-
-    it('returns all groups and no trash when recycle bin uuid is absent', async () => {
-      const database = await createDatabase();
-      const root = database.getDefaultGroup();
-      const first = database.createGroup(root, 'First');
-      const second = database.createGroup(root, 'Second');
-
-      const result = filterGroups({
-        groups: [first, second],
-        meta: { recycleBinUuid: undefined },
-      });
-
-      expect(result.trash).toBeNull();
-      expect(result.groups).toEqual([first, second]);
     });
   });
 
