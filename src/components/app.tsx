@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Toaster } from '@/components/ui/sonner';
-import { UnlockPage } from '@/components/unlock.page';
+import { UnlockPage } from '@/components/unlock/unlock.page';
 import { useSessionStore } from '@/services/session.service';
 
 export const App = () => {

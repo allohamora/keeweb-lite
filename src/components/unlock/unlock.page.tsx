@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import { CreateModal } from '@/components/create.modal';
-import { UnlockForm } from '@/components/unlock.form';
+import { CreateModal } from './create.modal';
+import { UnlockForm } from './unlock.form';
 
 export const UnlockPage = () => {
   const [recordsReloadToken, setRecordsReloadToken] = useState(0);
