@@ -34,6 +34,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Supports selection and search/sort controls.
 4. Entry details pane
    - Displays selected entry details.
+   - Displays selected entry tags when present.
    - Supports editing flow and history access/restore actions.
 5. Context panel area
    - Used for temporary workflows that replace or overlay standard list/details content (for example, generator or import-related flows).

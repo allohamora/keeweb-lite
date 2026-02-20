@@ -1,4 +1,5 @@
 import type kdbx from '@/lib/kdbx.lib';
+import { Badge } from '@/components/ui/badge';
 import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +30,7 @@ export const EntryDetails = ({ className, selectedEntry }: EntryDetailsProps) =>
   const password = getFieldText(selectedEntry.fields.get('Password'));
   const url = getFieldText(selectedEntry.fields.get('URL'));
   const notes = getFieldText(selectedEntry.fields.get('Notes'));
+  const tags = selectedEntry.tags;
 
   return (
     <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
@@ -86,6 +88,23 @@ export const EntryDetails = ({ className, selectedEntry }: EntryDetailsProps) =>
               <FieldLabel htmlFor="entry-url">URL</FieldLabel>
               <FieldContent>
                 <Input className="h-8 text-xs" disabled id="entry-url" placeholder="https://" type="url" value={url} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel>Tags</FieldLabel>
+              <FieldContent>
+                {tags.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No tags</p>
+                ) : (
+                  <div aria-label="Entry tags" className="flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <Badge className="h-5 rounded-sm px-2 text-[11px]" key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </FieldContent>
             </Field>
 
