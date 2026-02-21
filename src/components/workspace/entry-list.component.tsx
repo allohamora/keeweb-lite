@@ -62,11 +62,11 @@ export const EntryList = ({
         </InputGroup>
         <Button
           aria-label="Create entry"
-          className="h-7 w-7 shrink-0"
+          className="h-7 w-7 shrink-0 rounded-sm"
           onClick={onCreateEntry}
           size="icon"
           type="button"
-          variant="ghost"
+          variant="outline"
         >
           <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={1.5} />
         </Button>
