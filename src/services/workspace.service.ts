@@ -1,11 +1,11 @@
-import type kdbx from '@/lib/kdbx.lib';
+import kdbx from '@/lib/kdbx.lib';
 import { toEncryptedBytes } from '@/services/record.service';
 import { getRecord, updateRecord } from '@/repositories/record.repository';
 
 export type SelectFilter = kdbx.KdbxGroup | string | null;
 
 export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
-  return groups.flatMap((group) => [group, ...getAllGroups(group.groups)]);
+  return groups.flatMap((group) => [...group.allGroups()]);
 };
 
 type RecycleAwareDatabase = Pick<kdbx.Kdbx, 'groups'> & { meta: Pick<kdbx.KdbxMeta, 'recycleBinUuid'> };
