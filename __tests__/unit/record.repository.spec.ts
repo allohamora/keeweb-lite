@@ -4,6 +4,7 @@ import {
   RECORDS_STORAGE_KEY,
   clearRecords,
   createRecord,
+  getRecord,
   getRecords,
   removeRecord,
   setRecords,
@@ -486,6 +487,32 @@ describe('record.repository', () => {
       expect(record1.id).toBe('concurrent-record-1');
       expect(record2.id).toBe('concurrent-record-2');
       expect(await getRecords()).toHaveLength(2);
+    });
+  });
+
+  describe('getRecord', () => {
+    it('returns the record matching the given id', async () => {
+      await setRecords([
+        {
+          id: 'target-record',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'target.kdbx' },
+        },
+        {
+          id: 'other-record',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array([4, 5, 6]), name: 'other.kdbx' },
+        },
+      ]);
+
+      const record = await getRecord('target-record');
+
+      expect(record.id).toBe('target-record');
+      expect(record.kdbx.name).toBe('target.kdbx');
+    });
+
+    it('throws when no record matches the given id', async () => {
+      await expect(getRecord('nonexistent')).rejects.toThrow('Record not found.');
     });
   });
 
