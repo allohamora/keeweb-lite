@@ -70,8 +70,8 @@ npm run format:fix   # Prettier write
 ```text
 src/
 ├── components/
-│   ├── ui/          # shadcn/ui primitives and wrappers
-│   └── **/*.component.tsx  # Custom app components (non-shadcn, nested folders allowed)
+│   ├── ui/          # shadcn/ui primitives, wrappers, and ui-scoped custom components
+│   └── **/*.component.tsx  # Custom app components outside components/ui (non-shadcn, nested folders allowed)
 ├── layouts/         # Astro layouts
 ├── pages/           # Astro pages
 ├── lib/             # Custom libs and third party GOF wrappers
@@ -86,6 +86,7 @@ src/
 - Prefer putting domain logic in `src/services/*.ts`.
 - Prefer putting browser persistence logic in `src/repositories/*.repository.ts`.
 - Prefer putting custom app UI in `src/components/**/*.component.tsx`.
+- Exception: components in `src/components/ui/*` may use upstream/plain `*.tsx` filenames (no `.component` suffix required).
 - Shadcn-derived code means `src/components/ui/*` and `src/lib/utils.ts`.
 - Keep layering lightweight and pragmatic; avoid adding extra architectural ceremony (for example unnecessary abstraction layers, classes, or DI containers) when it does not improve clarity or testability.
 
