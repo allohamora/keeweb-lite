@@ -16,6 +16,7 @@ export const EntryHistory = ({ history, onApply }: EntryHistoryProps) => {
     <div>
       <Button
         className="h-7 px-2 text-xs"
+        aria-expanded={hasHistory ? isOpen : undefined}
         disabled={!hasHistory}
         type="button"
         variant="ghost"
