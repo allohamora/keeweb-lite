@@ -17,7 +17,6 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   const { database, recordId } = session;
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
-  const [databaseVersion, setDatabaseVersion] = useState(0); // Used to trigger re-render when the database changes
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
@@ -46,8 +45,6 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
     if (nextEntryUuid !== undefined) {
       setSelectedEntryUuid(nextEntryUuid);
     }
-
-    setDatabaseVersion((version) => version + 1);
   };
 
   const handleCreateEntry = async () => {
@@ -65,7 +62,6 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
         <MenuPane
           className="flex"
           database={database}
-          databaseVersion={databaseVersion}
           onSelectFilter={handleSelectFilter}
           selectFilter={selectFilter}
         />

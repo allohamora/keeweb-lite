@@ -7,7 +7,6 @@ import { getAllTags, filterGroups, isGroupSelect, type SelectFilter } from '@/se
 type MenuPaneProps = {
   className?: string;
   database: kdbx.Kdbx;
-  databaseVersion: number;
   selectFilter: SelectFilter;
   onSelectFilter: (selectFilter: SelectFilter) => void;
 };
