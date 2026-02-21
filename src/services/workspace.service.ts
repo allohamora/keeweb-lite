@@ -1,4 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
+import { toEncryptedBytes } from '@/services/record.service';
+import { getRecord, updateRecord } from '@/repositories/record.repository';
 
 export type SelectFilter = kdbx.KdbxGroup | string | null;
 
@@ -66,6 +68,13 @@ export const filterEntriesBySearch = (entries: kdbx.KdbxEntry[], query: string):
     const title = getFieldText(entry.fields.get('Title'));
     return normalize(title).includes(normalizedQuery);
   });
+};
+
+export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx; recordId: string }) => {
+  const encryptedBytes = await toEncryptedBytes(database);
+  const record = await getRecord(recordId);
+
+  await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {

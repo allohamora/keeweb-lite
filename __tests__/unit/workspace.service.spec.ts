@@ -1,5 +1,6 @@
 import kdbx from '@/lib/kdbx.lib';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
 import {
   getAllGroups,
   getAllTags,
@@ -7,9 +8,14 @@ import {
   getEntriesForList,
   getFieldText,
   filterEntriesBySearch,
+  saveDatabase,
 } from '@/services/workspace.service';
 
 describe('workspace.service', () => {
+  afterEach(async () => {
+    await clearRecords();
+  });
+
   const createDatabase = async () => {
     const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('workspace-test-password'));
     await credentials.ready;
@@ -308,6 +314,61 @@ describe('workspace.service', () => {
 
     it('returns an empty string for undefined fields', () => {
       expect(getFieldText(undefined)).toBe('');
+    });
+  });
+
+  describe('saveDatabase', () => {
+    const createUnlockedDatabase = async () => {
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('persist-test-password'));
+      await credentials.ready;
+
+      return kdbx.Kdbx.create(credentials, 'Persist Test DB');
+    };
+
+    it('saves encrypted bytes back to the repository record', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+
+      const group = database.getDefaultGroup();
+      database.createEntry(group).fields.set('Title', 'New Entry');
+
+      await saveDatabase({ database, recordId: 'persist-record' });
+
+      const records = await getRecords();
+      const updated = records.find(({ id }) => id === 'persist-record');
+      expect(updated).toBeDefined();
+      expect(updated?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
+
+    it('preserves existing record metadata when updating', async () => {
+      const database = await createUnlockedDatabase();
+      const encryptedBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes, name: 'persist.kdbx' },
+        lastOpenedAt: '2026-01-01T00:00:00.000Z',
+      });
+
+      await saveDatabase({ database, recordId: 'persist-record' });
+
+      const records = await getRecords();
+      const updated = records.find(({ id }) => id === 'persist-record');
+      expect(updated?.lastOpenedAt).toBe('2026-01-01T00:00:00.000Z');
+      expect(updated?.kdbx.name).toBe('persist.kdbx');
+    });
+
+    it('throws when the record id does not exist', async () => {
+      const database = await createUnlockedDatabase();
+
+      await expect(saveDatabase({ database, recordId: 'nonexistent' })).rejects.toThrow('Record not found.');
     });
   });
 });
