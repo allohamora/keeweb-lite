@@ -55,9 +55,9 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
       onSave?.(result);
-      toast.success('Entry saved.');
+      toast.success('The entry has been saved.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to save entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Failed to save the entry.' }));
     }
   });
 
