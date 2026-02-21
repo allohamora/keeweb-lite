@@ -130,7 +130,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-url">URL</FieldLabel>
                 <FieldContent>
-                  <Input {...field} className="h-8 text-xs" id="entry-url" placeholder="https://" type="url" />
+                  <Input {...field} className="h-8 text-xs" id="entry-url" placeholder="https://" type="text" />
                 </FieldContent>
               </Field>
             )}
