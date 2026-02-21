@@ -647,5 +647,44 @@ describe('workspace.service', () => {
 
       expect([['First Concurrent Save'], ['Second Concurrent Save']]).toContainEqual(persistedTitles);
     });
+
+    it('applies the last save when two concurrent saves target the same record', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+
+      const firstSaveDatabase = await cloneDatabase(database);
+      const secondSaveDatabase = await cloneDatabase(database);
+
+      firstSaveDatabase.createEntry(firstSaveDatabase.getDefaultGroup()).fields.set('Title', 'First Save');
+      secondSaveDatabase.createEntry(secondSaveDatabase.getDefaultGroup()).fields.set('Title', 'Second Save');
+
+      const save1 = saveDatabase({ database: firstSaveDatabase, recordId: 'persist-record' });
+      const save2 = saveDatabase({ database: secondSaveDatabase, recordId: 'persist-record' });
+
+      await Promise.all([save1, save2]);
+
+      const persistedRecord = (await getRecords()).find(({ id }) => id === 'persist-record');
+      expect(persistedRecord).toBeDefined();
+      if (!persistedRecord) {
+        throw new Error('Record not found.');
+      }
+
+      const reloadedDatabase = await unlockKdbx({
+        encryptedBytes: persistedRecord.kdbx.encryptedBytes,
+        password: 'persist-test-password',
+      });
+
+      const persistedTitles = reloadedDatabase
+        .getDefaultGroup()
+        .entries.map((entry) => getFieldText(entry.fields.get('Title')));
+
+      expect(persistedTitles).toEqual(['Second Save']);
+    });
   });
 });
