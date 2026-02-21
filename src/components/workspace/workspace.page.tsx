@@ -1,7 +1,7 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { UnlockSession } from '@/services/session.service';
-import { type SelectFilter } from '@/services/workspace.service';
+import { findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
@@ -31,6 +31,12 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
       if (!previousSession) return previousSession;
 
       return { ...previousSession, database: nextDatabase };
+    });
+
+    setSelectedEntry((currentEntry) => {
+      if (!currentEntry) return currentEntry;
+
+      return findEntryByUuid({ database: nextDatabase, entryUuid: currentEntry.uuid.toString() }) ?? currentEntry;
     });
 
     setDatabaseVersion((version) => version + 1);

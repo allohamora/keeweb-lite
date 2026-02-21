@@ -10,6 +10,7 @@ import {
   getAllGroups,
   getAllTags,
   getEntriesForList,
+  getEntryValues,
   getFieldText,
   getTags,
   saveEntry,
@@ -334,6 +335,63 @@ describe('workspace.service', () => {
 
     it('returns an empty string for undefined fields', () => {
       expect(getFieldText(undefined)).toBe('');
+    });
+  });
+
+  describe('getEntryValues', () => {
+    it('returns correct plain-text values for all fields', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.fields.set('Title', 'My Title');
+      entry.fields.set('UserName', 'my-user');
+      entry.fields.set('Password', kdbx.ProtectedValue.fromString('my-password'));
+      entry.fields.set('URL', 'https://example.com');
+      entry.fields.set('Notes', 'My notes');
+      entry.tags = ['work', 'shared'];
+
+      const result = getEntryValues(entry);
+
+      expect(result.title).toBe('My Title');
+      expect(result.username).toBe('my-user');
+      expect(result.password).toBe('my-password');
+      expect(result.url).toBe('https://example.com');
+      expect(result.notes).toBe('My notes');
+      expect(result.tags).toEqual(['work', 'shared']);
+    });
+
+    it('returns empty strings for missing fields and empty tags array', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.fields.clear();
+      entry.tags = [];
+
+      const result = getEntryValues(entry);
+
+      expect(result.title).toBe('');
+      expect(result.username).toBe('');
+      expect(result.password).toBe('');
+      expect(result.url).toBe('');
+      expect(result.notes).toBe('');
+      expect(result.tags).toEqual([]);
+    });
+
+    it('decodes protected value for the password field', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.fields.set('Password', kdbx.ProtectedValue.fromString('secret-pass'));
+
+      const result = getEntryValues(entry);
+
+      expect(result.password).toBe('secret-pass');
     });
   });
 
