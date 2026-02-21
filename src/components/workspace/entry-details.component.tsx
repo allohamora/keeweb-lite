@@ -15,10 +15,10 @@ export const EntryDetails = ({ className, selectedEntry, database, recordId, onS
     return (
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
         <div className="border-b border-border px-3 py-2">
-          <p className="truncate text-xs font-medium text-foreground">Record</p>
+          <p className="truncate text-xs font-medium text-foreground">Entry</p>
         </div>
         <div className="flex min-h-0 flex-1 items-center justify-center p-4">
-          <p className="text-xs text-muted-foreground">Select a record to view its details.</p>
+          <p className="text-xs text-muted-foreground">Select an entry to view its details.</p>
         </div>
       </aside>
     );
@@ -27,7 +27,7 @@ export const EntryDetails = ({ className, selectedEntry, database, recordId, onS
   return (
     <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
       <div className="border-b border-border px-3 py-2">
-        <p className="truncate text-xs font-medium text-foreground">Record</p>
+        <p className="truncate text-xs font-medium text-foreground">Entry</p>
       </div>
       <EntryEditForm
         key={selectedEntry.uuid.toString()}
