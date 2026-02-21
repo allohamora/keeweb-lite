@@ -35,7 +35,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Displays entries for the selected navigation context.
    - Provides a debounced text search input that filters the visible entries by title (case-insensitive, substring match).
    - The record count in the pane header reflects the number of entries after search filtering is applied.
-   - When a search query produces no matches, an explicit "No matching records." message is shown.
+   - When a search query produces no matches, an explicit "No matching entries." message is shown.
    - Supports selection controls.
 4. Entry details pane
    - Displays selected entry details.
@@ -95,9 +95,10 @@ View-state transitions:
    - The record count updates to reflect the filtered result.
    - Clearing the search restores the full list for the current navigation context.
 4. Edit and save feedback
-   - User edits selected entry fields.
-   - Save pipeline runs automatically.
-   - Save status updates (`saving` -> `saved` or `error`) with actionable feedback on failure.
+   - User edits selected entry fields (title, username, password, URL, tags, notes).
+   - User clicks the Save button to persist changes.
+   - On success, a confirmation notification is shown.
+   - On failure, an error notification is shown with the failure reason.
 5. Sync feedback for Drive-backed records
    - On edits or manual sync action, sync status updates by canonical sync state.
    - Metadata and retry/conflict actions are shown when needed.
@@ -169,7 +170,7 @@ View-state transitions:
 6. Save state changes are visible as `saving`, `saved`, and `error`.
 7. Drive sync state changes are visible as canonical statuses (`idle`, `pending`, `syncing`, `conflict`, `error`).
 8. Entry selection updates details context without leaving workspace.
-9. Search input in the entry list filters by title with a debounce delay, updates the record count, and shows "No matching records." when nothing matches.
+9. Search input in the entry list filters by title with a debounce delay, updates the record count, and shows "No matching entries." when nothing matches.
 10. Temporary panel flows can open and close without breaking main workspace state.
 11. Lock/close session returns user to Unlock and clears unlocked runtime session data.
 12. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
