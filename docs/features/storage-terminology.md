@@ -44,7 +44,7 @@ Use these canonical terms consistently across feature specs.
   - Implemented by `record.kdbx.encryptedBytes` in Records Store.
   - Stores encrypted KDBX bytes only (no decrypted values, no plaintext unlock credentials).
 - Runtime App State (non-persistent)
-  - Zustand-style in-memory state for:
+  - In-memory state for:
     - unlocked database model/session
     - selected/open record context
     - entered password and raw key bytes during unlock lifecycle

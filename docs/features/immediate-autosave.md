@@ -40,7 +40,7 @@ Define a single save pipeline that persists every edit immediately.
 
 ## Data and Storage
 
-- Queue/save state is maintained in runtime app state (Zustand-style, non-persistent).
+- Queue/save state is maintained in runtime app state (in-memory, non-persistent).
 - Save queue state includes lock/queue indicators used for status rendering.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export

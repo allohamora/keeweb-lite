@@ -76,7 +76,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - optional `sync` (`status`, optional `revisionId`, optional `lastSuccessfulAt`, optional `lastError`)
   - optional `oauth` (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
   - optional `lastOpenedAt`
-- Keep active unlocked DB/session and transient sync attempt state in runtime app state (Zustand-style, non-persistent).
+- Keep active unlocked DB/session and transient sync attempt state in runtime app state (in-memory, non-persistent).
 - Persist OAuth runtime token envelope only as part of Drive record `oauth` field in `record.repository`; malformed persisted records are deleted on read (safe-parse fallback in repository).
 - OAuth requests include offline refresh capability (KeeWeb default).
 

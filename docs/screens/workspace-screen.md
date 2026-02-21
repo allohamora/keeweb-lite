@@ -28,12 +28,15 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Shows `Sync` action when current record type is `google-drive`.
    - Shows sync metadata (last successful sync and last error context when present).
 2. Left menu pane
-   - Displays workspace navigation (groups, smart filters, and similar navigation items).
+   - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
+   - Tag items are clickable and filter the entry list to only entries that carry the selected tag.
+   - Recycle Bin is shown as a dedicated navigation item and is not included in `All Items`, tag-derived filters, or the standard collections list.
 3. Entry list pane
    - Displays entries for the selected navigation context.
    - Supports selection and search/sort controls.
 4. Entry details pane
    - Displays selected entry details.
+   - Displays selected entry tags when present.
    - Supports editing flow and history access/restore actions.
 5. Context panel area
    - Used for temporary workflows that replace or overlay standard list/details content (for example, generator or import-related flows).
@@ -80,6 +83,8 @@ View-state transitions:
 2. Navigate and select
    - User selects a group/filter in menu.
    - Entry list updates to selected context.
+   - User clicks a tag in menu.
+   - Entry list is filtered to show only entries that carry the selected tag.
    - User selects an entry and details panel updates.
 3. Edit and save feedback
    - User edits selected entry fields.
@@ -101,6 +106,7 @@ View-state transitions:
 - Workspace actions requiring an opened record are blocked when no unlocked session exists.
 - Entry-edit actions are blocked when no entry is selected.
 - `Sync` action is available only when current record type is `google-drive`.
+- Recycle Bin entries are excluded from `All Items` and tag-derived entry lists unless Recycle Bin itself is explicitly selected.
 - Save/sync status must always include text labels alongside color indicators.
 - Drive sync state rendering must use canonical sync status semantics:
   - `idle`

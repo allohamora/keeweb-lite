@@ -37,7 +37,7 @@ Define KeeWeb-like password generator behavior for lite workflows.
 
 ## Data and Storage
 
-- Generator state can stay in runtime app state (Zustand-style, non-persistent).
+- Generator state can stay in runtime app state (in-memory, non-persistent).
 - No generated plaintext password is persisted by default.
 
 ## Failure Handling

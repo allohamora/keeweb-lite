@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { unlockForSession, useSessionStore } from '@/services/session.service';
+import { unlockForSession, type UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
 import { getRecords } from '@/services/record.service';
 import { toast } from 'sonner';
@@ -20,9 +20,10 @@ type UnlockFormValues = z.infer<typeof unlockFormSchema>;
 
 export type UnlockFormProps = {
   recordsReloadToken: number;
+  setSession: (session: UnlockSession) => void;
 };
 
-export const UnlockForm = ({ recordsReloadToken }: UnlockFormProps) => {
+export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -40,8 +41,6 @@ export const UnlockForm = ({ recordsReloadToken }: UnlockFormProps) => {
     value: records = [],
   } = useAsync(async () => await getRecords(), [recordsReloadToken]);
 
-  const setSession = useSessionStore((state) => state.setSession);
-
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     try {
       const record = records.find(({ id }) => id === selectedRecordId);
@@ -54,7 +53,7 @@ export const UnlockForm = ({ recordsReloadToken }: UnlockFormProps) => {
         password,
       });
 
-      setSession({ session });
+      setSession(session);
     } catch (error) {
       toast.error(
         getErrorMessage({

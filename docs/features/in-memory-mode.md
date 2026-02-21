@@ -14,7 +14,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 - Lite defaults to local-cache behavior for local file-input sources.
 - This mode defines database persistence behavior; key-file remember defaults are still defined by Key File Unlock (`rememberKeyFiles = data`, hash-based metadata parity).
-- Keep unlocked database model in runtime app state (Zustand-style, non-persistent) while session is active.
+- Keep unlocked database model in runtime app state (in-memory, non-persistent) while session is active.
 - Apply edits immediately to the active in-memory model.
 - Persist encrypted KDBX bytes to Encrypted Offline Cache (IndexedDB) by default.
 - Never call Drive sync unless selected record type is `google-drive`.
@@ -28,7 +28,7 @@ Define behavior for browser-local and other non-writable source modes.
 
 ## Data and Storage
 
-- Runtime app state (Zustand-style, non-persistent): unlocked model and transient editing state.
+- Runtime app state (in-memory, non-persistent): unlocked model and transient editing state.
 - Encrypted Offline Cache (IndexedDB): encrypted KDBX bytes only, stored as `record.kdbx.encryptedBytes` in `src/repositories/record.repository.ts`.
 - IndexedDB records store (`src/repositories/record.repository.ts`): persisted source descriptors and per-record metadata.
 

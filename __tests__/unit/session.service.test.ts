@@ -1,7 +1,7 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
-import { unlockForSession, useSessionStore } from '@/services/session.service';
+import { unlockForSession } from '@/services/session.service';
 
 describe('session.service', () => {
   const createDatabase = async ({
@@ -29,69 +29,10 @@ describe('session.service', () => {
 
   afterEach(async () => {
     await clearRecords();
-    useSessionStore.getState().clearSession();
-  });
-
-  describe('useSessionStore', () => {
-    it('has null session when no session has been set', () => {
-      expect(useSessionStore.getState().session).toBeNull();
-    });
-
-    it('stores a session with setSession', () => {
-      const mockSession = {
-        database: {} as kdbx.Kdbx,
-        recordId: 'record-1',
-        recordName: 'vault.kdbx',
-        recordType: 'local' as const,
-        unlockedAt: '2026-02-18T00:00:00.000Z',
-      };
-
-      useSessionStore.getState().setSession({ session: mockSession });
-
-      expect(useSessionStore.getState().session).toEqual(mockSession);
-    });
-
-    it('clears the session to null with clearSession', () => {
-      useSessionStore.getState().setSession({
-        session: {
-          database: {} as kdbx.Kdbx,
-          recordId: 'record-1',
-          recordName: 'vault.kdbx',
-          recordType: 'local' as const,
-          unlockedAt: '2026-02-18T00:00:00.000Z',
-        },
-      });
-
-      useSessionStore.getState().clearSession();
-
-      expect(useSessionStore.getState().session).toBeNull();
-    });
-
-    it('overwrites an existing session with a new one', () => {
-      const firstSession = {
-        database: {} as kdbx.Kdbx,
-        recordId: 'record-1',
-        recordName: 'first.kdbx',
-        recordType: 'local' as const,
-        unlockedAt: '2026-02-18T00:00:00.000Z',
-      };
-      const secondSession = {
-        database: {} as kdbx.Kdbx,
-        recordId: 'record-2',
-        recordName: 'second.kdbx',
-        recordType: 'google-drive' as const,
-        unlockedAt: '2026-02-18T01:00:00.000Z',
-      };
-
-      useSessionStore.getState().setSession({ session: firstSession });
-      useSessionStore.getState().setSession({ session: secondSession });
-
-      expect(useSessionStore.getState().session).toEqual(secondSession);
-    });
   });
 
   describe('unlockForSession', () => {
-    it('returns session data with recordId, recordName, recordType and unlockedAt', async () => {
+    it('returns session data with record metadata', async () => {
       const { encryptedBytes, password } = await createDatabase();
       const record = await createRecord({
         id: 'test-record',
@@ -151,7 +92,7 @@ describe('session.service', () => {
 
       const result = await unlockForSession({ password: 'test-password', record });
 
-      const testGroup = result.database.getDefaultGroup().groups.find((g) => g.name === 'My Group');
+      const testGroup = result.database.getDefaultGroup().groups.find((storedGroup) => storedGroup.name === 'My Group');
       expect(testGroup).toBeDefined();
       if (testGroup) {
         expect(testGroup.entries).toHaveLength(1);
