@@ -9,21 +9,46 @@ type TagSelectProps = {
   onChange: (value: string[]) => void;
   options?: string[];
   placeholder?: string;
+  inputId?: string;
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
+  ariaDescribedBy?: string;
+  invalid?: boolean;
+  disabled?: boolean;
 };
 
 const toOption = (value: string): Option => ({ value, label: value });
 
-export const TagSelect = ({ value, onChange, options = [], placeholder }: TagSelectProps) => {
+export const TagSelect = ({
+  value,
+  onChange,
+  options = [],
+  placeholder,
+  inputId,
+  ariaLabel,
+  ariaLabelledBy,
+  ariaDescribedBy,
+  invalid = false,
+  disabled = false,
+}: TagSelectProps) => {
+  const resolvedAriaLabel = ariaLabelledBy ? undefined : (ariaLabel ?? 'Tags');
+
   return (
     <CreatableSelect<Option, true>
       isMulti
       unstyled
+      inputId={inputId}
+      isDisabled={disabled}
       options={options.map(toOption)}
       value={value.map(toOption)}
       onChange={(selected: MultiValue<Option>) => {
         onChange(selected.map((opt) => opt.value));
       }}
       placeholder={placeholder}
+      aria-label={resolvedAriaLabel}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+      aria-invalid={invalid || undefined}
       formatCreateLabel={(inputValue) => inputValue}
       classNames={{
         control: ({ isFocused }) =>

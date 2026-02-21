@@ -148,11 +148,16 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           <Controller
             control={control}
             name="tags"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <Field>
-                <FieldLabel>Tags</FieldLabel>
+                <FieldLabel htmlFor="entry-tags" id="entry-tags-label">
+                  Tags
+                </FieldLabel>
                 <FieldContent>
                   <TagSelect
+                    ariaLabelledBy="entry-tags-label"
+                    invalid={fieldState.invalid}
+                    inputId="entry-tags"
                     options={tagOptions}
                     value={field.value}
                     onChange={field.onChange}
