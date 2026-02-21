@@ -98,8 +98,8 @@ export const EntryDetails = ({ className, selectedEntry }: EntryDetailsProps) =>
                   <p className="text-xs text-muted-foreground">No tags</p>
                 ) : (
                   <div aria-label="Entry tags" className="flex flex-wrap gap-1.5">
-                    {tags.map((tag) => (
-                      <Badge className="h-5 rounded-sm px-2 text-[11px]" key={tag} variant="outline">
+                    {tags.map((tag, i) => (
+                      <Badge className="h-5 rounded-sm px-2 text-[11px]" key={`${tag}-${i}`} variant="outline">
                         {tag}
                       </Badge>
                     ))}
