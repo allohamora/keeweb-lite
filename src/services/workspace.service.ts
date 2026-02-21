@@ -3,7 +3,7 @@ import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 import { getRecord, updateRecord } from '@/repositories/record.repository';
 
-export type SelectFilter = kdbx.KdbxGroup | string | null;
+export type SelectFilter = kdbx.KdbxUuid | string | null;
 
 export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
   return groups.flatMap((group) => [...group.allGroups()]);
@@ -42,8 +42,31 @@ export const getFieldText = (field?: string | kdbx.ProtectedValue): string => {
 };
 
 const isTagSelect = (selectFilter: SelectFilter): selectFilter is string => typeof selectFilter === 'string';
-const isGroupSelect = (selectFilter: SelectFilter): selectFilter is kdbx.KdbxGroup => {
-  return selectFilter !== null && !isTagSelect(selectFilter);
+export const isGroupSelect = (selectFilter: SelectFilter): selectFilter is kdbx.KdbxUuid =>
+  selectFilter !== null && !isTagSelect(selectFilter);
+
+export const findEntryByUuid = (
+  database: Pick<kdbx.Kdbx, 'groups'>,
+  uuid: kdbx.KdbxUuid | string,
+): kdbx.KdbxEntry | null => {
+  for (const group of getAllGroups(database.groups)) {
+    for (const entry of group.entries) {
+      if (entry.uuid.equals(uuid)) return entry;
+    }
+  }
+
+  return null;
+};
+
+export const findGroupByUuid = (
+  database: Pick<kdbx.Kdbx, 'groups'>,
+  uuid: kdbx.KdbxUuid | string,
+): kdbx.KdbxGroup | null => {
+  for (const group of getAllGroups(database.groups)) {
+    if (group.uuid.equals(uuid)) return group;
+  }
+
+  return null;
 };
 
 export const getEntriesForList = ({
@@ -53,7 +76,7 @@ export const getEntriesForList = ({
   database: RecycleAwareDatabase;
   selectFilter: SelectFilter;
 }): kdbx.KdbxEntry[] => {
-  if (isGroupSelect(selectFilter)) return selectFilter.entries;
+  if (isGroupSelect(selectFilter)) return findGroupByUuid(database, selectFilter)?.entries ?? [];
 
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
@@ -89,26 +112,6 @@ type UpdateEntryInput = {
   recordId: string;
   entryUuid: string;
   values: EntryUpdateValues;
-};
-
-export const findEntryByUuid = ({
-  database,
-  entryUuid,
-}: {
-  database: Pick<kdbx.Kdbx, 'groups'>;
-  entryUuid: string;
-}): kdbx.KdbxEntry | null => {
-  const groups = getAllGroups(database.groups);
-
-  for (const group of groups) {
-    for (const entry of group.entries) {
-      if (entry.uuid.toString() === entryUuid) {
-        return entry;
-      }
-    }
-  }
-
-  return null;
 };
 
 export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => {
@@ -155,9 +158,9 @@ export const saveEntry = async ({
   recordId,
   entryUuid,
   values,
-}: UpdateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntry: kdbx.KdbxEntry }> => {
+}: UpdateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
   const nextDatabase = await cloneDatabase(database);
-  const nextEntry = findEntryByUuid({ database: nextDatabase, entryUuid });
+  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
   if (!nextEntry) {
     throw new Error('Entry not found.');
@@ -167,7 +170,7 @@ export const saveEntry = async ({
 
   await saveDatabase({ database: nextDatabase, recordId });
 
-  return { nextDatabase, nextEntry };
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
 };
 
 type CreateEntryInput = {
@@ -180,9 +183,15 @@ export const createEntry = async ({
   database,
   recordId,
   selectFilter,
-}: CreateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntry: kdbx.KdbxEntry }> => {
+}: CreateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
   const nextDatabase = await cloneDatabase(database);
-  const group = isGroupSelect(selectFilter) ? selectFilter : nextDatabase.getDefaultGroup();
+
+  const group = isGroupSelect(selectFilter)
+    ? findGroupByUuid(nextDatabase, selectFilter)
+    : nextDatabase.getDefaultGroup();
+  if (!group) {
+    throw new Error('Group not found.');
+  }
 
   const nextEntry = nextDatabase.createEntry(group);
   if (isTagSelect(selectFilter)) {
@@ -191,7 +200,7 @@ export const createEntry = async ({
 
   await saveDatabase({ database: nextDatabase, recordId });
 
-  return { nextDatabase, nextEntry };
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {

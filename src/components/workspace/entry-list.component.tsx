@@ -17,8 +17,8 @@ type EntryListProps = {
   className?: string;
   database: kdbx.Kdbx;
   selectFilter: SelectFilter;
-  selectedEntry: kdbx.KdbxEntry | null;
-  onSelectEntry: (entry: kdbx.KdbxEntry) => void;
+  selectedEntryUuid: kdbx.KdbxUuid | null;
+  onSelectEntry: (uuid: kdbx.KdbxUuid) => void;
   onCreateEntry: () => void;
 };
 
@@ -26,7 +26,7 @@ export const EntryList = ({
   className,
   database,
   selectFilter,
-  selectedEntry,
+  selectedEntryUuid,
   onSelectEntry,
   onCreateEntry,
 }: EntryListProps) => {
@@ -79,7 +79,7 @@ export const EntryList = ({
           </p>
         ) : (
           filteredEntries.map((entry) => {
-            const isSelected = entry === selectedEntry;
+            const isSelected = entry.uuid.equals(selectedEntryUuid);
 
             const title = getFieldText(entry.fields.get('Title')) || '(no title)';
             const username = getFieldText(entry.fields.get('UserName')) || '(no username)';
@@ -93,7 +93,7 @@ export const EntryList = ({
                     : 'text-foreground hover:bg-muted hover:text-foreground',
                 )}
                 key={entry.uuid.toString()}
-                onClick={() => onSelectEntry(entry)}
+                onClick={() => onSelectEntry(entry.uuid)}
                 type="button"
               >
                 <span className="truncate text-xs font-medium">{title}</span>

@@ -16,27 +16,35 @@ type WorkspacePageProps = {
 export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   const { database, recordId } = session;
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
-  const [selectedEntry, setSelectedEntry] = useState<kdbx.KdbxEntry | null>(null);
+  const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
   const [databaseVersion, setDatabaseVersion] = useState(0); // Used to trigger re-render when the database changes
 
-  const handleSelectEntry = (entry: kdbx.KdbxEntry) => {
-    setSelectedEntry(entry);
+  const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
+
+  const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
+    setSelectedEntryUuid(uuid);
   };
 
   const handleSelectFilter = (nextSelectFilter: SelectFilter) => {
     setSelectFilter(nextSelectFilter);
-    setSelectedEntry(null);
+    setSelectedEntryUuid(null);
   };
 
-  const handleSave = ({ nextDatabase, nextEntry }: { nextDatabase: kdbx.Kdbx; nextEntry?: kdbx.KdbxEntry | null }) => {
+  const handleSave = ({
+    nextDatabase,
+    nextEntryUuid,
+  }: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid?: kdbx.KdbxUuid | null;
+  }) => {
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
       return { ...previousSession, database: nextDatabase };
     });
 
-    if (nextEntry !== undefined) {
-      setSelectedEntry(nextEntry);
+    if (nextEntryUuid !== undefined) {
+      setSelectedEntryUuid(nextEntryUuid);
     }
 
     setDatabaseVersion((version) => version + 1);
@@ -67,7 +75,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
           onCreateEntry={() => void handleCreateEntry()}
           onSelectEntry={handleSelectEntry}
           selectFilter={selectFilter}
-          selectedEntry={selectedEntry}
+          selectedEntryUuid={selectedEntryUuid}
         />
         <EntryDetails
           className="flex"
