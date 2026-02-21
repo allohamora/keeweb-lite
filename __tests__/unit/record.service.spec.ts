@@ -1,6 +1,6 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createLocalRecord, getRecords, saveKdbx, unlockKdbx } from '@/services/record.service';
+import { createLocalRecord, getRecords, toEncryptedBytes, unlockKdbx } from '@/services/record.service';
 import { unlockForSession } from '@/services/session.service';
 import { clearRecords, createRecord } from '@/repositories/record.repository';
 
@@ -236,7 +236,7 @@ describe('record.service', () => {
     });
   });
 
-  describe('saveKdbx', () => {
+  describe('toEncryptedBytes', () => {
     it('saves a KDBX database to Uint8Array', async () => {
       const { encryptedBytes, keyFileHashBase64, password } = await createDatabase();
 
@@ -246,7 +246,7 @@ describe('record.service', () => {
         password,
       });
 
-      const savedBytes = await saveKdbx(unlockedDatabase);
+      const savedBytes = await toEncryptedBytes(unlockedDatabase);
 
       expect(savedBytes).toBeInstanceOf(Uint8Array);
       expect(savedBytes.length).toBeGreaterThan(0);
@@ -280,7 +280,7 @@ describe('record.service', () => {
       createdEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('created-user'));
       createdEntry.fields.set('Password', kdbx.ProtectedValue.fromString('created-password'));
 
-      const savedBytes = await saveKdbx(unlockedDatabase);
+      const savedBytes = await toEncryptedBytes(unlockedDatabase);
       const reloadedDatabase = await unlockKdbx({
         encryptedBytes: savedBytes,
         keyFileHashBase64,
@@ -316,7 +316,7 @@ describe('record.service', () => {
       newEntry.fields.set('Title', kdbx.ProtectedValue.fromString('New Entry'));
       newEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('new-user'));
 
-      const savedBytes = await saveKdbx(unlockedDatabase);
+      const savedBytes = await toEncryptedBytes(unlockedDatabase);
 
       // Reload and verify
       const reloadedDatabase = await unlockKdbx({
@@ -343,13 +343,13 @@ describe('record.service', () => {
         password,
       });
 
-      const savedBytesBeforeModification = await saveKdbx(unlockedDatabase);
+      const savedBytesBeforeModification = await toEncryptedBytes(unlockedDatabase);
 
       // Modify the database
       const newEntry = unlockedDatabase.createEntry(unlockedDatabase.getDefaultGroup());
       newEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Modified Entry'));
 
-      const savedBytesAfterModification = await saveKdbx(unlockedDatabase);
+      const savedBytesAfterModification = await toEncryptedBytes(unlockedDatabase);
 
       expect(savedBytesBeforeModification).not.toEqual(savedBytesAfterModification);
     });
@@ -366,7 +366,7 @@ describe('record.service', () => {
       unlockedDatabase.meta.name = 'Updated Database Name';
       unlockedDatabase.meta.desc = 'Test Description';
 
-      const savedBytes = await saveKdbx(unlockedDatabase);
+      const savedBytes = await toEncryptedBytes(unlockedDatabase);
 
       const reloadedDatabase = await unlockKdbx({
         encryptedBytes: savedBytes,

@@ -18,7 +18,7 @@ export const unlockKdbx = async ({
   return await kdbx.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
 };
 
-export const saveKdbx = async (db: kdbx.Kdbx) => {
+export const toEncryptedBytes = async (db: kdbx.Kdbx) => {
   return asUint8Array(await db.save());
 };
 
