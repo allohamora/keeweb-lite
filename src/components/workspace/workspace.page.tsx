@@ -10,9 +10,10 @@ type WorkspacePageProps = {
   session: UnlockSession;
 };
 
-export const WorkspacePage = ({ session: { database } }: WorkspacePageProps) => {
+export const WorkspacePage = ({ session: { database, recordId } }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntry, setSelectedEntry] = useState<kdbx.KdbxEntry | null>(null);
+  const [databaseVersion, setDatabaseVersion] = useState(0); // Used to trigger re-render when database changes
 
   const handleSelectEntry = (entry: kdbx.KdbxEntry) => {
     setSelectedEntry(entry);
@@ -23,12 +24,17 @@ export const WorkspacePage = ({ session: { database } }: WorkspacePageProps) => 
     setSelectedEntry(null);
   };
 
+  const handleSave = () => {
+    setDatabaseVersion((version) => version + 1);
+  };
+
   return (
     <div className="flex h-dvh min-h-dvh overflow-hidden bg-background text-foreground">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
           className="flex"
           database={database}
+          databaseVersion={databaseVersion}
           onSelectFilter={handleSelectFilter}
           selectFilter={selectFilter}
         />
@@ -39,7 +45,13 @@ export const WorkspacePage = ({ session: { database } }: WorkspacePageProps) => 
           selectFilter={selectFilter}
           selectedEntry={selectedEntry}
         />
-        <EntryDetails className="flex" selectedEntry={selectedEntry} />
+        <EntryDetails
+          className="flex"
+          selectedEntry={selectedEntry}
+          database={database}
+          recordId={recordId}
+          onSave={handleSave}
+        />
       </div>
     </div>
   );
