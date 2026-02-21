@@ -13,14 +13,15 @@ Use native KDBX history as the only entry-history mechanism.
 
 - Entry edits create native KDBX history revisions.
 - UI shows available historical versions for selected entry.
-- User can inspect historical version data.
-- User can restore a selected historical version.
+- User can view revision number and last modification date for each historical version.
+- User can apply a historical version to the edit form and then save to restore it.
 - Restored version follows normal save/sync pipeline.
 
 ## UI Requirements
 
-- History section is available in entry details.
-- Restore action is explicit and confirms selected version target.
+- History section is available in the entry edit form within entry details.
+- Each history revision shows its revision number and last modification date.
+- Applying a revision loads its field values into the edit form; the user must explicitly save to persist the restore.
 
 ## Data and Storage
 
@@ -39,5 +40,6 @@ Use native KDBX history as the only entry-history mechanism.
 ## Acceptance Criteria
 
 - Editing produces visible native history revisions.
-- User can inspect and restore prior versions.
-- Restored state persists after save/sync.
+- History section in the edit form shows revision number and last modification date for each revision.
+- Applying a revision populates the edit form with its field values.
+- Restored state persists after the user explicitly saves.

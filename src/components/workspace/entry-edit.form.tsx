@@ -4,12 +4,14 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getAllTags, getFieldText, getTags, saveEntry } from '@/services/workspace.service';
+import { getAllTags, getEntryValues, saveEntry } from '@/services/workspace.service';
+import { EntryHistory } from '@/components/workspace/entry-history.component';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -30,20 +32,14 @@ type EntryEditFormProps = {
 };
 
 export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {
-  const title = getFieldText(entry.fields.get('Title'));
-  const username = getFieldText(entry.fields.get('UserName'));
-  const password = getFieldText(entry.fields.get('Password'));
-  const url = getFieldText(entry.fields.get('URL'));
-  const notes = getFieldText(entry.fields.get('Notes'));
-  const tags = getTags(entry);
-
   const {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { isDirty, isSubmitting },
   } = useForm<EntryEditValues>({
-    defaultValues: { title, username, password, url, notes, tags },
+    defaultValues: getEntryValues(entry),
     resolver: zodResolver(entryEditSchema),
   });
 
@@ -64,6 +60,12 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
       toast.error(getErrorMessage({ error, fallback: 'Failed to save entry.' }));
     }
   });
+
+  const handleApplyHistory = (values: EntryEditValues) => {
+    for (const [field, value] of Object.entries(values)) {
+      setValue(field as keyof EntryEditValues, value, { shouldDirty: true });
+    }
+  };
 
   const tagOptions = getAllTags(database);
 
@@ -172,12 +174,16 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
             )}
           />
         </section>
-      </div>
 
-      <div className="flex justify-end px-4 pt-2 pb-4">
-        <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
+        <div className="flex justify-end pt-2">
+          <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+
+        <Separator className="my-3" />
+
+        <EntryHistory history={entry.history} onApply={handleApplyHistory} />
       </div>
     </form>
   );

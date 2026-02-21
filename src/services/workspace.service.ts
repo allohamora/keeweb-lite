@@ -117,6 +117,15 @@ export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => 
   return kdbx.Kdbx.load(databaseBytes, database.credentials);
 };
 
+export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
+  title: getFieldText(entry.fields.get('Title')),
+  username: getFieldText(entry.fields.get('UserName')),
+  password: getFieldText(entry.fields.get('Password')),
+  url: getFieldText(entry.fields.get('URL')),
+  notes: getFieldText(entry.fields.get('Notes')),
+  tags: getTags(entry),
+});
+
 export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): void => {
   entry.pushHistory();
 
