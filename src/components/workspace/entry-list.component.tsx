@@ -38,7 +38,7 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
         </p>
       </div>
       <div className="border-b border-border p-2">
-        <InputGroup className="rounded-sm">
+        <InputGroup className="h-7 rounded-sm">
           <InputGroupAddon>
             <InputGroupText>
               <HugeiconsIcon icon={Search01Icon} size={14} strokeWidth={1.5} />
