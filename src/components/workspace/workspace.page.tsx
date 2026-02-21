@@ -13,8 +13,7 @@ type WorkspacePageProps = {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
-  const { database, recordId } = session;
+export const WorkspacePage = ({ session: { database, recordId }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
 
