@@ -45,6 +45,7 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
             </InputGroupText>
           </InputGroupAddon>
           <InputGroupInput
+            aria-label="Search entries"
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
