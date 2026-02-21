@@ -12,11 +12,11 @@ export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
 type RecycleAwareDatabase = Pick<kdbx.Kdbx, 'groups'> & { meta: Pick<kdbx.KdbxMeta, 'recycleBinUuid'> };
 
 export const filterGroups = (database: RecycleAwareDatabase) => {
-  const recycleBinUuidString = database.meta.recycleBinUuid?.toString();
+  const recycleBinUuid = database.meta.recycleBinUuid;
 
   return getAllGroups(database.groups).reduce<{ groups: kdbx.KdbxGroup[]; recycleBinGroup: kdbx.KdbxGroup | null }>(
     (state, group) => {
-      if (recycleBinUuidString && group.uuid.toString() === recycleBinUuidString) {
+      if (recycleBinUuid && group.uuid.equals(recycleBinUuid)) {
         state.recycleBinGroup = group;
       } else {
         state.groups.push(group);
