@@ -4,6 +4,7 @@ import { clearRecords, createRecord, getRecords } from '@/repositories/record.re
 import { unlockKdbx } from '@/services/record.service';
 import {
   cloneDatabase,
+  createEntry,
   filterEntriesBySearch,
   filterGroups,
   findEntryByUuid,
@@ -611,6 +612,161 @@ describe('workspace.service', () => {
       const persistedRecord = records.find(({ id }) => id === 'update-record');
       expect(persistedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
       expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
+    });
+  });
+
+  describe('createEntry', () => {
+    const createPersistedDatabase = async () => {
+      const database = await createDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'create-entry-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
+      });
+
+      return { database, initialBytes };
+    };
+
+    it('returns a cloned database and a new entry', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntry } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(nextDatabase).not.toBe(database);
+      expect(nextEntry).toBeDefined();
+    });
+
+    it('places entry in the default group when selectFilter is null', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntry } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(nextDatabase.getDefaultGroup().entries).toContain(nextEntry);
+    });
+
+    it('sets no tags when selectFilter is null', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextEntry } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(nextEntry.tags).toEqual([]);
+    });
+
+    it('places entry in the default group when selectFilter is a tag', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntry } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: 'work',
+      });
+
+      expect(nextDatabase.getDefaultGroup().entries).toContain(nextEntry);
+    });
+
+    it('sets the tag on the entry when selectFilter is a tag', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextEntry } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: 'work',
+      });
+
+      expect(nextEntry.tags).toEqual(['work']);
+    });
+
+    it('places entry in the selected group when selectFilter is a group', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const targetGroup = database.createGroup(root, 'Target');
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'create-entry-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
+      });
+
+      const { nextEntry } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: targetGroup,
+      });
+
+      expect(targetGroup.entries).toContain(nextEntry);
+    });
+
+    it('sets no tags when selectFilter is a group', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const targetGroup = database.createGroup(root, 'Target');
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'create-entry-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
+      });
+
+      const { nextEntry } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: targetGroup,
+      });
+
+      expect(nextEntry.tags).toEqual([]);
+    });
+
+    it('persists the database to the record', async () => {
+      const { database, initialBytes } = await createPersistedDatabase();
+
+      await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      const records = await getRecords();
+      const updatedRecord = records.find(({ id }) => id === 'create-entry-record');
+
+      expect(updatedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
+
+    it('throws when the record id does not exist', async () => {
+      const database = await createDatabase();
+
+      await expect(createEntry({ database, recordId: 'nonexistent-record', selectFilter: null })).rejects.toThrow(
+        'Record not found.',
+      );
+    });
+
+    it('does not mutate the original database when selectFilter is null', async () => {
+      const { database } = await createPersistedDatabase();
+      const defaultGroup = database.getDefaultGroup();
+      const initialEntryCount = defaultGroup.entries.length;
+
+      await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(defaultGroup.entries).toHaveLength(initialEntryCount);
     });
   });
 

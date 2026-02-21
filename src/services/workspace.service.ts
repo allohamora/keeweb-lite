@@ -165,6 +165,30 @@ export const saveEntry = async ({ database, recordId, entryUuid, values }: Updat
   return updatedDatabase;
 };
 
+type CreateEntryInput = {
+  database: kdbx.Kdbx;
+  recordId: string;
+  selectFilter: SelectFilter;
+};
+
+export const createEntry = async ({
+  database,
+  recordId,
+  selectFilter,
+}: CreateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntry: kdbx.KdbxEntry }> => {
+  const nextDatabase = await cloneDatabase(database);
+  const group = isGroupSelect(selectFilter) ? selectFilter : nextDatabase.getDefaultGroup();
+
+  const nextEntry = nextDatabase.createEntry(group);
+  if (isTagSelect(selectFilter)) {
+    nextEntry.tags = [selectFilter];
+  }
+
+  await saveDatabase({ database: nextDatabase, recordId });
+
+  return { nextDatabase, nextEntry };
+};
+
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
