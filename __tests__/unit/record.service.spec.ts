@@ -13,23 +13,22 @@ type DatabaseRecordInput = {
 type CreateDatabaseInput = {
   databaseName: string;
   groupName?: string;
-  keyFileContent?: string | null;
+  keyFile?: string | null;
   password: string;
   records?: DatabaseRecordInput[];
 };
 
 describe('record.service', () => {
-  const createKeyFileHashBase64 = async (keyFileContent: string) => {
-    const keyFileBytes = kdbx.ByteUtils.stringToBytes(keyFileContent);
-    const keyFileHash = await kdbx.CryptoEngine.sha256(keyFileBytes.buffer as ArrayBuffer);
+  const createRandomKeyFile = async () => {
+    const keyFileBuffer = await kdbx.Credentials.createRandomKeyFile();
 
-    return kdbx.ByteUtils.bytesToBase64(new Uint8Array(keyFileHash));
+    return kdbx.ByteUtils.bytesToBase64(keyFileBuffer);
   };
 
   const createDatabase = async ({
     databaseName = 'Test Database',
     groupName = 'Test Group',
-    keyFileContent = 'test-key-file-content',
+    keyFile,
     password = 'test-password-123',
     records = [
       {
@@ -39,7 +38,8 @@ describe('record.service', () => {
       },
     ],
   }: Partial<CreateDatabaseInput> = {}) => {
-    const keyFileHashBase64 = keyFileContent ? await createKeyFileHashBase64(keyFileContent) : undefined;
+    // 'await' expressions cannot be used in a parameter initializer.
+    const keyFileHashBase64 = keyFile === undefined ? await createRandomKeyFile() : keyFile;
     const keyFileHashBytes = keyFileHashBase64 ? kdbx.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
 
     const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyFileHashBytes);
@@ -99,7 +99,7 @@ describe('record.service', () => {
     it('unlocks a KDBX database with password only', async () => {
       const { encryptedBytes, password } = await createDatabase({
         databaseName: 'Password Only Database',
-        keyFileContent: null,
+        keyFile: null,
         records: [],
       });
 
@@ -139,7 +139,7 @@ describe('record.service', () => {
 
     it('throws an error when key file hash is incorrect', async () => {
       const { encryptedBytes, password } = await createDatabase();
-      const wrongKeyFileHashBase64 = await createKeyFileHashBase64('wrong-key-file-content');
+      const wrongKeyFileHashBase64 = await createRandomKeyFile();
 
       await expect(
         unlockKdbx({
@@ -155,7 +155,7 @@ describe('record.service', () => {
       const { encryptedBytes } = await createDatabase({
         databaseName: 'No Key File Database',
         password,
-        keyFileContent: null,
+        keyFile: null,
         records: [],
       });
 
@@ -204,7 +204,7 @@ describe('record.service', () => {
     it('accepts null for keyFileHashBase64', async () => {
       const { encryptedBytes, password } = await createDatabase({
         databaseName: 'Null Key Test',
-        keyFileContent: null,
+        keyFile: null,
         records: [],
       });
 
@@ -221,7 +221,7 @@ describe('record.service', () => {
     it('accepts undefined for keyFileHashBase64', async () => {
       const { encryptedBytes, password } = await createDatabase({
         databaseName: 'Undefined Key Test',
-        keyFileContent: null,
+        keyFile: null,
         records: [],
       });
 
@@ -575,7 +575,7 @@ describe('record.service', () => {
 
     it('unlocks after creation without a key file and entries are accessible', async () => {
       const { encryptedBytes, password } = await createDatabase({
-        keyFileContent: null,
+        keyFile: null,
         records: [{ name: 'Test Entry', password: 'entry-pass', username: 'test-user' }],
       });
 
@@ -590,12 +590,11 @@ describe('record.service', () => {
     });
 
     it('unlocks after creation with a key file and entries are accessible', async () => {
-      const keyFileContent = 'test-key-file-content';
-      const keyFileHashBase64 = await createKeyFileHashBase64(keyFileContent);
+      const keyFileHashBase64 = await createRandomKeyFile();
       const keyFileBytes = kdbx.ByteUtils.base64ToBytes(keyFileHashBase64);
 
       const { encryptedBytes, password } = await createDatabase({
-        keyFileContent,
+        keyFile: keyFileHashBase64,
         records: [{ name: 'Test Entry', password: 'entry-pass', username: 'test-user' }],
       });
 
