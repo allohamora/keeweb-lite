@@ -1,7 +1,9 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { unlockKdbx } from '@/services/record.service';
 import {
+  cloneDatabase,
   filterEntriesBySearch,
   filterGroups,
   findEntryByUuid,
@@ -591,6 +593,44 @@ describe('workspace.service', () => {
       const database = await createUnlockedDatabase();
 
       await expect(saveDatabase({ database, recordId: 'nonexistent' })).rejects.toThrow('Record not found.');
+    });
+
+    it('handles concurrent saves without persisting partial state', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+
+      const firstUpdate = await cloneDatabase(database);
+      const secondUpdate = await cloneDatabase(database);
+
+      firstUpdate.createEntry(firstUpdate.getDefaultGroup()).fields.set('Title', 'First Concurrent Save');
+      secondUpdate.createEntry(secondUpdate.getDefaultGroup()).fields.set('Title', 'Second Concurrent Save');
+
+      const save1 = saveDatabase({ database: firstUpdate, recordId: 'persist-record' });
+      const save2 = saveDatabase({ database: secondUpdate, recordId: 'persist-record' });
+
+      await Promise.all([save1, save2]);
+
+      const persistedRecord = (await getRecords()).find(({ id }) => id === 'persist-record');
+      expect(persistedRecord).toBeDefined();
+      if (!persistedRecord) {
+        throw new Error('Record not found.');
+      }
+
+      const reloadedDatabase = await unlockKdbx({
+        encryptedBytes: persistedRecord.kdbx.encryptedBytes,
+        password: 'persist-test-password',
+      });
+      const persistedTitles = reloadedDatabase
+        .getDefaultGroup()
+        .entries.map((entry) => getFieldText(entry.fields.get('Title')));
+
+      expect([['First Concurrent Save'], ['Second Concurrent Save']]).toContainEqual(persistedTitles);
     });
   });
 });

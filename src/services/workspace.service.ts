@@ -1,5 +1,6 @@
 import kdbx from '@/lib/kdbx.lib';
 import { toEncryptedBytes } from '@/services/record.service';
+import { Lock } from '@/utils/lock.utils';
 import { getRecord, updateRecord } from '@/repositories/record.repository';
 
 export type SelectFilter = kdbx.KdbxGroup | string | null;
@@ -125,11 +126,15 @@ export const updateEntry = (entry: kdbx.KdbxEntry, fields: EntryUpdateFields): v
   entry.times.update();
 };
 
-export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx; recordId: string }) => {
-  const encryptedBytes = await toEncryptedBytes(database);
-  const record = await getRecord(recordId);
+const saveDatabaseLock = new Lock('workspace.service.saveDatabase');
 
-  await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
+export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx; recordId: string }) => {
+  await saveDatabaseLock.runInLock(async () => {
+    const encryptedBytes = await toEncryptedBytes(database);
+
+    const record = await getRecord(recordId);
+    await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
+  });
 };
 
 export const saveEntry = async ({ database, recordId, entryUuid, fields }: UpdateEntryInput): Promise<kdbx.Kdbx> => {
