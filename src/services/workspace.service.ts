@@ -75,7 +75,7 @@ export const filterEntriesBySearch = (entries: kdbx.KdbxEntry[], query: string):
   });
 };
 
-export type EntryUpdateFields = {
+export type EntryUpdateValues = {
   title: string;
   username: string;
   password: string;
@@ -88,7 +88,7 @@ type UpdateEntryInput = {
   database: kdbx.Kdbx;
   recordId: string;
   entryUuid: string;
-  fields: EntryUpdateFields;
+  values: EntryUpdateValues;
 };
 
 export const findEntryByUuid = ({
@@ -117,15 +117,15 @@ export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => 
   return kdbx.Kdbx.load(databaseBytes, database.credentials);
 };
 
-export const updateEntry = (entry: kdbx.KdbxEntry, fields: EntryUpdateFields): void => {
+export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): void => {
   entry.pushHistory();
 
-  entry.fields.set('Title', fields.title);
-  entry.fields.set('UserName', fields.username);
-  entry.fields.set('Password', kdbx.ProtectedValue.fromString(fields.password));
-  entry.fields.set('URL', fields.url);
-  entry.fields.set('Notes', fields.notes);
-  entry.tags.splice(0, entry.tags.length, ...fields.tags);
+  entry.fields.set('Title', values.title);
+  entry.fields.set('UserName', values.username);
+  entry.fields.set('Password', kdbx.ProtectedValue.fromString(values.password));
+  entry.fields.set('URL', values.url);
+  entry.fields.set('Notes', values.notes);
+  entry.tags = values.tags;
 
   entry.times.update();
 };
@@ -141,7 +141,7 @@ export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx
   });
 };
 
-export const saveEntry = async ({ database, recordId, entryUuid, fields }: UpdateEntryInput): Promise<kdbx.Kdbx> => {
+export const saveEntry = async ({ database, recordId, entryUuid, values }: UpdateEntryInput): Promise<kdbx.Kdbx> => {
   const updatedDatabase = await cloneDatabase(database);
   const entry = findEntryByUuid({ database: updatedDatabase, entryUuid });
 
@@ -149,7 +149,7 @@ export const saveEntry = async ({ database, recordId, entryUuid, fields }: Updat
     throw new Error('Entry not found.');
   }
 
-  updateEntry(entry, fields);
+  updateEntry(entry, values);
 
   await saveDatabase({ database: updatedDatabase, recordId });
 

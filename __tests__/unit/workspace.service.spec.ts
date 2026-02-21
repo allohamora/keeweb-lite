@@ -459,7 +459,7 @@ describe('workspace.service', () => {
         database,
         recordId: 'update-record',
         entryUuid: entry.uuid.toString(),
-        fields: {
+        values: {
           title: 'Updated Title',
           username: 'updated-user',
           password: 'updated-password',
@@ -494,7 +494,7 @@ describe('workspace.service', () => {
           database,
           recordId: 'update-record',
           entryUuid: 'missing-entry-uuid',
-          fields: {
+          values: {
             title: 'Should fail',
             username: 'user',
             password: 'password',
@@ -515,7 +515,7 @@ describe('workspace.service', () => {
           database,
           recordId: 'nonexistent-record-id',
           entryUuid: entry.uuid.toString(),
-          fields: {
+          values: {
             title: 'Should not persist',
             username: 'user',
             password: 'password',
@@ -537,7 +537,7 @@ describe('workspace.service', () => {
         database,
         recordId: 'update-record',
         entryUuid: entry.uuid.toString(),
-        fields: {
+        values: {
           title: 'Original Title',
           username: 'original-user',
           password: 'original-password',

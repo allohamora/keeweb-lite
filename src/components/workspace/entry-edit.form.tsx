@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getAllTags, getFieldText, getTags, saveEntry, type EntryUpdateFields } from '@/services/workspace.service';
+import { getAllTags, getFieldText, getTags, saveEntry } from '@/services/workspace.service';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -49,21 +49,12 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
-      const fields: EntryUpdateFields = {
-        title: values.title,
-        username: values.username,
-        password: values.password,
-        url: values.url,
-        notes: values.notes,
-        tags: values.tags,
-      };
-
       const entryUuid = entry.uuid.toString();
       const updatedDatabase = await saveEntry({
         database,
         recordId,
         entryUuid,
-        fields,
+        values,
       });
 
       reset(values); // Reset form state after successful save (isDirty, touched state, etc)
