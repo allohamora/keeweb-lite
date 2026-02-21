@@ -18,6 +18,7 @@ import {
   getTags,
   saveEntry,
   saveDatabase,
+  sortEntries,
   updateEntry,
 } from '@/services/workspace.service';
 
@@ -331,6 +332,87 @@ describe('workspace.service', () => {
       const result = getTags({ tags: [] });
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('sortEntries', () => {
+    it('returns a new array, does not mutate the original', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const a = database.createEntry(group);
+      const b = database.createEntry(group);
+      a.fields.set('Title', 'Beta');
+      b.fields.set('Title', 'Alpha');
+      const original = [a, b];
+
+      sortEntries(original, 'name-asc');
+
+      expect(original).toEqual([a, b]);
+    });
+
+    it('sorts by name ascending', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const a = database.createEntry(group);
+      const b = database.createEntry(group);
+      a.fields.set('Title', 'Beta');
+      b.fields.set('Title', 'Alpha');
+
+      expect(sortEntries([a, b], 'name-asc')).toEqual([b, a]);
+    });
+
+    it('sorts by name descending', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const a = database.createEntry(group);
+      const b = database.createEntry(group);
+      a.fields.set('Title', 'Alpha');
+      b.fields.set('Title', 'Beta');
+
+      expect(sortEntries([a, b], 'name-desc')).toEqual([b, a]);
+    });
+
+    it('sorts by date ascending (lastModTime)', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const older = database.createEntry(group);
+      const newer = database.createEntry(group);
+      older.times.lastModTime = new Date('2024-01-01');
+      newer.times.lastModTime = new Date('2025-01-01');
+
+      expect(sortEntries([newer, older], 'date-asc')).toEqual([older, newer]);
+    });
+
+    it('sorts by date descending (lastModTime)', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const older = database.createEntry(group);
+      const newer = database.createEntry(group);
+      older.times.lastModTime = new Date('2024-01-01');
+      newer.times.lastModTime = new Date('2025-01-01');
+
+      expect(sortEntries([older, newer], 'date-desc')).toEqual([newer, older]);
+    });
+
+    it('treats missing lastModTime as epoch (0) when sorting by date', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const withDate = database.createEntry(group);
+      const noDate = database.createEntry(group);
+      withDate.times.lastModTime = new Date('2024-01-01');
+      noDate.times.lastModTime = undefined;
+
+      expect(sortEntries([withDate, noDate], 'date-asc')).toEqual([noDate, withDate]);
+    });
+
+    it('returns an empty array unchanged', () => {
+      expect(sortEntries([], 'name-asc')).toEqual([]);
     });
   });
 

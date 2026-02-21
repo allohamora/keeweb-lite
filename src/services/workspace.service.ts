@@ -98,6 +98,23 @@ export const filterEntriesBySearch = (entries: kdbx.KdbxEntry[], query: string):
   });
 };
 
+export type SortOrder = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc';
+
+export const sortEntries = (entries: kdbx.KdbxEntry[], sortOrder: SortOrder): kdbx.KdbxEntry[] => {
+  return entries.toSorted((a, b) => {
+    switch (sortOrder) {
+      case 'name-asc':
+        return getFieldText(a.fields.get('Title')).localeCompare(getFieldText(b.fields.get('Title')));
+      case 'name-desc':
+        return getFieldText(b.fields.get('Title')).localeCompare(getFieldText(a.fields.get('Title')));
+      case 'date-asc':
+        return (a.times.lastModTime?.getTime() ?? 0) - (b.times.lastModTime?.getTime() ?? 0);
+      case 'date-desc':
+        return (b.times.lastModTime?.getTime() ?? 0) - (a.times.lastModTime?.getTime() ?? 0);
+    }
+  });
+};
+
 export type EntryUpdateValues = {
   title: string;
   username: string;

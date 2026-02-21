@@ -2,15 +2,25 @@ import type kdbx from '@/lib/kdbx.lib';
 import { useState } from 'react';
 import { useDebounce } from 'react-use';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Search01Icon, Add01Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, Add01Icon, ArrangeByLettersAZIcon } from '@hugeicons/core-free-icons';
 import { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput } from '@/components/ui/input-group';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import {
   getEntriesForList,
   getFieldText,
   filterEntriesBySearch,
+  sortEntries,
   type SelectFilter,
+  type SortOrder,
 } from '@/services/workspace.service';
 
 type EntryListProps = {
@@ -34,10 +44,11 @@ export const EntryList = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('name-asc');
 
   useDebounce(() => setDebouncedQuery(searchQuery), 300, [searchQuery]);
 
-  const filteredEntries = filterEntriesBySearch(entries, debouncedQuery);
+  const filteredEntries = sortEntries(filterEntriesBySearch(entries, debouncedQuery), sortOrder);
 
   return (
     <aside className={cn('flex h-full w-72 min-w-0 flex-col border-r border-border bg-background', className)}>
@@ -60,6 +71,28 @@ export const EntryList = ({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </InputGroup>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label="Sort entries"
+              className="h-7 w-7 shrink-0 rounded-sm"
+              size="icon"
+              type="button"
+              variant="outline"
+            >
+              <HugeiconsIcon icon={ArrangeByLettersAZIcon} size={14} strokeWidth={1.5} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="rounded-sm">
+            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as SortOrder)}>
+              <DropdownMenuRadioItem value="name-asc">Name A→Z</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="name-desc">Name Z→A</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="date-asc">Date oldest</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="date-desc">Date newest</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           aria-label="Create entry"
           className="h-7 w-7 shrink-0 rounded-sm"
