@@ -2,12 +2,11 @@ import type kdbx from '@/lib/kdbx.lib';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Delete01Icon, Folder01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
-import { getAllTags, filterGroups, type SelectFilter } from '@/services/workspace.service';
+import { getAllTags, filterGroups, isGroupSelect, type SelectFilter } from '@/services/workspace.service';
 
 type MenuPaneProps = {
   className?: string;
   database: kdbx.Kdbx;
-  databaseVersion: number;
   selectFilter: SelectFilter;
   onSelectFilter: (selectFilter: SelectFilter) => void;
 };
@@ -62,9 +61,9 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
             {groups.map((group) => {
               return (
                 <button
-                  className={navItemClass(group === selectFilter)}
+                  className={navItemClass(isGroupSelect(selectFilter) && group.uuid.equals(selectFilter))}
                   key={group.uuid.toString()}
-                  onClick={() => onSelectFilter(group)}
+                  onClick={() => onSelectFilter(group.uuid)}
                   type="button"
                 >
                   <HugeiconsIcon className="shrink-0" icon={Folder01Icon} size={14} strokeWidth={1.5} />
@@ -78,8 +77,8 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
         {recycleBinGroup && (
           <div className="border-t border-border p-2">
             <button
-              className={navItemClass(recycleBinGroup === selectFilter)}
-              onClick={() => onSelectFilter(recycleBinGroup)}
+              className={navItemClass(isGroupSelect(selectFilter) && recycleBinGroup.uuid.equals(selectFilter))}
+              onClick={() => onSelectFilter(recycleBinGroup.uuid)}
               type="button"
             >
               <HugeiconsIcon className="shrink-0" icon={Delete01Icon} size={14} strokeWidth={1.5} />

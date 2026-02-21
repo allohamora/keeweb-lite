@@ -3,7 +3,7 @@ import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 import { getRecord, updateRecord } from '@/repositories/record.repository';
 
-export type SelectFilter = kdbx.KdbxGroup | string | null;
+export type SelectFilter = kdbx.KdbxUuid | string | null;
 
 export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
   return groups.flatMap((group) => [...group.allGroups()]);
@@ -12,11 +12,11 @@ export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
 type RecycleAwareDatabase = Pick<kdbx.Kdbx, 'groups'> & { meta: Pick<kdbx.KdbxMeta, 'recycleBinUuid'> };
 
 export const filterGroups = (database: RecycleAwareDatabase) => {
-  const recycleBinUuidString = database.meta.recycleBinUuid?.toString();
+  const recycleBinUuid = database.meta.recycleBinUuid;
 
   return getAllGroups(database.groups).reduce<{ groups: kdbx.KdbxGroup[]; recycleBinGroup: kdbx.KdbxGroup | null }>(
     (state, group) => {
-      if (recycleBinUuidString && group.uuid.toString() === recycleBinUuidString) {
+      if (recycleBinUuid && group.uuid.equals(recycleBinUuid)) {
         state.recycleBinGroup = group;
       } else {
         state.groups.push(group);
@@ -42,8 +42,31 @@ export const getFieldText = (field?: string | kdbx.ProtectedValue): string => {
 };
 
 const isTagSelect = (selectFilter: SelectFilter): selectFilter is string => typeof selectFilter === 'string';
-const isGroupSelect = (selectFilter: SelectFilter): selectFilter is kdbx.KdbxGroup => {
-  return selectFilter !== null && !isTagSelect(selectFilter);
+export const isGroupSelect = (selectFilter: SelectFilter): selectFilter is kdbx.KdbxUuid =>
+  selectFilter !== null && !isTagSelect(selectFilter);
+
+export const findEntryByUuid = (
+  database: Pick<kdbx.Kdbx, 'groups'>,
+  uuid: kdbx.KdbxUuid | string,
+): kdbx.KdbxEntry | null => {
+  for (const group of getAllGroups(database.groups)) {
+    for (const entry of group.entries) {
+      if (entry.uuid.equals(uuid)) return entry;
+    }
+  }
+
+  return null;
+};
+
+export const findGroupByUuid = (
+  database: Pick<kdbx.Kdbx, 'groups'>,
+  uuid: kdbx.KdbxUuid | string,
+): kdbx.KdbxGroup | null => {
+  for (const group of getAllGroups(database.groups)) {
+    if (group.uuid.equals(uuid)) return group;
+  }
+
+  return null;
 };
 
 export const getEntriesForList = ({
@@ -53,7 +76,7 @@ export const getEntriesForList = ({
   database: RecycleAwareDatabase;
   selectFilter: SelectFilter;
 }): kdbx.KdbxEntry[] => {
-  if (isGroupSelect(selectFilter)) return selectFilter.entries;
+  if (isGroupSelect(selectFilter)) return findGroupByUuid(database, selectFilter)?.entries ?? [];
 
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
@@ -89,26 +112,6 @@ type UpdateEntryInput = {
   recordId: string;
   entryUuid: string;
   values: EntryUpdateValues;
-};
-
-export const findEntryByUuid = ({
-  database,
-  entryUuid,
-}: {
-  database: Pick<kdbx.Kdbx, 'groups'>;
-  entryUuid: string;
-}): kdbx.KdbxEntry | null => {
-  const groups = getAllGroups(database.groups);
-
-  for (const group of groups) {
-    for (const entry of group.entries) {
-      if (entry.uuid.toString() === entryUuid) {
-        return entry;
-      }
-    }
-  }
-
-  return null;
 };
 
 export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => {
@@ -150,19 +153,54 @@ export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx
   });
 };
 
-export const saveEntry = async ({ database, recordId, entryUuid, values }: UpdateEntryInput): Promise<kdbx.Kdbx> => {
-  const updatedDatabase = await cloneDatabase(database);
-  const entry = findEntryByUuid({ database: updatedDatabase, entryUuid });
+export const saveEntry = async ({
+  database,
+  recordId,
+  entryUuid,
+  values,
+}: UpdateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
+  const nextDatabase = await cloneDatabase(database);
+  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
-  if (!entry) {
+  if (!nextEntry) {
     throw new Error('Entry not found.');
   }
 
-  updateEntry(entry, values);
+  updateEntry(nextEntry, values);
 
-  await saveDatabase({ database: updatedDatabase, recordId });
+  await saveDatabase({ database: nextDatabase, recordId });
 
-  return updatedDatabase;
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
+};
+
+type CreateEntryInput = {
+  database: kdbx.Kdbx;
+  recordId: string;
+  selectFilter: SelectFilter;
+};
+
+export const createEntry = async ({
+  database,
+  recordId,
+  selectFilter,
+}: CreateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
+  const nextDatabase = await cloneDatabase(database);
+
+  const group = isGroupSelect(selectFilter)
+    ? findGroupByUuid(nextDatabase, selectFilter)
+    : nextDatabase.getDefaultGroup();
+  if (!group) {
+    throw new Error('Group not found.');
+  }
+
+  const nextEntry = nextDatabase.createEntry(group);
+  if (isTagSelect(selectFilter)) {
+    nextEntry.tags = [selectFilter];
+  }
+
+  await saveDatabase({ database: nextDatabase, recordId });
+
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {

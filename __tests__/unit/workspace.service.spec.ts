@@ -4,10 +4,13 @@ import { clearRecords, createRecord, getRecords } from '@/repositories/record.re
 import { unlockKdbx } from '@/services/record.service';
 import {
   cloneDatabase,
+  createEntry,
   filterEntriesBySearch,
   filterGroups,
   findEntryByUuid,
+  findGroupByUuid,
   getAllGroups,
+  isGroupSelect,
   getAllTags,
   getEntriesForList,
   getEntryValues,
@@ -81,6 +84,92 @@ describe('workspace.service', () => {
     });
   });
 
+  describe('isGroupSelect', () => {
+    it('returns true for a KdbxUuid', async () => {
+      const database = await createDatabase();
+      const group = database.getDefaultGroup();
+
+      expect(isGroupSelect(group.uuid)).toBe(true);
+    });
+
+    it('returns false for a string', () => {
+      expect(isGroupSelect('work')).toBe(false);
+    });
+
+    it('returns false for null', () => {
+      expect(isGroupSelect(null)).toBe(false);
+    });
+  });
+
+  describe('findEntryByUuid', () => {
+    it('returns the entry when found by KdbxUuid', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const entry = database.createEntry(group);
+
+      expect(findEntryByUuid(database, entry.uuid)).toBe(entry);
+    });
+
+    it('returns the entry when found by uuid string', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const entry = database.createEntry(group);
+
+      expect(findEntryByUuid(database, entry.uuid.toString())).toBe(entry);
+    });
+
+    it('returns null when no entry matches the uuid', async () => {
+      const database = await createDatabase();
+
+      expect(findEntryByUuid(database, kdbx.KdbxUuid.random())).toBeNull();
+    });
+
+    it('searches across multiple nested groups', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const parent = database.createGroup(root, 'Parent');
+      const child = database.createGroup(parent, 'Child');
+      const entry = database.createEntry(child);
+
+      expect(findEntryByUuid(database, entry.uuid)).toBe(entry);
+    });
+  });
+
+  describe('findGroupByUuid', () => {
+    it('returns the group when found by KdbxUuid', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+
+      expect(findGroupByUuid(database, group.uuid)).toBe(group);
+    });
+
+    it('returns the group when found by uuid string', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+
+      expect(findGroupByUuid(database, group.uuid.toString())).toBe(group);
+    });
+
+    it('returns null when no group matches the uuid', async () => {
+      const database = await createDatabase();
+
+      expect(findGroupByUuid(database, kdbx.KdbxUuid.random())).toBeNull();
+    });
+
+    it('finds a nested group', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const parent = database.createGroup(root, 'Parent');
+      const child = database.createGroup(parent, 'Child');
+
+      expect(findGroupByUuid(database, child.uuid)).toBe(child);
+    });
+  });
+
   describe('getEntriesForList', () => {
     it('returns selected group entries when a group is selected', async () => {
       const database = await createDatabase();
@@ -88,7 +177,7 @@ describe('workspace.service', () => {
       const selectedGroup = database.createGroup(root, 'Selected');
       const entry = database.createEntry(selectedGroup);
 
-      const result = getEntriesForList({ database, selectFilter: selectedGroup });
+      const result = getEntriesForList({ database, selectFilter: selectedGroup.uuid });
 
       expect(result).toEqual([entry]);
     });
@@ -174,11 +263,19 @@ describe('workspace.service', () => {
           groups: [first, recycleBin],
           meta: { recycleBinUuid: recycleBin.uuid },
         },
-        selectFilter: recycleBin,
+        selectFilter: recycleBin.uuid,
       });
 
       expect(result).toEqual([recycleBinFirstEntry, recycleBinSecondEntry]);
       expect(result).not.toContain(otherGroupEntry);
+    });
+
+    it('returns an empty array when group uuid is not found in the database', async () => {
+      const database = await createDatabase();
+
+      const result = getEntriesForList({ database, selectFilter: kdbx.KdbxUuid.random() });
+
+      expect(result).toEqual([]);
     });
 
     it('returns all entries when the selected tag is blank after trimming', async () => {
@@ -513,7 +610,7 @@ describe('workspace.service', () => {
     it('clones database, updates the entry, and persists encrypted bytes', async () => {
       const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
 
-      const updatedDatabase = await saveEntry({
+      const { nextDatabase, nextEntryUuid } = await saveEntry({
         database,
         recordId: 'update-record',
         entryUuid: entry.uuid.toString(),
@@ -527,16 +624,15 @@ describe('workspace.service', () => {
         },
       });
 
-      expect(updatedDatabase).not.toBe(database);
+      const nextEntry = findEntryByUuid(nextDatabase, nextEntryUuid);
+      expect(nextDatabase).not.toBe(database);
       expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
-      const updatedEntry = findEntryByUuid({ database: updatedDatabase, entryUuid: entry.uuid.toString() });
-      expect(updatedEntry).not.toBeNull();
-      expect(getFieldText(updatedEntry?.fields.get('Title'))).toBe('Updated Title');
-      expect(getFieldText(updatedEntry?.fields.get('UserName'))).toBe('updated-user');
-      expect(getFieldText(updatedEntry?.fields.get('Password'))).toBe('updated-password');
-      expect(getFieldText(updatedEntry?.fields.get('URL'))).toBe('https://updated.example.com');
-      expect(getFieldText(updatedEntry?.fields.get('Notes'))).toBe('Updated notes');
-      expect(updatedEntry?.tags).toEqual(['updated']);
+      expect(getFieldText(nextEntry?.fields.get('Title'))).toBe('Updated Title');
+      expect(getFieldText(nextEntry?.fields.get('UserName'))).toBe('updated-user');
+      expect(getFieldText(nextEntry?.fields.get('Password'))).toBe('updated-password');
+      expect(getFieldText(nextEntry?.fields.get('URL'))).toBe('https://updated.example.com');
+      expect(getFieldText(nextEntry?.fields.get('Notes'))).toBe('Updated notes');
+      expect(nextEntry?.tags).toEqual(['updated']);
 
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'update-record');
@@ -591,7 +687,7 @@ describe('workspace.service', () => {
     it('still clones and persists when same values are provided', async () => {
       const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
 
-      const result = await saveEntry({
+      const { nextDatabase } = await saveEntry({
         database,
         recordId: 'update-record',
         entryUuid: entry.uuid.toString(),
@@ -605,12 +701,177 @@ describe('workspace.service', () => {
         },
       });
 
-      expect(result).not.toBe(database);
+      expect(nextDatabase).not.toBe(database);
 
       const records = await getRecords();
       const persistedRecord = records.find(({ id }) => id === 'update-record');
       expect(persistedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
       expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
+    });
+  });
+
+  describe('createEntry', () => {
+    const createPersistedDatabase = async () => {
+      const database = await createDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'create-entry-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
+      });
+
+      return { database, initialBytes };
+    };
+
+    it('returns a cloned database and a new entry', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntryUuid } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(nextDatabase).not.toBe(database);
+      expect(nextEntryUuid).toBeDefined();
+    });
+
+    it('places entry in the default group when selectFilter is null', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntryUuid } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(nextDatabase.getDefaultGroup().entries).toContain(findEntryByUuid(nextDatabase, nextEntryUuid));
+    });
+
+    it('sets no tags when selectFilter is null', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntryUuid } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(findEntryByUuid(nextDatabase, nextEntryUuid)?.tags).toEqual([]);
+    });
+
+    it('places entry in the default group when selectFilter is a tag', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntryUuid } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: 'work',
+      });
+
+      expect(nextDatabase.getDefaultGroup().entries).toContain(findEntryByUuid(nextDatabase, nextEntryUuid));
+    });
+
+    it('sets the tag on the entry when selectFilter is a tag', async () => {
+      const { database } = await createPersistedDatabase();
+
+      const { nextDatabase, nextEntryUuid } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: 'work',
+      });
+
+      expect(findEntryByUuid(nextDatabase, nextEntryUuid)?.tags).toEqual(['work']);
+    });
+
+    it('places entry in the selected group when selectFilter is a group uuid', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const targetGroup = database.createGroup(root, 'Target');
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'create-entry-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
+      });
+
+      const { nextDatabase, nextEntryUuid } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: targetGroup.uuid,
+      });
+
+      expect(findGroupByUuid(nextDatabase, targetGroup.uuid)?.entries).toContain(
+        findEntryByUuid(nextDatabase, nextEntryUuid),
+      );
+    });
+
+    it('sets no tags when selectFilter is a group uuid', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const targetGroup = database.createGroup(root, 'Target');
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'create-entry-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
+      });
+
+      const { nextDatabase, nextEntryUuid } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: targetGroup.uuid,
+      });
+
+      expect(findEntryByUuid(nextDatabase, nextEntryUuid)?.tags).toEqual([]);
+    });
+
+    it('throws when group uuid is not found in the cloned database', async () => {
+      const { database } = await createPersistedDatabase();
+
+      await expect(
+        createEntry({ database, recordId: 'create-entry-record', selectFilter: kdbx.KdbxUuid.random() }),
+      ).rejects.toThrow('Group not found.');
+    });
+
+    it('persists the database to the record', async () => {
+      const { database, initialBytes } = await createPersistedDatabase();
+
+      await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      const records = await getRecords();
+      const updatedRecord = records.find(({ id }) => id === 'create-entry-record');
+
+      expect(updatedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
+
+    it('throws when the record id does not exist', async () => {
+      const database = await createDatabase();
+
+      await expect(createEntry({ database, recordId: 'nonexistent-record', selectFilter: null })).rejects.toThrow(
+        'Record not found.',
+      );
+    });
+
+    it('does not mutate the original database when selectFilter is null', async () => {
+      const { database } = await createPersistedDatabase();
+      const defaultGroup = database.getDefaultGroup();
+      const initialEntryCount = defaultGroup.entries.length;
+
+      await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(defaultGroup.entries).toHaveLength(initialEntryCount);
     });
   });
 

@@ -7,7 +7,7 @@ type EntryDetailsProps = {
   selectedEntry: kdbx.KdbxEntry | null;
   database: kdbx.Kdbx;
   recordId: string;
-  onSave?: (nextDatabase: kdbx.Kdbx) => void;
+  onSave?: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
 };
 
 export const EntryDetails = ({ className, selectedEntry, database, recordId, onSave }: EntryDetailsProps) => {

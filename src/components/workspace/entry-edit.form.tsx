@@ -28,7 +28,7 @@ type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onSave?: (nextDatabase: kdbx.Kdbx) => void;
+  onSave?: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
 };
 
 export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {
@@ -46,7 +46,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
       const entryUuid = entry.uuid.toString();
-      const updatedDatabase = await saveEntry({
+      const result = await saveEntry({
         database,
         recordId,
         entryUuid,
@@ -54,10 +54,10 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
       });
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
-      onSave?.(updatedDatabase);
-      toast.success('Entry saved.');
+      onSave?.(result);
+      toast.success('The entry has been saved.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to save entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Failed to save the entry.' }));
     }
   });
 

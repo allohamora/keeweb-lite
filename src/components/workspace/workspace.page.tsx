@@ -1,45 +1,58 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { UnlockSession } from '@/services/session.service';
-import { findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
+import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/utils/error.utils';
 
 type WorkspacePageProps = {
   session: UnlockSession;
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
-  const { database, recordId } = session;
+export const WorkspacePage = ({ session: { database, recordId }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
-  const [selectedEntry, setSelectedEntry] = useState<kdbx.KdbxEntry | null>(null);
-  const [databaseVersion, setDatabaseVersion] = useState(0); // Used to trigger re-render when the database changes
+  const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
 
-  const handleSelectEntry = (entry: kdbx.KdbxEntry) => {
-    setSelectedEntry(entry);
+  const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
+
+  const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
+    setSelectedEntryUuid(uuid);
   };
 
   const handleSelectFilter = (nextSelectFilter: SelectFilter) => {
     setSelectFilter(nextSelectFilter);
-    setSelectedEntry(null);
+    setSelectedEntryUuid(null);
   };
 
-  const handleSave = (nextDatabase: kdbx.Kdbx) => {
+  const handleSave = ({
+    nextDatabase,
+    nextEntryUuid,
+  }: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid?: kdbx.KdbxUuid | null;
+  }) => {
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
       return { ...previousSession, database: nextDatabase };
     });
 
-    setSelectedEntry((currentEntry) => {
-      if (!currentEntry) return currentEntry;
+    if (nextEntryUuid !== undefined) {
+      setSelectedEntryUuid(nextEntryUuid);
+    }
+  };
 
-      return findEntryByUuid({ database: nextDatabase, entryUuid: currentEntry.uuid.toString() }) ?? currentEntry;
-    });
-
-    setDatabaseVersion((version) => version + 1);
+  const handleCreateEntry = async () => {
+    try {
+      handleSave(await createEntry({ database, recordId, selectFilter }));
+      toast.success('The entry has been created.');
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'Failed to create the entry.' }));
+    }
   };
 
   return (
@@ -48,16 +61,16 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
         <MenuPane
           className="flex"
           database={database}
-          databaseVersion={databaseVersion}
           onSelectFilter={handleSelectFilter}
           selectFilter={selectFilter}
         />
         <EntryList
           className="flex"
           database={database}
+          onCreateEntry={() => void handleCreateEntry()}
           onSelectEntry={handleSelectEntry}
           selectFilter={selectFilter}
-          selectedEntry={selectedEntry}
+          selectedEntryUuid={selectedEntryUuid}
         />
         <EntryDetails
           className="flex"
