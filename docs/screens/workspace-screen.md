@@ -29,7 +29,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Shows sync metadata (last successful sync and last error context when present).
 2. Left menu pane
    - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
-   - Tag items are clickable and sort the entry list by the selected tag.
+   - Tag items are clickable and filter the entry list to only entries that carry the selected tag.
    - Recycle Bin is shown as a dedicated navigation item and is not included in `All Items`, tag-derived filters, or the standard collections list.
 3. Entry list pane
    - Displays entries for the selected navigation context.
@@ -84,7 +84,7 @@ View-state transitions:
    - User selects a group/filter in menu.
    - Entry list updates to selected context.
    - User clicks a tag in menu.
-   - Entry list is sorted to prioritize entries with the selected tag.
+   - Entry list is filtered to show only entries that carry the selected tag.
    - User selects an entry and details panel updates.
 3. Edit and save feedback
    - User edits selected entry fields.
