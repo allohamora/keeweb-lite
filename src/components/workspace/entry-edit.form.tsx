@@ -57,7 +57,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
         values,
       });
 
-      reset(values); // Reset form state after successful save (isDirty, touched state, etc)
+      reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
       onSave?.(updatedDatabase);
       toast.success('Entry saved.');
     } catch (error) {

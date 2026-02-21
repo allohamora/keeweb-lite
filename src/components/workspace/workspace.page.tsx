@@ -15,7 +15,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   const { database, recordId } = session;
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntry, setSelectedEntry] = useState<kdbx.KdbxEntry | null>(null);
-  const [databaseVersion, setDatabaseVersion] = useState(0); // Used to trigger re-render when database changes
+  const [databaseVersion, setDatabaseVersion] = useState(0); // Used to trigger re-render when the database changes
 
   const handleSelectEntry = (entry: kdbx.KdbxEntry) => {
     setSelectedEntry(entry);
