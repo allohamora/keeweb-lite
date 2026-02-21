@@ -11,6 +11,7 @@ import {
   getAllTags,
   getEntriesForList,
   getFieldText,
+  getTags,
   saveEntry,
   saveDatabase,
   updateEntry,
@@ -218,6 +219,20 @@ describe('workspace.service', () => {
       });
 
       expect(result).toEqual(['work', 'shared', 'personal']);
+    });
+  });
+
+  describe('getTags', () => {
+    it('returns normalized tags for the provided entry', () => {
+      const result = getTags({ tags: [' Work ', 'Shared', 'WORK', '   '] });
+
+      expect(result).toEqual(['work', 'shared', 'work', '']);
+    });
+
+    it('returns an empty array when entry has no tags', () => {
+      const result = getTags({ tags: [] });
+
+      expect(result).toEqual([]);
     });
   });
 

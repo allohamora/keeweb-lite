@@ -30,6 +30,10 @@ export const filterGroups = (database: RecycleAwareDatabase) => {
 
 const normalize = (tag: string): string => tag.trim().toLocaleLowerCase();
 
+export const getTags = ({ tags }: Pick<kdbx.KdbxEntry, 'tags'>): string[] => {
+  return tags.map((tag) => normalize(tag));
+};
+
 export const getFieldText = (field?: string | kdbx.ProtectedValue): string => {
   if (!field) return '';
   if (typeof field === 'string') return field;
@@ -155,7 +159,7 @@ export const saveEntry = async ({ database, recordId, entryUuid, fields }: Updat
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
-  const normalizedTags = entries.flatMap((entry) => entry.tags.map((tag) => normalize(tag)));
+  const normalizedTags = entries.flatMap((entry) => getTags(entry));
 
   return [...new Set(normalizedTags.filter((tag) => tag.length > 0))];
 };

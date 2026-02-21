@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getAllTags, getFieldText, saveEntry, type EntryUpdateFields } from '@/services/workspace.service';
+import { getAllTags, getFieldText, getTags, saveEntry, type EntryUpdateFields } from '@/services/workspace.service';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -35,7 +35,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
   const password = getFieldText(entry.fields.get('Password'));
   const url = getFieldText(entry.fields.get('URL'));
   const notes = getFieldText(entry.fields.get('Notes'));
-  const tags = entry.tags;
+  const tags = getTags(entry);
 
   const {
     control,
