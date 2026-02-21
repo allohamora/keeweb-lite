@@ -28,15 +28,9 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
         <p className="text-xs font-medium text-foreground">Groups</p>
       </div>
 
-      <div aria-label="Workspace groups" className="flex min-h-0 flex-1 flex-col" role="listbox">
+      <div aria-label="Workspace groups" className="flex min-h-0 flex-1 flex-col">
         <div className="p-2 pb-1">
-          <button
-            aria-selected={selectFilter === null}
-            className={navItemClass(selectFilter === null)}
-            onClick={() => onSelectFilter(null)}
-            role="option"
-            type="button"
-          >
+          <button className={navItemClass(selectFilter === null)} onClick={() => onSelectFilter(null)} type="button">
             <HugeiconsIcon className="shrink-0" icon={GridViewIcon} size={14} strokeWidth={1.5} />
             <span className="truncate">All Items</span>
           </button>
@@ -49,11 +43,9 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
               <div aria-label="Workspace tags" className="flex flex-col gap-0.5">
                 {tags.map((tag) => (
                   <button
-                    aria-selected={selectFilter === tag}
                     className={navItemClass(selectFilter === tag)}
                     key={tag}
                     onClick={() => onSelectFilter(tag)}
-                    role="option"
                     type="button"
                   >
                     <HugeiconsIcon className="shrink-0" icon={Tag01Icon} size={14} strokeWidth={1.5} />
@@ -69,11 +61,9 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
             {groups.map((group) => {
               return (
                 <button
-                  aria-selected={group === selectFilter}
                   className={navItemClass(group === selectFilter)}
                   key={group.uuid.toString()}
                   onClick={() => onSelectFilter(group)}
-                  role="option"
                   type="button"
                 >
                   <HugeiconsIcon className="shrink-0" icon={Tag01Icon} size={14} strokeWidth={1.5} />
@@ -87,10 +77,8 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
         {recycleBinGroup && (
           <div className="border-t border-border p-2">
             <button
-              aria-selected={recycleBinGroup === selectFilter}
               className={navItemClass(recycleBinGroup === selectFilter)}
               onClick={() => onSelectFilter(recycleBinGroup)}
-              role="option"
               type="button"
             >
               <HugeiconsIcon className="shrink-0" icon={Delete01Icon} size={14} strokeWidth={1.5} />

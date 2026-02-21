@@ -23,7 +23,7 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
         </div>
       </div>
 
-      <div aria-label="Records list" className="min-h-0 flex-1 overflow-y-auto" role="listbox">
+      <div aria-label="Records list" className="min-h-0 flex-1 overflow-y-auto">
         {entries.length === 0 ? (
           <p className="p-4 text-xs text-muted-foreground">No records in this view yet.</p>
         ) : (
@@ -34,7 +34,6 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
 
             return (
               <button
-                aria-selected={isSelected}
                 className={cn(
                   'flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
                   isSelected
@@ -43,7 +42,6 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
                 )}
                 key={entry.uuid.toString()}
                 onClick={() => onSelectEntry(entry)}
-                role="option"
                 type="button"
               >
                 <span className="truncate text-xs font-medium">{title}</span>
