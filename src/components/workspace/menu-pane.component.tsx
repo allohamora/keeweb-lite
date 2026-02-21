@@ -1,6 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Delete01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
+import { Delete01Icon, Folder01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
 import { getAllTags, filterGroups, type SelectFilter } from '@/services/workspace.service';
 
@@ -66,7 +66,7 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
                   onClick={() => onSelectFilter(group)}
                   type="button"
                 >
-                  <HugeiconsIcon className="shrink-0" icon={Tag01Icon} size={14} strokeWidth={1.5} />
+                  <HugeiconsIcon className="shrink-0" icon={Folder01Icon} size={14} strokeWidth={1.5} />
                   <span className="truncate">{group.name}</span>
                 </button>
               );
