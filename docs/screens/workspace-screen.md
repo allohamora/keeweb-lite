@@ -33,7 +33,10 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Recycle Bin is shown as a dedicated navigation item and is not included in `All Items`, tag-derived filters, or the standard collections list.
 3. Entry list pane
    - Displays entries for the selected navigation context.
-   - Supports selection and search/sort controls.
+   - Provides a debounced text search input that filters the visible entries by title (case-insensitive, substring match).
+   - The record count in the pane header reflects the number of entries after search filtering is applied.
+   - When a search query produces no matches, an explicit "No matching records." message is shown.
+   - Supports selection controls.
 4. Entry details pane
    - Displays selected entry details.
    - Displays selected entry tags when present.
@@ -86,17 +89,22 @@ View-state transitions:
    - User clicks a tag in menu.
    - Entry list is filtered to show only entries that carry the selected tag.
    - User selects an entry and details panel updates.
-3. Edit and save feedback
+3. Search entries
+   - User types in the search input in the entry list pane.
+   - After a short debounce delay, the list narrows to entries whose title contains the query (case-insensitive).
+   - The record count updates to reflect the filtered result.
+   - Clearing the search restores the full list for the current navigation context.
+4. Edit and save feedback
    - User edits selected entry fields.
    - Save pipeline runs automatically.
    - Save status updates (`saving` -> `saved` or `error`) with actionable feedback on failure.
-4. Sync feedback for Drive-backed records
+5. Sync feedback for Drive-backed records
    - On edits or manual sync action, sync status updates by canonical sync state.
    - Metadata and retry/conflict actions are shown when needed.
-5. Download current encrypted state
+6. Download current encrypted state
    - User triggers `Download`.
    - Current encrypted record state is exported without changing sync state.
-6. Lock/close session
+7. Lock/close session
    - User locks or closes active record.
    - Workspace session is cleared from runtime memory.
    - App returns to Unlock.
@@ -161,9 +169,10 @@ View-state transitions:
 6. Save state changes are visible as `saving`, `saved`, and `error`.
 7. Drive sync state changes are visible as canonical statuses (`idle`, `pending`, `syncing`, `conflict`, `error`).
 8. Entry selection updates details context without leaving workspace.
-9. Temporary panel flows can open and close without breaking main workspace state.
-10. Lock/close session returns user to Unlock and clears unlocked runtime session data.
-11. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
+9. Search input in the entry list filters by title with a debounce delay, updates the record count, and shows "No matching records." when nothing matches.
+10. Temporary panel flows can open and close without breaking main workspace state.
+11. Lock/close session returns user to Unlock and clears unlocked runtime session data.
+12. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
 
 ## Out of Scope
 

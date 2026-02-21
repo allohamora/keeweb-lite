@@ -58,6 +58,16 @@ export const getEntriesForList = ({
   return entries.filter((entry) => entry.tags.some((tag) => normalize(tag) === normalizedTag));
 };
 
+export const filterEntriesBySearch = (entries: kdbx.KdbxEntry[], query: string): kdbx.KdbxEntry[] => {
+  const normalizedQuery = normalize(query);
+  if (!normalizedQuery) return entries;
+
+  return entries.filter((entry) => {
+    const title = getFieldText(entry.fields.get('Title'));
+    return normalize(title).includes(normalizedQuery);
+  });
+};
+
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
