@@ -514,7 +514,7 @@ describe('workspace.service', () => {
     it('clones database, updates the entry, and persists encrypted bytes', async () => {
       const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
 
-      const updatedDatabase = await saveEntry({
+      const { nextDatabase, nextEntry } = await saveEntry({
         database,
         recordId: 'update-record',
         entryUuid: entry.uuid.toString(),
@@ -528,16 +528,14 @@ describe('workspace.service', () => {
         },
       });
 
-      expect(updatedDatabase).not.toBe(database);
+      expect(nextDatabase).not.toBe(database);
       expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
-      const updatedEntry = findEntryByUuid({ database: updatedDatabase, entryUuid: entry.uuid.toString() });
-      expect(updatedEntry).not.toBeNull();
-      expect(getFieldText(updatedEntry?.fields.get('Title'))).toBe('Updated Title');
-      expect(getFieldText(updatedEntry?.fields.get('UserName'))).toBe('updated-user');
-      expect(getFieldText(updatedEntry?.fields.get('Password'))).toBe('updated-password');
-      expect(getFieldText(updatedEntry?.fields.get('URL'))).toBe('https://updated.example.com');
-      expect(getFieldText(updatedEntry?.fields.get('Notes'))).toBe('Updated notes');
-      expect(updatedEntry?.tags).toEqual(['updated']);
+      expect(getFieldText(nextEntry.fields.get('Title'))).toBe('Updated Title');
+      expect(getFieldText(nextEntry.fields.get('UserName'))).toBe('updated-user');
+      expect(getFieldText(nextEntry.fields.get('Password'))).toBe('updated-password');
+      expect(getFieldText(nextEntry.fields.get('URL'))).toBe('https://updated.example.com');
+      expect(getFieldText(nextEntry.fields.get('Notes'))).toBe('Updated notes');
+      expect(nextEntry.tags).toEqual(['updated']);
 
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'update-record');
@@ -592,7 +590,7 @@ describe('workspace.service', () => {
     it('still clones and persists when same values are provided', async () => {
       const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
 
-      const result = await saveEntry({
+      const { nextDatabase } = await saveEntry({
         database,
         recordId: 'update-record',
         entryUuid: entry.uuid.toString(),
@@ -606,7 +604,7 @@ describe('workspace.service', () => {
         },
       });
 
-      expect(result).not.toBe(database);
+      expect(nextDatabase).not.toBe(database);
 
       const records = await getRecords();
       const persistedRecord = records.find(({ id }) => id === 'update-record');

@@ -150,19 +150,24 @@ export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx
   });
 };
 
-export const saveEntry = async ({ database, recordId, entryUuid, values }: UpdateEntryInput): Promise<kdbx.Kdbx> => {
-  const updatedDatabase = await cloneDatabase(database);
-  const entry = findEntryByUuid({ database: updatedDatabase, entryUuid });
+export const saveEntry = async ({
+  database,
+  recordId,
+  entryUuid,
+  values,
+}: UpdateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntry: kdbx.KdbxEntry }> => {
+  const nextDatabase = await cloneDatabase(database);
+  const nextEntry = findEntryByUuid({ database: nextDatabase, entryUuid });
 
-  if (!entry) {
+  if (!nextEntry) {
     throw new Error('Entry not found.');
   }
 
-  updateEntry(entry, values);
+  updateEntry(nextEntry, values);
 
-  await saveDatabase({ database: updatedDatabase, recordId });
+  await saveDatabase({ database: nextDatabase, recordId });
 
-  return updatedDatabase;
+  return { nextDatabase, nextEntry };
 };
 
 type CreateEntryInput = {
