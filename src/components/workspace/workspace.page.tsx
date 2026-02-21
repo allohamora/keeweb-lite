@@ -1,10 +1,12 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { UnlockSession } from '@/services/session.service';
-import { type SelectFilter } from '@/services/workspace.service';
+import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/utils/error.utils';
 
 type WorkspacePageProps = {
   session: UnlockSession;
@@ -40,6 +42,15 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
     setDatabaseVersion((version) => version + 1);
   };
 
+  const handleCreateEntry = async () => {
+    try {
+      handleSave(await createEntry({ database, recordId, selectFilter }));
+      toast.success('Entry created');
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'Failed to save entry.' }));
+    }
+  };
+
   return (
     <div className="flex h-dvh min-h-dvh overflow-hidden bg-background text-foreground">
       <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -53,6 +64,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
         <EntryList
           className="flex"
           database={database}
+          onCreateEntry={() => void handleCreateEntry()}
           onSelectEntry={handleSelectEntry}
           selectFilter={selectFilter}
           selectedEntry={selectedEntry}

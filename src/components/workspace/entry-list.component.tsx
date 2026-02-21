@@ -2,8 +2,9 @@ import type kdbx from '@/lib/kdbx.lib';
 import { useState } from 'react';
 import { useDebounce } from 'react-use';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Search01Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, Add01Icon } from '@hugeicons/core-free-icons';
 import { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput } from '@/components/ui/input-group';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   getEntriesForList,
@@ -18,9 +19,17 @@ type EntryListProps = {
   selectFilter: SelectFilter;
   selectedEntry: kdbx.KdbxEntry | null;
   onSelectEntry: (entry: kdbx.KdbxEntry) => void;
+  onCreateEntry: () => void;
 };
 
-export const EntryList = ({ className, database, selectFilter, selectedEntry, onSelectEntry }: EntryListProps) => {
+export const EntryList = ({
+  className,
+  database,
+  selectFilter,
+  selectedEntry,
+  onSelectEntry,
+  onCreateEntry,
+}: EntryListProps) => {
   const entries = getEntriesForList({ database, selectFilter });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,8 +46,8 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
           Entries <span className="opacity-60">({filteredEntries.length})</span>
         </p>
       </div>
-      <div className="border-b border-border p-2">
-        <InputGroup className="h-7 rounded-sm">
+      <div className="flex items-center gap-1 border-b border-border p-2">
+        <InputGroup className="h-7 flex-1 rounded-sm">
           <InputGroupAddon>
             <InputGroupText>
               <HugeiconsIcon icon={Search01Icon} size={14} strokeWidth={1.5} />
@@ -51,6 +60,16 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </InputGroup>
+        <Button
+          aria-label="Create entry"
+          className="h-7 w-7 shrink-0"
+          onClick={onCreateEntry}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={1.5} />
+        </Button>
       </div>
 
       <div aria-label="Entries list" className="min-h-0 flex-1 overflow-y-auto">
