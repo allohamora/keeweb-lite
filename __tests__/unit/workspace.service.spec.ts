@@ -1,6 +1,13 @@
 import kdbx from '@/lib/kdbx.lib';
 import { describe, expect, it } from 'vitest';
-import { getAllGroups, getAllTags, filterGroups, getEntriesForList, getFieldText } from '@/services/workspace.service';
+import {
+  getAllGroups,
+  getAllTags,
+  filterGroups,
+  getEntriesForList,
+  getFieldText,
+  filterEntriesBySearch,
+} from '@/services/workspace.service';
 
 describe('workspace.service', () => {
   const createDatabase = async () => {
@@ -200,6 +207,91 @@ describe('workspace.service', () => {
       });
 
       expect(result).toEqual(['work', 'shared', 'personal']);
+    });
+  });
+
+  describe('filterEntriesBySearch', () => {
+    it('returns all entries when query is empty', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const first = database.createEntry(group);
+      const second = database.createEntry(group);
+      first.fields.set('Title', 'Alpha');
+      second.fields.set('Title', 'Beta');
+
+      const result = filterEntriesBySearch([first, second], '');
+
+      expect(result).toEqual([first, second]);
+    });
+
+    it('returns all entries when query is blank after trimming', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const first = database.createEntry(group);
+      const second = database.createEntry(group);
+      first.fields.set('Title', 'Alpha');
+      second.fields.set('Title', 'Beta');
+
+      const result = filterEntriesBySearch([first, second], '   ');
+
+      expect(result).toEqual([first, second]);
+    });
+
+    it('returns entries whose title includes the query as a substring', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const matching = database.createEntry(group);
+      const other = database.createEntry(group);
+      matching.fields.set('Title', 'GitHub Account');
+      other.fields.set('Title', 'Email');
+
+      const result = filterEntriesBySearch([matching, other], 'github');
+
+      expect(result).toEqual([matching]);
+    });
+
+    it('matches case-insensitively', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const entry = database.createEntry(group);
+      entry.fields.set('Title', 'GitHub Account');
+
+      const result = filterEntriesBySearch([entry], 'GITHUB');
+
+      expect(result).toEqual([entry]);
+    });
+
+    it('returns an empty array when no entry title matches', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const entry = database.createEntry(group);
+      entry.fields.set('Title', 'Email');
+
+      const result = filterEntriesBySearch([entry], 'github');
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array for an empty entries list', () => {
+      const result = filterEntriesBySearch([], 'github');
+
+      expect(result).toEqual([]);
+    });
+
+    it('excludes entries with no title when query is non-empty', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Group');
+      const entry = database.createEntry(group);
+
+      const result = filterEntriesBySearch([entry], 'github');
+
+      expect(result).toEqual([]);
     });
   });
 

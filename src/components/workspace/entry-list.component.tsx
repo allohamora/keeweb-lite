@@ -1,6 +1,16 @@
 import type kdbx from '@/lib/kdbx.lib';
+import { useState } from 'react';
+import { useDebounce } from 'react-use';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Search01Icon } from '@hugeicons/core-free-icons';
+import { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput } from '@/components/ui/input-group';
 import { cn } from '@/lib/utils';
-import { getEntriesForList, getFieldText, type SelectFilter } from '@/services/workspace.service';
+import {
+  getEntriesForList,
+  getFieldText,
+  filterEntriesBySearch,
+  type SelectFilter,
+} from '@/services/workspace.service';
 
 type EntryListProps = {
   className?: string;
@@ -13,21 +23,43 @@ type EntryListProps = {
 export const EntryList = ({ className, database, selectFilter, selectedEntry, onSelectEntry }: EntryListProps) => {
   const entries = getEntriesForList({ database, selectFilter });
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  useDebounce(() => setDebouncedQuery(searchQuery), 300, [searchQuery]);
+
+  const filteredEntries = filterEntriesBySearch(entries, debouncedQuery);
+
   return (
     <aside className={cn('flex h-full w-72 min-w-0 flex-col border-r border-border bg-background', className)}>
       <div className="border-b border-border px-3 py-2">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-foreground">
-            Records <span className="opacity-60">({entries.length})</span>
-          </p>
-        </div>
+        <p className="truncate text-xs font-medium text-foreground">
+          Records <span className="opacity-60">({filteredEntries.length})</span>
+        </p>
+      </div>
+      <div className="border-b border-border p-2">
+        <InputGroup className="rounded-sm">
+          <InputGroupAddon>
+            <InputGroupText>
+              <HugeiconsIcon icon={Search01Icon} size={14} strokeWidth={1.5} />
+            </InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
+            aria-label="Search entries"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </InputGroup>
       </div>
 
       <div aria-label="Records list" className="min-h-0 flex-1 overflow-y-auto">
-        {entries.length === 0 ? (
-          <p className="p-4 text-xs text-muted-foreground">No records in this view yet.</p>
+        {filteredEntries.length === 0 ? (
+          <p className="p-4 text-xs text-muted-foreground">
+            {debouncedQuery ? 'No matching records.' : 'No records in this view yet.'}
+          </p>
         ) : (
-          entries.map((entry) => {
+          filteredEntries.map((entry) => {
             const isSelected = entry === selectedEntry;
             const title = getFieldText(entry.fields.get('Title')) || '(no title)';
             const username = getFieldText(entry.fields.get('UserName')) || '(no username)';
