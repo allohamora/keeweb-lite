@@ -112,7 +112,7 @@ export const EntryList = ({
           </p>
         ) : (
           filteredEntries.map((entry) => {
-            const isSelected = entry.uuid.equals(selectedEntryUuid);
+            const isSelected = selectedEntryUuid !== null && entry.uuid.equals(selectedEntryUuid);
 
             const title = getFieldText(entry.fields.get('Title')) || '(no title)';
             const username = getFieldText(entry.fields.get('UserName')) || '(no username)';

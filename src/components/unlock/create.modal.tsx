@@ -53,9 +53,9 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
       await onRecordCreated();
       setIsOpen(false);
 
-      toast.success('Record has been created.');
+      toast.success('The record has been created.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'An unexpected error occurred.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Failed to create the record.' }));
     }
   });
 
