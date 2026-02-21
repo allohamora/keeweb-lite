@@ -70,11 +70,81 @@ export const filterEntriesBySearch = (entries: kdbx.KdbxEntry[], query: string):
   });
 };
 
+export type EntryUpdateFields = {
+  title: string;
+  username: string;
+  password: string;
+  url: string;
+  notes: string;
+  tags: string[];
+};
+
+type UpdateEntryInput = {
+  database: kdbx.Kdbx;
+  recordId: string;
+  entryUuid: string;
+  fields: EntryUpdateFields;
+};
+
+export const findEntryByUuid = ({
+  database,
+  entryUuid,
+}: {
+  database: Pick<kdbx.Kdbx, 'groups'>;
+  entryUuid: string;
+}): kdbx.KdbxEntry | null => {
+  const groups = getAllGroups(database.groups);
+
+  for (const group of groups) {
+    for (const entry of group.entries) {
+      if (entry.uuid.toString() === entryUuid) {
+        return entry;
+      }
+    }
+  }
+
+  return null;
+};
+
+export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => {
+  const databaseBytes = await database.save();
+
+  return kdbx.Kdbx.load(databaseBytes, database.credentials);
+};
+
+export const updateEntry = (entry: kdbx.KdbxEntry, fields: EntryUpdateFields): void => {
+  entry.pushHistory();
+
+  entry.fields.set('Title', fields.title);
+  entry.fields.set('UserName', fields.username);
+  entry.fields.set('Password', kdbx.ProtectedValue.fromString(fields.password));
+  entry.fields.set('URL', fields.url);
+  entry.fields.set('Notes', fields.notes);
+  entry.tags.splice(0, entry.tags.length, ...fields.tags);
+
+  entry.times.update();
+};
+
 export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx; recordId: string }) => {
   const encryptedBytes = await toEncryptedBytes(database);
   const record = await getRecord(recordId);
 
   await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
+};
+
+export const saveEntry = async ({ database, recordId, entryUuid, fields }: UpdateEntryInput): Promise<kdbx.Kdbx> => {
+  const updatedDatabase = await cloneDatabase(database);
+  const entry = findEntryByUuid({ database: updatedDatabase, entryUuid });
+
+  if (!entry) {
+    throw new Error('Entry not found.');
+  }
+
+  updateEntry(entry, fields);
+
+  await saveDatabase({ database: updatedDatabase, recordId });
+
+  return updatedDatabase;
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {

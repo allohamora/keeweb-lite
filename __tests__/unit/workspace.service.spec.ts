@@ -2,13 +2,16 @@ import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
 import {
+  filterEntriesBySearch,
+  filterGroups,
+  findEntryByUuid,
   getAllGroups,
   getAllTags,
-  filterGroups,
   getEntriesForList,
   getFieldText,
-  filterEntriesBySearch,
+  saveEntry,
   saveDatabase,
+  updateEntry,
 } from '@/services/workspace.service';
 
 describe('workspace.service', () => {
@@ -314,6 +317,225 @@ describe('workspace.service', () => {
 
     it('returns an empty string for undefined fields', () => {
       expect(getFieldText(undefined)).toBe('');
+    });
+  });
+
+  describe('updateEntry', () => {
+    const createEntryWithValues = async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.fields.set('Title', 'Original Title');
+      entry.fields.set('UserName', 'original-user');
+      entry.fields.set('Password', kdbx.ProtectedValue.fromString('original-password'));
+      entry.fields.set('URL', 'https://example.com');
+      entry.fields.set('Notes', 'Original notes');
+      entry.tags = ['first'];
+
+      return { database, entry };
+    };
+
+    it('updates entry fields in place', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Updated Title',
+        username: 'updated-user',
+        password: 'updated-password',
+        url: 'https://updated.example.com',
+        notes: 'Updated notes',
+        tags: ['updated'],
+      });
+
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Updated Title');
+      expect(getFieldText(entry.fields.get('UserName'))).toBe('updated-user');
+      expect(getFieldText(entry.fields.get('Password'))).toBe('updated-password');
+      expect(getFieldText(entry.fields.get('URL'))).toBe('https://updated.example.com');
+      expect(getFieldText(entry.fields.get('Notes'))).toBe('Updated notes');
+      expect(entry.tags).toEqual(['updated']);
+    });
+
+    it('stores updated password as protected value text-equivalent', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'new-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+      });
+
+      expect(getFieldText(entry.fields.get('Password'))).toBe('new-password');
+    });
+
+    it('creates entry history and updates last modification time', async () => {
+      const { entry } = await createEntryWithValues();
+      const initialHistoryLength = entry.history.length;
+      const initialLastModTime = entry.times.lastModTime?.getTime() ?? 0;
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Updated notes',
+        tags: ['first'],
+      });
+
+      expect(entry.history).toHaveLength(initialHistoryLength + 1);
+      expect(entry.times.lastModTime?.getTime() ?? 0).toBeGreaterThanOrEqual(initialLastModTime);
+      const latestHistoryEntry = entry.history.at(-1);
+      expect(getFieldText(latestHistoryEntry?.fields.get('Notes'))).toBe('Original notes');
+    });
+
+    it('creates history and updates timestamp even when values are unchanged', async () => {
+      const { entry } = await createEntryWithValues();
+      const initialHistoryLength = entry.history.length;
+      const initialLastModTime = entry.times.lastModTime?.getTime() ?? 0;
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+      });
+
+      expect(entry.history).toHaveLength(initialHistoryLength + 1);
+      expect(entry.times.lastModTime?.getTime() ?? 0).toBeGreaterThanOrEqual(initialLastModTime);
+    });
+  });
+
+  describe('saveEntry', () => {
+    const createPersistedDatabaseWithEntry = async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.fields.set('Title', 'Original Title');
+      entry.fields.set('UserName', 'original-user');
+      entry.fields.set('Password', kdbx.ProtectedValue.fromString('original-password'));
+      entry.fields.set('URL', 'https://example.com');
+      entry.fields.set('Notes', 'Original notes');
+      entry.tags = ['first'];
+
+      const initialBytes = new Uint8Array(await database.save());
+      await createRecord({
+        id: 'update-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'update.kdbx' },
+      });
+
+      return { database, entry, initialBytes };
+    };
+
+    it('clones database, updates the entry, and persists encrypted bytes', async () => {
+      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+
+      const updatedDatabase = await saveEntry({
+        database,
+        recordId: 'update-record',
+        entryUuid: entry.uuid.toString(),
+        fields: {
+          title: 'Updated Title',
+          username: 'updated-user',
+          password: 'updated-password',
+          url: 'https://updated.example.com',
+          notes: 'Updated notes',
+          tags: ['updated'],
+        },
+      });
+
+      expect(updatedDatabase).not.toBe(database);
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
+      const updatedEntry = findEntryByUuid({ database: updatedDatabase, entryUuid: entry.uuid.toString() });
+      expect(updatedEntry).not.toBeNull();
+      expect(getFieldText(updatedEntry?.fields.get('Title'))).toBe('Updated Title');
+      expect(getFieldText(updatedEntry?.fields.get('UserName'))).toBe('updated-user');
+      expect(getFieldText(updatedEntry?.fields.get('Password'))).toBe('updated-password');
+      expect(getFieldText(updatedEntry?.fields.get('URL'))).toBe('https://updated.example.com');
+      expect(getFieldText(updatedEntry?.fields.get('Notes'))).toBe('Updated notes');
+      expect(updatedEntry?.tags).toEqual(['updated']);
+
+      const records = await getRecords();
+      const updatedRecord = records.find(({ id }) => id === 'update-record');
+      expect(updatedRecord).toBeDefined();
+      expect(updatedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
+
+    it('throws when entry uuid is missing in the copied database', async () => {
+      const { database } = await createPersistedDatabaseWithEntry();
+
+      await expect(
+        saveEntry({
+          database,
+          recordId: 'update-record',
+          entryUuid: 'missing-entry-uuid',
+          fields: {
+            title: 'Should fail',
+            username: 'user',
+            password: 'password',
+            url: 'https://example.com',
+            notes: 'notes',
+            tags: ['tag'],
+          },
+        }),
+      ).rejects.toThrow('Entry not found.');
+    });
+
+    it('keeps original database unchanged when saving updated copy fails', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const initialHistoryLength = entry.history.length;
+
+      await expect(
+        saveEntry({
+          database,
+          recordId: 'nonexistent-record-id',
+          entryUuid: entry.uuid.toString(),
+          fields: {
+            title: 'Should not persist',
+            username: 'user',
+            password: 'password',
+            url: 'https://example.com',
+            notes: 'notes',
+            tags: ['tag'],
+          },
+        }),
+      ).rejects.toThrow('Record not found.');
+
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
+      expect(entry.history).toHaveLength(initialHistoryLength);
+    });
+
+    it('still clones and persists when same values are provided', async () => {
+      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+
+      const result = await saveEntry({
+        database,
+        recordId: 'update-record',
+        entryUuid: entry.uuid.toString(),
+        fields: {
+          title: 'Original Title',
+          username: 'original-user',
+          password: 'original-password',
+          url: 'https://example.com',
+          notes: 'Original notes',
+          tags: ['first'],
+        },
+      });
+
+      expect(result).not.toBe(database);
+
+      const records = await getRecords();
+      const persistedRecord = records.find(({ id }) => id === 'update-record');
+      expect(persistedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
     });
   });
 

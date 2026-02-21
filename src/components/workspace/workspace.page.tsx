@@ -1,16 +1,18 @@
 import type kdbx from '@/lib/kdbx.lib';
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { UnlockSession } from '@/services/session.service';
-import type { SelectFilter } from '@/services/workspace.service';
+import { type SelectFilter } from '@/services/workspace.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
 
 type WorkspacePageProps = {
   session: UnlockSession;
+  setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({ session: { database, recordId } }: WorkspacePageProps) => {
+export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
+  const { database, recordId } = session;
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntry, setSelectedEntry] = useState<kdbx.KdbxEntry | null>(null);
   const [databaseVersion, setDatabaseVersion] = useState(0); // Used to trigger re-render when database changes
@@ -24,7 +26,13 @@ export const WorkspacePage = ({ session: { database, recordId } }: WorkspacePage
     setSelectedEntry(null);
   };
 
-  const handleSave = () => {
+  const handleSave = (nextDatabase: kdbx.Kdbx) => {
+    setSession((previousSession) => {
+      if (!previousSession) return previousSession;
+
+      return { ...previousSession, database: nextDatabase };
+    });
+
     setDatabaseVersion((version) => version + 1);
   };
 

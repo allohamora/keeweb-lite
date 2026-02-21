@@ -1,4 +1,4 @@
-import kdbx from '@/lib/kdbx.lib';
+import type kdbx from '@/lib/kdbx.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getAllTags, getFieldText, saveDatabase } from '@/services/workspace.service';
+import { getAllTags, getFieldText, saveEntry, type EntryUpdateFields } from '@/services/workspace.service';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -26,7 +26,7 @@ type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onSave?: () => void;
+  onSave?: (nextDatabase: kdbx.Kdbx) => void;
 };
 
 export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {
@@ -41,7 +41,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     control,
     handleSubmit,
     reset,
-    formState: { isDirty, isSubmitting, dirtyFields },
+    formState: { isDirty, isSubmitting },
   } = useForm<EntryEditValues>({
     defaultValues: { title, username, password, url, notes, tags },
     resolver: zodResolver(entryEditSchema),
@@ -49,16 +49,25 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
-      if (dirtyFields.title) entry.fields.set('Title', values.title);
-      if (dirtyFields.username) entry.fields.set('UserName', values.username);
-      if (dirtyFields.password) entry.fields.set('Password', kdbx.ProtectedValue.fromString(values.password));
-      if (dirtyFields.url) entry.fields.set('URL', values.url);
-      if (dirtyFields.notes) entry.fields.set('Notes', values.notes);
-      if (dirtyFields.tags) entry.tags.splice(0, entry.tags.length, ...values.tags);
+      const fields: EntryUpdateFields = {
+        title: values.title,
+        username: values.username,
+        password: values.password,
+        url: values.url,
+        notes: values.notes,
+        tags: values.tags,
+      };
 
-      await saveDatabase({ database, recordId });
-      reset(values); // Reset form state after successful save, isDirty, dirtyFields, etc
-      onSave?.();
+      const entryUuid = entry.uuid.toString();
+      const updatedDatabase = await saveEntry({
+        database,
+        recordId,
+        entryUuid,
+        fields,
+      });
+
+      reset(values); // Reset form state after successful save (isDirty, touched state, etc)
+      onSave?.(updatedDatabase);
       toast.success('Entry saved.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Failed to save entry.' }));

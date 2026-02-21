@@ -9,7 +9,7 @@ export const App = () => {
 
   return (
     <>
-      {!session ? <UnlockPage setSession={setSession} /> : <WorkspacePage session={session} />}
+      {!session ? <UnlockPage setSession={setSession} /> : <WorkspacePage session={session} setSession={setSession} />}
       <Toaster />
     </>
   );

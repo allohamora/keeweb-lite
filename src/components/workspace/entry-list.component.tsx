@@ -60,7 +60,9 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
           </p>
         ) : (
           filteredEntries.map((entry) => {
-            const isSelected = entry === selectedEntry;
+            // after the database is updated, the selectedEntry reference becomes stale, so we need to check by uuid instead of reference equality
+            const isSelected = entry.uuid.equals(selectedEntry?.uuid);
+
             const title = getFieldText(entry.fields.get('Title')) || '(no title)';
             const username = getFieldText(entry.fields.get('UserName')) || '(no username)';
 
