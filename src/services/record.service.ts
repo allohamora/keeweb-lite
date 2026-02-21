@@ -15,10 +15,18 @@ export const unlockKdbx = async ({
   const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyfile);
   await credentials.ready;
 
-  return await kdbx.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
+  try {
+    return await kdbx.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
+  } catch (error) {
+    if (error instanceof kdbx.KdbxError && error.code === kdbx.Consts.ErrorCodes.InvalidKey) {
+      throw new Error('Invalid password or key file.');
+    }
+
+    throw error;
+  }
 };
 
-export const saveKdbx = async (db: kdbx.Kdbx) => {
+export const toEncryptedBytes = async (db: kdbx.Kdbx) => {
   return asUint8Array(await db.save());
 };
 

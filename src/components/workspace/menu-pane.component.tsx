@@ -7,6 +7,7 @@ import { getAllTags, filterGroups, type SelectFilter } from '@/services/workspac
 type MenuPaneProps = {
   className?: string;
   database: kdbx.Kdbx;
+  databaseVersion: number;
   selectFilter: SelectFilter;
   onSelectFilter: (selectFilter: SelectFilter) => void;
 };

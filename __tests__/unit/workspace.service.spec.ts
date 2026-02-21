@@ -1,15 +1,27 @@
 import kdbx from '@/lib/kdbx.lib';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { unlockKdbx } from '@/services/record.service';
 import {
+  cloneDatabase,
+  filterEntriesBySearch,
+  filterGroups,
+  findEntryByUuid,
   getAllGroups,
   getAllTags,
-  filterGroups,
   getEntriesForList,
   getFieldText,
-  filterEntriesBySearch,
+  getTags,
+  saveEntry,
+  saveDatabase,
+  updateEntry,
 } from '@/services/workspace.service';
 
 describe('workspace.service', () => {
+  afterEach(async () => {
+    await clearRecords();
+  });
+
   const createDatabase = async () => {
     const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('workspace-test-password'));
     await credentials.ready;
@@ -210,6 +222,20 @@ describe('workspace.service', () => {
     });
   });
 
+  describe('getTags', () => {
+    it('returns normalized tags for the provided entry', () => {
+      const result = getTags({ tags: [' Work ', 'Shared', 'WORK', '   '] });
+
+      expect(result).toEqual(['work', 'shared', 'work', '']);
+    });
+
+    it('returns an empty array when entry has no tags', () => {
+      const result = getTags({ tags: [] });
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('filterEntriesBySearch', () => {
     it('returns all entries when query is empty', async () => {
       const database = await createDatabase();
@@ -308,6 +334,357 @@ describe('workspace.service', () => {
 
     it('returns an empty string for undefined fields', () => {
       expect(getFieldText(undefined)).toBe('');
+    });
+  });
+
+  describe('updateEntry', () => {
+    const createEntryWithValues = async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.fields.set('Title', 'Original Title');
+      entry.fields.set('UserName', 'original-user');
+      entry.fields.set('Password', kdbx.ProtectedValue.fromString('original-password'));
+      entry.fields.set('URL', 'https://example.com');
+      entry.fields.set('Notes', 'Original notes');
+      entry.tags = ['first'];
+
+      return { database, entry };
+    };
+
+    it('updates entry fields in place', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Updated Title',
+        username: 'updated-user',
+        password: 'updated-password',
+        url: 'https://updated.example.com',
+        notes: 'Updated notes',
+        tags: ['updated'],
+      });
+
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Updated Title');
+      expect(getFieldText(entry.fields.get('UserName'))).toBe('updated-user');
+      expect(getFieldText(entry.fields.get('Password'))).toBe('updated-password');
+      expect(getFieldText(entry.fields.get('URL'))).toBe('https://updated.example.com');
+      expect(getFieldText(entry.fields.get('Notes'))).toBe('Updated notes');
+      expect(entry.tags).toEqual(['updated']);
+    });
+
+    it('stores updated password as protected value text-equivalent', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'new-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+      });
+
+      expect(getFieldText(entry.fields.get('Password'))).toBe('new-password');
+    });
+
+    it('creates entry history and updates last modification time', async () => {
+      const { entry } = await createEntryWithValues();
+      const initialHistoryLength = entry.history.length;
+      const initialLastModTime = entry.times.lastModTime?.getTime() ?? 0;
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Updated notes',
+        tags: ['first'],
+      });
+
+      expect(entry.history).toHaveLength(initialHistoryLength + 1);
+      expect(entry.times.lastModTime?.getTime() ?? 0).toBeGreaterThanOrEqual(initialLastModTime);
+      const latestHistoryEntry = entry.history.at(-1);
+      expect(getFieldText(latestHistoryEntry?.fields.get('Notes'))).toBe('Original notes');
+    });
+
+    it('creates history and updates timestamp even when values are unchanged', async () => {
+      const { entry } = await createEntryWithValues();
+      const initialHistoryLength = entry.history.length;
+      const initialLastModTime = entry.times.lastModTime?.getTime() ?? 0;
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+      });
+
+      expect(entry.history).toHaveLength(initialHistoryLength + 1);
+      expect(entry.times.lastModTime?.getTime() ?? 0).toBeGreaterThanOrEqual(initialLastModTime);
+    });
+  });
+
+  describe('saveEntry', () => {
+    const createPersistedDatabaseWithEntry = async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.fields.set('Title', 'Original Title');
+      entry.fields.set('UserName', 'original-user');
+      entry.fields.set('Password', kdbx.ProtectedValue.fromString('original-password'));
+      entry.fields.set('URL', 'https://example.com');
+      entry.fields.set('Notes', 'Original notes');
+      entry.tags = ['first'];
+
+      const initialBytes = new Uint8Array(await database.save());
+      await createRecord({
+        id: 'update-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'update.kdbx' },
+      });
+
+      return { database, entry, initialBytes };
+    };
+
+    it('clones database, updates the entry, and persists encrypted bytes', async () => {
+      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+
+      const updatedDatabase = await saveEntry({
+        database,
+        recordId: 'update-record',
+        entryUuid: entry.uuid.toString(),
+        values: {
+          title: 'Updated Title',
+          username: 'updated-user',
+          password: 'updated-password',
+          url: 'https://updated.example.com',
+          notes: 'Updated notes',
+          tags: ['updated'],
+        },
+      });
+
+      expect(updatedDatabase).not.toBe(database);
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
+      const updatedEntry = findEntryByUuid({ database: updatedDatabase, entryUuid: entry.uuid.toString() });
+      expect(updatedEntry).not.toBeNull();
+      expect(getFieldText(updatedEntry?.fields.get('Title'))).toBe('Updated Title');
+      expect(getFieldText(updatedEntry?.fields.get('UserName'))).toBe('updated-user');
+      expect(getFieldText(updatedEntry?.fields.get('Password'))).toBe('updated-password');
+      expect(getFieldText(updatedEntry?.fields.get('URL'))).toBe('https://updated.example.com');
+      expect(getFieldText(updatedEntry?.fields.get('Notes'))).toBe('Updated notes');
+      expect(updatedEntry?.tags).toEqual(['updated']);
+
+      const records = await getRecords();
+      const updatedRecord = records.find(({ id }) => id === 'update-record');
+      expect(updatedRecord).toBeDefined();
+      expect(updatedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
+
+    it('throws when entry uuid is missing in the copied database', async () => {
+      const { database } = await createPersistedDatabaseWithEntry();
+
+      await expect(
+        saveEntry({
+          database,
+          recordId: 'update-record',
+          entryUuid: 'missing-entry-uuid',
+          values: {
+            title: 'Should fail',
+            username: 'user',
+            password: 'password',
+            url: 'https://example.com',
+            notes: 'notes',
+            tags: ['tag'],
+          },
+        }),
+      ).rejects.toThrow('Entry not found.');
+    });
+
+    it('keeps original database unchanged when saving updated copy fails', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const initialHistoryLength = entry.history.length;
+
+      await expect(
+        saveEntry({
+          database,
+          recordId: 'nonexistent-record-id',
+          entryUuid: entry.uuid.toString(),
+          values: {
+            title: 'Should not persist',
+            username: 'user',
+            password: 'password',
+            url: 'https://example.com',
+            notes: 'notes',
+            tags: ['tag'],
+          },
+        }),
+      ).rejects.toThrow('Record not found.');
+
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
+      expect(entry.history).toHaveLength(initialHistoryLength);
+    });
+
+    it('still clones and persists when same values are provided', async () => {
+      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+
+      const result = await saveEntry({
+        database,
+        recordId: 'update-record',
+        entryUuid: entry.uuid.toString(),
+        values: {
+          title: 'Original Title',
+          username: 'original-user',
+          password: 'original-password',
+          url: 'https://example.com',
+          notes: 'Original notes',
+          tags: ['first'],
+        },
+      });
+
+      expect(result).not.toBe(database);
+
+      const records = await getRecords();
+      const persistedRecord = records.find(({ id }) => id === 'update-record');
+      expect(persistedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+      expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
+    });
+  });
+
+  describe('saveDatabase', () => {
+    const createUnlockedDatabase = async () => {
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('persist-test-password'));
+      await credentials.ready;
+
+      return kdbx.Kdbx.create(credentials, 'Persist Test DB');
+    };
+
+    it('saves encrypted bytes back to the repository record', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+
+      const group = database.getDefaultGroup();
+      database.createEntry(group).fields.set('Title', 'New Entry');
+
+      await saveDatabase({ database, recordId: 'persist-record' });
+
+      const records = await getRecords();
+      const updated = records.find(({ id }) => id === 'persist-record');
+      expect(updated).toBeDefined();
+      expect(updated?.kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
+
+    it('preserves existing record metadata when updating', async () => {
+      const database = await createUnlockedDatabase();
+      const encryptedBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes, name: 'persist.kdbx' },
+        lastOpenedAt: '2026-01-01T00:00:00.000Z',
+      });
+
+      await saveDatabase({ database, recordId: 'persist-record' });
+
+      const records = await getRecords();
+      const updated = records.find(({ id }) => id === 'persist-record');
+      expect(updated?.lastOpenedAt).toBe('2026-01-01T00:00:00.000Z');
+      expect(updated?.kdbx.name).toBe('persist.kdbx');
+    });
+
+    it('throws when the record id does not exist', async () => {
+      const database = await createUnlockedDatabase();
+
+      await expect(saveDatabase({ database, recordId: 'nonexistent' })).rejects.toThrow('Record not found.');
+    });
+
+    it('handles concurrent saves without persisting partial state', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+
+      const firstUpdate = await cloneDatabase(database);
+      const secondUpdate = await cloneDatabase(database);
+
+      firstUpdate.createEntry(firstUpdate.getDefaultGroup()).fields.set('Title', 'First Concurrent Save');
+      secondUpdate.createEntry(secondUpdate.getDefaultGroup()).fields.set('Title', 'Second Concurrent Save');
+
+      const save1 = saveDatabase({ database: firstUpdate, recordId: 'persist-record' });
+      const save2 = saveDatabase({ database: secondUpdate, recordId: 'persist-record' });
+
+      await Promise.all([save1, save2]);
+
+      const persistedRecord = (await getRecords()).find(({ id }) => id === 'persist-record');
+      expect(persistedRecord).toBeDefined();
+      if (!persistedRecord) {
+        throw new Error('Record not found.');
+      }
+
+      const reloadedDatabase = await unlockKdbx({
+        encryptedBytes: persistedRecord.kdbx.encryptedBytes,
+        password: 'persist-test-password',
+      });
+      const persistedTitles = reloadedDatabase
+        .getDefaultGroup()
+        .entries.map((entry) => getFieldText(entry.fields.get('Title')));
+
+      expect([['First Concurrent Save'], ['Second Concurrent Save']]).toContainEqual(persistedTitles);
+    });
+
+    it('applies the last save when two concurrent saves target the same record', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+
+      const firstSaveDatabase = await cloneDatabase(database);
+      const secondSaveDatabase = await cloneDatabase(database);
+
+      firstSaveDatabase.createEntry(firstSaveDatabase.getDefaultGroup()).fields.set('Title', 'First Save');
+      secondSaveDatabase.createEntry(secondSaveDatabase.getDefaultGroup()).fields.set('Title', 'Second Save');
+
+      const save1 = saveDatabase({ database: firstSaveDatabase, recordId: 'persist-record' });
+      const save2 = saveDatabase({ database: secondSaveDatabase, recordId: 'persist-record' });
+
+      await Promise.all([save1, save2]);
+
+      const persistedRecord = (await getRecords()).find(({ id }) => id === 'persist-record');
+      expect(persistedRecord).toBeDefined();
+      if (!persistedRecord) {
+        throw new Error('Record not found.');
+      }
+
+      const reloadedDatabase = await unlockKdbx({
+        encryptedBytes: persistedRecord.kdbx.encryptedBytes,
+        password: 'persist-test-password',
+      });
+
+      const persistedTitles = reloadedDatabase
+        .getDefaultGroup()
+        .entries.map((entry) => getFieldText(entry.fields.get('Title')));
+
+      expect(persistedTitles).toEqual(['Second Save']);
     });
   });
 });

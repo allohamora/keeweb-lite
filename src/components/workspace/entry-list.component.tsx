@@ -34,11 +34,11 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
     <aside className={cn('flex h-full w-72 min-w-0 flex-col border-r border-border bg-background', className)}>
       <div className="border-b border-border px-3 py-2">
         <p className="truncate text-xs font-medium text-foreground">
-          Records <span className="opacity-60">({filteredEntries.length})</span>
+          Entries <span className="opacity-60">({filteredEntries.length})</span>
         </p>
       </div>
       <div className="border-b border-border p-2">
-        <InputGroup className="rounded-sm">
+        <InputGroup className="h-7 rounded-sm">
           <InputGroupAddon>
             <InputGroupText>
               <HugeiconsIcon icon={Search01Icon} size={14} strokeWidth={1.5} />
@@ -53,14 +53,16 @@ export const EntryList = ({ className, database, selectFilter, selectedEntry, on
         </InputGroup>
       </div>
 
-      <div aria-label="Records list" className="min-h-0 flex-1 overflow-y-auto">
+      <div aria-label="Entries list" className="min-h-0 flex-1 overflow-y-auto">
         {filteredEntries.length === 0 ? (
           <p className="p-4 text-xs text-muted-foreground">
-            {debouncedQuery ? 'No matching records.' : 'No records in this view yet.'}
+            {debouncedQuery ? 'No matching entries.' : 'No entries in this view yet.'}
           </p>
         ) : (
           filteredEntries.map((entry) => {
-            const isSelected = entry === selectedEntry;
+            // after the database is updated, the selectedEntry reference becomes stale, so we need to check by uuid instead of reference equality
+            const isSelected = entry.uuid.equals(selectedEntry?.uuid);
+
             const title = getFieldText(entry.fields.get('Title')) || '(no title)';
             const username = getFieldText(entry.fields.get('UserName')) || '(no username)';
 

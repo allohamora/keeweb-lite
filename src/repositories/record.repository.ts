@@ -122,6 +122,15 @@ export const createRecord = async (record: FileRecord) => {
   return parsedRecord;
 };
 
+export const getRecord = async (recordId: string) => {
+  const records = await getRecords();
+
+  const record = records.find(({ id }) => id === recordId);
+  if (!record) throw new Error('Record not found.');
+
+  return record;
+};
+
 export const removeRecord = async (recordId: string) => {
   await updateRecords((oldRecords) => oldRecords.filter(({ id }) => id !== recordId));
 };

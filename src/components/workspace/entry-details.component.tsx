@@ -1,122 +1,41 @@
 import type kdbx from '@/lib/kdbx.lib';
-import { Badge } from '@/components/ui/badge';
-import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { getFieldText } from '@/services/workspace.service';
+import { EntryEditForm } from '@/components/workspace/entry-edit.form';
 
 type EntryDetailsProps = {
   className?: string;
   selectedEntry: kdbx.KdbxEntry | null;
+  database: kdbx.Kdbx;
+  recordId: string;
+  onSave?: (nextDatabase: kdbx.Kdbx) => void;
 };
 
-export const EntryDetails = ({ className, selectedEntry }: EntryDetailsProps) => {
+export const EntryDetails = ({ className, selectedEntry, database, recordId, onSave }: EntryDetailsProps) => {
   if (!selectedEntry) {
     return (
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
         <div className="border-b border-border px-3 py-2">
-          <p className="truncate text-xs font-medium text-foreground">Record</p>
+          <p className="truncate text-xs font-medium text-foreground">Entry</p>
         </div>
         <div className="flex min-h-0 flex-1 items-center justify-center p-4">
-          <p className="text-xs text-muted-foreground">Select a record to view its details.</p>
+          <p className="text-xs text-muted-foreground">Select an entry to view its details.</p>
         </div>
       </aside>
     );
   }
 
-  const title = getFieldText(selectedEntry.fields.get('Title'));
-  const username = getFieldText(selectedEntry.fields.get('UserName'));
-  const password = getFieldText(selectedEntry.fields.get('Password'));
-  const url = getFieldText(selectedEntry.fields.get('URL'));
-  const notes = getFieldText(selectedEntry.fields.get('Notes'));
-  const tags = selectedEntry.tags;
-
   return (
     <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
       <div className="border-b border-border px-3 py-2">
-        <p className="truncate text-xs font-medium text-foreground">Record</p>
+        <p className="truncate text-xs font-medium text-foreground">Entry</p>
       </div>
-      <form className="flex min-h-0 flex-1 flex-col">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <section className="space-y-3">
-            <Field>
-              <FieldLabel htmlFor="entry-title">Title</FieldLabel>
-              <FieldContent>
-                <Input
-                  className="h-8 text-xs"
-                  disabled
-                  id="entry-title"
-                  placeholder="Title"
-                  type="text"
-                  value={title}
-                />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="entry-username">Username</FieldLabel>
-              <FieldContent>
-                <Input
-                  className="h-8 text-xs"
-                  disabled
-                  id="entry-username"
-                  placeholder="Username"
-                  type="text"
-                  value={username}
-                />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="entry-password">Password</FieldLabel>
-              <FieldContent>
-                <Input
-                  className="h-8 text-xs"
-                  disabled
-                  id="entry-password"
-                  placeholder="Password"
-                  type="password"
-                  value={password}
-                />
-              </FieldContent>
-            </Field>
-          </section>
-
-          <section className="space-y-3">
-            <Field>
-              <FieldLabel htmlFor="entry-url">URL</FieldLabel>
-              <FieldContent>
-                <Input className="h-8 text-xs" disabled id="entry-url" placeholder="https://" type="url" value={url} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel>Tags</FieldLabel>
-              <FieldContent>
-                {tags.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No tags</p>
-                ) : (
-                  <div aria-label="Entry tags" className="flex flex-wrap gap-1.5">
-                    {tags.map((tag, idx) => (
-                      <Badge className="h-5 rounded-sm px-2 text-[11px]" key={`${tag}-${idx}`} variant="outline">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="entry-notes">Notes</FieldLabel>
-              <FieldContent>
-                <Textarea className="min-h-24 text-xs" disabled id="entry-notes" placeholder="Notes" value={notes} />
-              </FieldContent>
-            </Field>
-          </section>
-        </div>
-      </form>
+      <EntryEditForm
+        key={selectedEntry.uuid.toString()}
+        database={database}
+        entry={selectedEntry}
+        recordId={recordId}
+        onSave={onSave}
+      />
     </aside>
   );
 };
