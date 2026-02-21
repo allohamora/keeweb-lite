@@ -50,7 +50,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
       if (dirtyFields.title) entry.fields.set('Title', values.title);
-      if (dirtyFields.username) entry.fields.set('UserName', kdbx.ProtectedValue.fromString(values.username));
+      if (dirtyFields.username) entry.fields.set('UserName', values.username);
       if (dirtyFields.password) entry.fields.set('Password', kdbx.ProtectedValue.fromString(values.password));
       if (dirtyFields.url) entry.fields.set('URL', values.url);
       if (dirtyFields.notes) entry.fields.set('Notes', values.notes);
