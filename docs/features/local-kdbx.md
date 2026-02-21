@@ -40,7 +40,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
   - optional `key` metadata (`name`, `hash`) for remember-key behavior
   - optional `lastOpenedAt`
 - Encrypted Offline Cache is represented by `record.kdbx.encryptedBytes` in `record.repository` records.
-- Keep unlocked model and active file session in runtime app state (Zustand-style, non-persistent) while file is open.
+- Keep unlocked model and active file session in runtime app state (in-memory, non-persistent) while file is open.
 
 ## Failure Handling
 

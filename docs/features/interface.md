@@ -25,7 +25,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
   - inline unlock message area
 - Selecting source/file context pre-fills unlock context and focuses unlock.
 - Successful unlock closes the Unlock screen and shows workspace.
-- Successful unlock hydrates runtime app state with unlocked session data (Zustand-style in-memory store, non-persistent).
+- Successful unlock hydrates runtime app state with unlocked session data (in-memory store, non-persistent).
 - If files are already open, the Unlock screen can be toggled without closing workspace files.
 - Workspace page contains:
   - top workspace status bar
@@ -61,7 +61,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 ## Data and Storage
 
 - Entered password and raw key bytes remain in runtime memory (inside runtime app state, non-persistent) only.
-- Unlocked session data is stored in runtime app state (Zustand-style, non-persistent) and cleared on lock/logout/close-file.
+- Unlocked session data is stored in runtime app state (in-memory, non-persistent) and cleared on lock/logout/close-file.
 
 ## Failure Handling
 

@@ -14,7 +14,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
   - selecting an existing recent record
   - entering password and optional key file
   - submitting unlock for the selected record context
-  - storing successful unlock result in runtime app state (Zustand-style in-memory store)
+  - storing successful unlock result in runtime app state (in-memory store)
 - Unlock must support both record types:
   - `local`
   - `google-drive`
@@ -109,7 +109,7 @@ Unlock-success persistence contract:
 
 Unlock-success runtime state contract:
 
-- After credentials are validated and DB is unlocked, store unlocked session state in app runtime store (for example, Zustand):
+- After credentials are validated and DB is unlocked, store unlocked session state in app runtime store:
   - unlocked database model
   - selected record `id`
   - selected record `type`
@@ -206,7 +206,7 @@ Unlock-success runtime state contract:
 8. Pressing `Enter` triggers unlock for the current selected/open context.
 9. Unlock failure keeps Unlock visible and surfaces actionable error text.
 10. Unlock success transitions to workspace and updates selected record `lastOpenedAt`.
-11. Unlock success writes unlocked DB/session into runtime app state (Zustand-style, non-persistent).
+11. Unlock success writes unlocked DB/session into runtime app state (in-memory, non-persistent).
 12. Optional key-file path is supported for both record types.
 13. Accessibility requirements pass for keyboard flow, focus order, and `aria-live` status updates.
 

@@ -30,7 +30,6 @@ This project is intentionally focused on a small, practical feature set because 
 - **TailwindCSS v4**: Utility-first styling with CSS layering & `@apply` minimization
 - **Shadcn/Ui**: Accessible, composable component primitives styled with Tailwind and project design tokens
 - **kdbxweb**: KDBX file format operations
-- **Zustand**: Planned for app state management
 - **React Hook Form**: Planned for performant form state management
 - **Zod**: Planned for schema-based validation & type inference
 - **ESLint / Prettier / Stylelint**: Consistent formatting & linting
