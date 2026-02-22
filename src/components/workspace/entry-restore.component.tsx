@@ -20,7 +20,7 @@ type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }) => void;
+  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null }) => void;
 };
 
 export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRestoreProps) => {

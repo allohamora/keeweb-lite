@@ -1183,13 +1183,13 @@ describe('workspace.service', () => {
     it('moves entry to the default group', async () => {
       const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
 
-      const { nextDatabase, nextEntryUuid } = await restoreEntry({
+      const { nextDatabase } = await restoreEntry({
         database,
         recordId: 'restore-record',
         entryUuid: entry.uuid.toString(),
       });
 
-      const nextEntry = findEntryByUuid(nextDatabase, nextEntryUuid);
+      const nextEntry = findEntryByUuid(nextDatabase, entry.uuid);
       expect(nextDatabase.getDefaultGroup().entries).toContain(nextEntry);
     });
 
@@ -1220,7 +1220,7 @@ describe('workspace.service', () => {
       expect(nextDatabase).not.toBe(database);
     });
 
-    it('returns nextEntryUuid matching the original entry uuid', async () => {
+    it('returns nextEntryUuid as null', async () => {
       const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextEntryUuid } = await restoreEntry({
@@ -1229,7 +1229,7 @@ describe('workspace.service', () => {
         entryUuid: entry.uuid.toString(),
       });
 
-      expect(nextEntryUuid.equals(entry.uuid)).toBe(true);
+      expect(nextEntryUuid).toBeNull();
     });
 
     it('does not mutate the original database', async () => {
