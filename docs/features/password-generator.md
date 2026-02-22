@@ -37,6 +37,10 @@ Define KeeWeb-like password generator behavior for lite workflows.
 - Save after apply creates native KDBX history revision through normal edit path.
 - Lite keeps generator behavior in-app with fixed defaults (no settings page dependency).
 - Generated password includes at least one character from each enabled range.
+- Character ranges skip look-alike characters for readability:
+  - uppercase omits `I` and `O`
+  - lowercase omits `l` and `o`
+  - numbers omits `0`
 - If all ranges are disabled, generated password value is an empty string.
 - Password generation uses runtime pseudo-random helpers (`Math.random`-based).
 

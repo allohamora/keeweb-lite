@@ -3,6 +3,7 @@ import { randomElement, shuffle } from '@/lib/random.lib';
 export const MIN_LENGTH = 4;
 export const MAX_LENGTH = 64;
 
+// Skip look-alike characters for readability (0/O/o and I/l).
 export const CharRanges = {
   upper: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
   lower: 'abcdefghijkmnpqrstuvwxyz',
