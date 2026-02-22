@@ -5,7 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
+import { Copy01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
@@ -72,6 +72,13 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     }
   };
 
+  const copy = (value: string, message: string) => () => {
+    void navigator.clipboard
+      .writeText(value)
+      .then(() => toast.success(message))
+      .catch((error) => toast.error(getErrorMessage({ error, fallback: 'Failed to copy to clipboard.' })));
+  };
+
   const [showPassword, setShowPassword] = useState(false);
 
   const tagOptions = getAllTags(database);
@@ -122,19 +129,29 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                   <div className="relative">
                     <Input
                       {...field}
-                      className="h-8 pr-8 text-xs"
+                      className="h-8 pr-16 text-xs"
                       id="entry-password"
                       placeholder="Password"
                       type={showPassword ? 'text' : 'password'}
                     />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
-                    </button>
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'Password copied to clipboard.')}
+                        aria-label="Copy password"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
+                      </button>
+                    </div>
                   </div>
                 </FieldContent>
               </Field>
