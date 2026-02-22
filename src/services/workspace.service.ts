@@ -220,6 +220,57 @@ export const createEntry = async ({
   return { nextDatabase, nextEntryUuid: nextEntry.uuid };
 };
 
+export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbx.KdbxEntry): boolean => {
+  const { recycleBinGroup } = filterGroups(database);
+  if (!recycleBinGroup) return false;
+
+  return recycleBinGroup.entries.some((item) => item.uuid.equals(entry.uuid));
+};
+
+type RemoveEntryInput = {
+  database: kdbx.Kdbx;
+  recordId: string;
+  entryUuid: string;
+};
+
+export const moveEntryToTrash = async ({
+  database,
+  recordId,
+  entryUuid,
+}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null }> => {
+  const nextDatabase = await cloneDatabase(database);
+  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
+
+  if (!nextEntry) {
+    throw new Error('Entry not found.');
+  }
+
+  nextDatabase.remove(nextEntry);
+
+  await saveDatabase({ database: nextDatabase, recordId });
+
+  return { nextDatabase, nextEntryUuid: null };
+};
+
+export const deleteEntryPermanently = async ({
+  database,
+  recordId,
+  entryUuid,
+}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null }> => {
+  const nextDatabase = await cloneDatabase(database);
+  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
+
+  if (!nextEntry) {
+    throw new Error('Entry not found.');
+  }
+
+  nextDatabase.move(nextEntry, null);
+
+  await saveDatabase({ database: nextDatabase, recordId });
+
+  return { nextDatabase, nextEntryUuid: null };
+};
+
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
