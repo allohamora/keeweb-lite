@@ -245,7 +245,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-notes">Notes</FieldLabel>
                 <FieldContent>
-                  <Textarea {...field} className="min-h-24 text-xs" id="entry-notes" placeholder="Notes" />
+                  <Textarea {...field} className="min-h-24 resize-none text-xs" id="entry-notes" placeholder="Notes" />
                 </FieldContent>
               </Field>
             )}
