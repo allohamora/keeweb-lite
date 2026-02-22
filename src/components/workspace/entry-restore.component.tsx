@@ -46,7 +46,7 @@ export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRest
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" className="h-8 px-4 text-xs" disabled={isRestoring}>
+        <Button className="h-8 px-4 text-xs" disabled={isRestoring}>
           Restore
         </Button>
       </AlertDialogTrigger>
