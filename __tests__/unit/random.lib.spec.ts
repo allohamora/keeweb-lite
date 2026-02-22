@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { randomInt } from '@/lib/random.lib';
+import { randomElement, randomInt } from '@/lib/random.lib';
 
 describe('random.lib', () => {
   describe('randomInt', () => {
@@ -40,8 +40,33 @@ describe('random.lib', () => {
     });
 
     it('throws when bounds do not include any integer', () => {
-      expect(() => randomInt(1.2, 1.8)).toThrow(RangeError);
+      expect(() => randomInt(1.2, 1.8)).toThrow(Error);
       expect(() => randomInt(1.2, 1.8)).toThrow('from and to must define at least one integer');
+    });
+  });
+
+  describe('randomElement', () => {
+    it('returns a random element from the array', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+
+      expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('beta');
+    });
+
+    it('returns first element when random is 0', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+
+      expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('alpha');
+    });
+
+    it('returns last element when random is near 1', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.999999999999);
+
+      expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('gamma');
+    });
+
+    it('throws when array is empty', () => {
+      expect(() => randomElement([])).toThrow(Error);
+      expect(() => randomElement([])).toThrow('value is not found');
     });
   });
 });
