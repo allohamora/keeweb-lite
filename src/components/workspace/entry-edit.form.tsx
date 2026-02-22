@@ -48,6 +48,8 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     resolver: zodResolver(entryEditSchema),
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
       const entryUuid = entry.uuid.toString();
@@ -83,8 +85,6 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
       .then(() => toast.success(`${name} copied.`))
       .catch((error) => toast.error(getErrorMessage({ error, fallback: `${name} copy failed.` })));
   };
-
-  const [showPassword, setShowPassword] = useState(false);
 
   const tagOptions = getAllTags(database);
   const isInTrash = isEntryInRecycleBin(database, entry);
