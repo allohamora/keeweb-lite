@@ -19,3 +19,10 @@ export const randomElement = <Element>(values: readonly Element[]) => {
 
   return value;
 };
+
+export const shuffle = <Element>(values: readonly Element[]) => {
+  return values
+    .map((value) => ({ value, score: Math.random() }))
+    .toSorted((left, right) => left.score - right.score)
+    .map(({ value }) => value);
+};

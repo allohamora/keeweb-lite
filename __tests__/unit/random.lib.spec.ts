@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { randomElement, randomInt } from '@/lib/random.lib';
+import { randomElement, randomInt, shuffle } from '@/lib/random.lib';
 
 describe('random.lib', () => {
   describe('randomInt', () => {
@@ -67,6 +67,29 @@ describe('random.lib', () => {
     it('throws when array is empty', () => {
       expect(() => randomElement([])).toThrow(Error);
       expect(() => randomElement([])).toThrow('value is not found');
+    });
+  });
+
+  describe('shuffle', () => {
+    it('returns values sorted by generated random scores', () => {
+      vi.spyOn(Math, 'random').mockReturnValueOnce(0.8).mockReturnValueOnce(0.1).mockReturnValueOnce(0.5);
+
+      expect(shuffle(['alpha', 'beta', 'gamma'])).toEqual(['beta', 'gamma', 'alpha']);
+    });
+
+    it('returns a new array and does not mutate input', () => {
+      const values = [1, 2, 3];
+      vi.spyOn(Math, 'random').mockReturnValueOnce(0.4).mockReturnValueOnce(0.3).mockReturnValueOnce(0.2);
+
+      const shuffled = shuffle(values);
+
+      expect(shuffled).toEqual([3, 2, 1]);
+      expect(values).toEqual([1, 2, 3]);
+      expect(shuffled).not.toBe(values);
+    });
+
+    it('returns empty array when input is empty', () => {
+      expect(shuffle([])).toEqual([]);
     });
   });
 });
