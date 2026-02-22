@@ -5,16 +5,15 @@ import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
 import { removeEntry } from '@/services/workspace.service';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type EntryRemoveProps = {
@@ -25,7 +24,6 @@ type EntryRemoveProps = {
 };
 
 export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemoveProps) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleRemove = async () => {
@@ -44,15 +42,15 @@ export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemove
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogTrigger asChild>
+    <Dialog>
+      <DialogTrigger asChild>
         <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving}>
           Remove
         </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent size="sm" onInteractOutside={() => setIsOpen(false)}>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-1.5">
+      </DialogTrigger>
+      <DialogContent showCloseButton={false} className="sm:max-w-xs">
+        <DialogHeader className="grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center">
+          <DialogTitle className="flex items-center gap-1.5">
             Remove entry?
             <Tooltip>
               <TooltipTrigger className="cursor-default text-xs text-muted-foreground">(?)</TooltipTrigger>
@@ -61,16 +59,22 @@ export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemove
                 to the recycle bin if enabled, or permanently deleted if the recycle bin is disabled.
               </TooltipContent>
             </Tooltip>
-          </AlertDialogTitle>
-          <AlertDialogDescription>Are you sure you want to remove this entry?</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" disabled={isRemoving} onClick={() => void handleRemove()}>
-            {isRemoving ? 'Removing...' : 'Remove'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </DialogTitle>
+          <DialogDescription>Are you sure you want to remove this entry?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="grid grid-cols-2">
+          <DialogClose asChild>
+            <Button type="button" variant="secondary">
+              Cancel
+            </Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button type="button" variant="destructive" disabled={isRemoving} onClick={() => void handleRemove()}>
+              {isRemoving ? 'Removing...' : 'Remove'}
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
