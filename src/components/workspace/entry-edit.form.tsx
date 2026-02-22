@@ -1,5 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -10,7 +11,18 @@ import { Input } from '@/components/ui/input';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getAllTags, getEntryValues, saveEntry } from '@/services/workspace.service';
+import { getAllTags, getEntryValues, saveEntry, removeEntry } from '@/services/workspace.service';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
 
 const entryEditSchema = z.object({
@@ -28,7 +40,7 @@ type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onSave?: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
 };
 
 export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {
@@ -64,6 +76,24 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
   const handleApplyHistory = (values: EntryEditValues) => {
     for (const [field, value] of Object.entries(values)) {
       setValue(field as keyof EntryEditValues, value, { shouldDirty: true });
+    }
+  };
+
+  const [isRemoveOpen, setIsRemoveOpen] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  const handleRemove = async () => {
+    setIsRemoving(true);
+    try {
+      const entryUuid = entry.uuid.toString();
+
+      onSave(await removeEntry({ database, recordId, entryUuid }));
+
+      toast.success('Entry removed.');
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'Failed to remove entry.' }));
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -175,7 +205,26 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           />
         </section>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex items-center justify-between pt-2">
+          <AlertDialog open={isRemoveOpen} onOpenChange={setIsRemoveOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving}>
+                Remove
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent size="sm" onInteractOutside={() => setIsRemoveOpen(false)}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove entry?</AlertDialogTitle>
+                <AlertDialogDescription>Are you sure you want to remove this entry?</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" disabled={isRemoving} onClick={() => void handleRemove()}>
+                  {isRemoving ? 'Removing...' : 'Remove'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>

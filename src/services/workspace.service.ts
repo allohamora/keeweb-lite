@@ -233,7 +233,7 @@ type RemoveEntryInput = {
   entryUuid: string;
 };
 
-export const moveEntryToTrash = async ({
+export const removeEntry = async ({
   database,
   recordId,
   entryUuid,
@@ -245,26 +245,11 @@ export const moveEntryToTrash = async ({
     throw new Error('Entry not found.');
   }
 
-  nextDatabase.remove(nextEntry);
-
-  await saveDatabase({ database: nextDatabase, recordId });
-
-  return { nextDatabase, nextEntryUuid: null };
-};
-
-export const deleteEntryPermanently = async ({
-  database,
-  recordId,
-  entryUuid,
-}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null }> => {
-  const nextDatabase = await cloneDatabase(database);
-  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
-
-  if (!nextEntry) {
-    throw new Error('Entry not found.');
+  if (isEntryInRecycleBin(nextDatabase, nextEntry)) {
+    nextDatabase.move(nextEntry, null);
+  } else {
+    nextDatabase.remove(nextEntry);
   }
-
-  nextDatabase.move(nextEntry, null);
 
   await saveDatabase({ database: nextDatabase, recordId });
 
