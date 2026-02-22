@@ -46,7 +46,7 @@ export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemove
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving}>
+        <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving}>
           Remove
         </Button>
       </AlertDialogTrigger>
