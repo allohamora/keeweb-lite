@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
 
 const entryEditSchema = z.object({
@@ -214,7 +215,16 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
             </AlertDialogTrigger>
             <AlertDialogContent size="sm" onInteractOutside={() => setIsRemoveOpen(false)}>
               <AlertDialogHeader>
-                <AlertDialogTitle>Remove entry?</AlertDialogTitle>
+                <AlertDialogTitle className="flex items-center gap-1.5">
+                  Remove entry?
+                  <Tooltip>
+                    <TooltipTrigger className="cursor-default text-xs text-muted-foreground">(?)</TooltipTrigger>
+                    <TooltipContent className="max-w-56">
+                      If the entry is already in the recycle bin, it will be permanently deleted. Otherwise, it will be
+                      moved to the recycle bin if enabled, or permanently deleted if the recycle bin is disabled.
+                    </TooltipContent>
+                  </Tooltip>
+                </AlertDialogTitle>
                 <AlertDialogDescription>Are you sure you want to remove this entry?</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
