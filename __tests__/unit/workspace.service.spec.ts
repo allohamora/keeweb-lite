@@ -1057,8 +1057,8 @@ describe('workspace.service', () => {
         entryUuid: entry.uuid.toString(),
       });
 
-      const nextGroup = nextDatabase.groups[0].groups.find((g) => g.name === 'Work');
-      expect(nextGroup?.entries.some((e) => e.uuid.equals(entry.uuid))).toBe(false);
+      const nextGroup = nextDatabase.groups[0].groups.find((group) => group.name === 'Work');
+      expect(nextGroup?.entries.some((entryItem) => entryItem.uuid.equals(entry.uuid))).toBe(false);
     });
 
     it('deletes entry permanently when already in trash', async () => {
