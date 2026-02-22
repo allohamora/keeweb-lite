@@ -1044,7 +1044,8 @@ describe('workspace.service', () => {
 
       const nextEntry = findEntryByUuid(nextDatabase, entry.uuid);
       expect(nextEntry).not.toBeNull();
-      expect(isEntryInRecycleBin(nextDatabase, nextEntry!)).toBe(true);
+      if (nextEntry === null) throw new Error('nextEntry is null');
+      expect(isEntryInRecycleBin(nextDatabase, nextEntry)).toBe(true);
     });
 
     it('removes entry from its original group when not already in trash', async () => {
@@ -1201,7 +1202,10 @@ describe('workspace.service', () => {
         entryUuid: entry.uuid.toString(),
       });
 
-      expect(isEntryInRecycleBin(nextDatabase, findEntryByUuid(nextDatabase, entry.uuid)!)).toBe(false);
+      const nextEntry = findEntryByUuid(nextDatabase, entry.uuid);
+      expect(nextEntry).not.toBeNull();
+      if (nextEntry === null) throw new Error('nextEntry is null');
+      expect(isEntryInRecycleBin(nextDatabase, nextEntry)).toBe(false);
     });
 
     it('returns a cloned database, not the original', async () => {
