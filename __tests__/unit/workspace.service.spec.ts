@@ -1158,6 +1158,14 @@ describe('workspace.service', () => {
         'Entry not found.',
       );
     });
+
+    it('throws when the record id does not exist', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntry();
+
+      await expect(
+        removeEntry({ database, recordId: 'nonexistent-record', entryUuid: entry.uuid.toString() }),
+      ).rejects.toThrow('Record not found.');
+    });
   });
 
   describe('restoreEntry', () => {
