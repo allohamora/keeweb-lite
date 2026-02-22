@@ -6,15 +6,13 @@ Define KeeWeb-like password generator behavior for lite workflows.
 
 ## Scope
 
-- Generator access from Unlock screen and workspace.
+- Generator access from workspace entry editing flow.
 - Password generation, apply, and copy flows.
-- Integration with immediate autosave and entry history.
+- Integration with entry edit flow and existing save/history pipeline.
 
 ## Functional Requirements
 
-- Generator is available from:
-  - Unlock screen
-  - workspace entry editing flow
+- Generator is available from workspace entry editing flow.
 - Generator supports core options:
   - length
   - uppercase letters
@@ -22,18 +20,17 @@ Define KeeWeb-like password generator behavior for lite workflows.
   - numbers
   - symbols
 - `Generate` creates a new candidate password without mutating entry data until user applies it.
-- `Apply` writes generated password to selected entry password field.
-- Entry password apply follows immediate autosave pipeline.
-- Entry password apply creates native KDBX history revision through normal edit path.
-- `Copy` action is available for generated value.
+- `Apply` writes generated password to selected entry password field in form state only.
+- Applied password is persisted only when user explicitly saves the entry form.
+- Save after apply creates native KDBX history revision through normal edit path.
 - Lite keeps generator behavior in-app with fixed defaults (no settings page dependency).
+- Password generation uses cryptographic randomness.
 
 ## UI Requirements
 
 - Generator opens as a focused panel/modal and can be dismissed with `Esc`.
-- Generated password field supports reveal/hide and copy.
+- Generated password field supports reveal/hide.
 - `Generate` and `Apply` actions are clearly separated.
-- Unlock screen generator can be used without an opened DB.
 
 ## Data and Storage
 
@@ -43,7 +40,6 @@ Define KeeWeb-like password generator behavior for lite workflows.
 ## Failure Handling
 
 - Apply failure keeps current entry password unchanged and surfaces error.
-- Copy failure surfaces a clear error/toast.
 
 ## Security and Privacy
 
@@ -52,6 +48,7 @@ Define KeeWeb-like password generator behavior for lite workflows.
 
 ## Acceptance Criteria
 
-- User can generate passwords from unlock and workspace contexts.
-- Applied passwords persist through immediate autosave.
-- Applied passwords are recoverable through native KDBX history.
+- User can generate passwords from workspace entry edit context.
+- Apply updates password field without persisting until user clicks save.
+- Saving after apply persists changes through normal entry-save pipeline.
+- Saved applied passwords are recoverable through native KDBX history.

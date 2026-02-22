@@ -17,6 +17,7 @@ import { getAllTags, getEntryValues, isEntryInRecycleBin, saveEntry } from '@/se
 import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
+import { PasswordGenerator } from '@/components/workspace/password-generator.component';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -164,7 +165,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                   <div className="relative">
                     <Input
                       {...field}
-                      className="h-8 pr-16 text-xs"
+                      className="h-8 pr-24 text-xs"
                       id="entry-password"
                       placeholder="Password"
                       type={showPassword ? 'text' : 'password'}
@@ -178,6 +179,10 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       >
                         <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
                       </button>
+                      <PasswordGenerator
+                        currentPassword={field.value}
+                        onApply={(password) => setValue('password', password, { shouldDirty: true })}
+                      />
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
