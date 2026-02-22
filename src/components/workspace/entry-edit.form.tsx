@@ -113,7 +113,25 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-username">Username</FieldLabel>
                 <FieldContent>
-                  <Input {...field} className="h-8 text-xs" id="entry-username" placeholder="Username" type="text" />
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      className="h-8 pr-8 text-xs"
+                      id="entry-username"
+                      placeholder="Username"
+                      type="text"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'Username copied.')}
+                        aria-label="Copy username"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </FieldContent>
               </Field>
             )}
@@ -167,7 +185,19 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-url">URL</FieldLabel>
                 <FieldContent>
-                  <Input {...field} className="h-8 text-xs" id="entry-url" placeholder="https://" type="text" />
+                  <div className="relative">
+                    <Input {...field} className="h-8 pr-8 text-xs" id="entry-url" placeholder="https://" type="text" />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'URL copied.')}
+                        aria-label="Copy URL"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </FieldContent>
               </Field>
             )}
