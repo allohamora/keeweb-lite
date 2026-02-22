@@ -10,8 +10,10 @@ import { Input } from '@/components/ui/input';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getAllTags, getEntryValues, saveEntry } from '@/services/workspace.service';
+import { getAllTags, getEntryValues, isEntryInRecycleBin, saveEntry } from '@/services/workspace.service';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
+import { EntryRemove } from '@/components/workspace/entry-remove.component';
+import { EntryRestore } from '@/components/workspace/entry-restore.component';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -28,7 +30,7 @@ type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onSave?: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
 };
 
 export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {
@@ -68,6 +70,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
   };
 
   const tagOptions = getAllTags(database);
+  const isInTrash = isEntryInRecycleBin(database, entry);
 
   return (
     <form
@@ -175,7 +178,11 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           />
         </section>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-2">
+            <EntryRemove database={database} entry={entry} recordId={recordId} onRemove={onSave} />
+            {isInTrash && <EntryRestore database={database} entry={entry} recordId={recordId} onRestore={onSave} />}
+          </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
