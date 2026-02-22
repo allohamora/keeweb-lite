@@ -90,9 +90,9 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
       onSave(await removeEntry({ database, recordId, entryUuid }));
 
-      toast.success('Entry removed.');
+      toast.success('The entry has been removed.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to remove entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Failed to remove the entry.' }));
     } finally {
       setIsRemoving(false);
     }
