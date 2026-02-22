@@ -57,5 +57,5 @@ Allow users to remove entries from their database and restore entries that have 
 If users need to restore an entry to a specific group rather than the default group, consider introducing a dedicated **Move** action:
 
 - A **Move** button opens a modal with a group selector (default group, recycle bin, and all other user-created groups).
-- The existing **Remove** button in that model would only perform permanent deletion (no recycle bin logic).
+- The existing **Remove** button in that modal would only perform permanent deletion (no recycle bin logic).
 - This approach replaces the current dual-behavior Remove (move-to-trash vs. permanent delete) with explicit, separate actions: Move (for repositioning) and Remove (for permanent deletion only).
