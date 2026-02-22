@@ -8,7 +8,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Copy01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
+import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
@@ -102,12 +102,19 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           <Controller
             control={control}
             name="title"
-            render={({ field }) => (
-              <Field>
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-title">Title</FieldLabel>
                 <FieldContent>
                   <div className="relative">
-                    <Input {...field} className="h-8 pr-8 text-xs" id="entry-title" placeholder="Title" type="text" />
+                    <Input
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                      className="h-8 pr-8 text-xs"
+                      id="entry-title"
+                      placeholder="Title"
+                      type="text"
+                    />
                     <div className="absolute inset-y-0 right-0 flex items-center">
                       <button
                         type="button"
@@ -119,6 +126,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       </button>
                     </div>
                   </div>
+                  <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
             )}
@@ -127,13 +135,14 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           <Controller
             control={control}
             name="username"
-            render={({ field }) => (
-              <Field>
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-username">Username</FieldLabel>
                 <FieldContent>
                   <div className="relative">
                     <Input
                       {...field}
+                      aria-invalid={fieldState.invalid}
                       className="h-8 pr-8 text-xs"
                       id="entry-username"
                       placeholder="Username"
@@ -150,6 +159,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       </button>
                     </div>
                   </div>
+                  <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
             )}
@@ -158,13 +168,14 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           <Controller
             control={control}
             name="password"
-            render={({ field }) => (
-              <Field>
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-password">Password</FieldLabel>
                 <FieldContent>
                   <div className="relative">
                     <Input
                       {...field}
+                      aria-invalid={fieldState.invalid}
                       className="h-8 pr-24 text-xs"
                       id="entry-password"
                       placeholder="Password"
@@ -193,6 +204,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       </button>
                     </div>
                   </div>
+                  <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
             )}
@@ -203,12 +215,19 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           <Controller
             control={control}
             name="url"
-            render={({ field }) => (
-              <Field>
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-url">URL</FieldLabel>
                 <FieldContent>
                   <div className="relative">
-                    <Input {...field} className="h-8 pr-8 text-xs" id="entry-url" placeholder="https://" type="text" />
+                    <Input
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                      className="h-8 pr-8 text-xs"
+                      id="entry-url"
+                      placeholder="https://"
+                      type="text"
+                    />
                     <div className="absolute inset-y-0 right-0 flex items-center">
                       <button
                         type="button"
@@ -220,6 +239,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       </button>
                     </div>
                   </div>
+                  <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
             )}
@@ -229,7 +249,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
             control={control}
             name="tags"
             render={({ field, fieldState }) => (
-              <Field>
+              <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-tags" id="entry-tags-label">
                   Tags
                 </FieldLabel>
@@ -243,6 +263,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                     onChange={field.onChange}
                     placeholder="Add tags..."
                   />
+                  <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
             )}
@@ -251,11 +272,18 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
           <Controller
             control={control}
             name="notes"
-            render={({ field }) => (
-              <Field>
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-notes">Notes</FieldLabel>
                 <FieldContent>
-                  <Textarea {...field} className="min-h-24 resize-none text-xs" id="entry-notes" placeholder="Notes" />
+                  <Textarea
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                    className="min-h-24 resize-none text-xs"
+                    id="entry-notes"
+                    placeholder="Notes"
+                  />
+                  <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
             )}
