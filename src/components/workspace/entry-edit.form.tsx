@@ -72,11 +72,16 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     }
   };
 
-  const copy = (value: string, message: string) => () => {
+  const copy = (value: string, name: string) => () => {
+    if (!navigator.clipboard) {
+      toast.error('Clipboard is not available.');
+      return;
+    }
+
     void navigator.clipboard
       .writeText(value)
-      .then(() => toast.success(message))
-      .catch((error) => toast.error(getErrorMessage({ error, fallback: 'Password copy failed.' })));
+      .then(() => toast.success(`${name} copied.`))
+      .catch((error) => toast.error(getErrorMessage({ error, fallback: `${name} copy failed.` })));
   };
 
   const [showPassword, setShowPassword] = useState(false);
@@ -106,7 +111,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                        onClick={copy(field.value, 'Title copied.')}
+                        onClick={copy(field.value, 'Title')}
                         aria-label="Copy title"
                       >
                         <HugeiconsIcon icon={Copy01Icon} size={14} />
@@ -137,7 +142,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                        onClick={copy(field.value, 'Username copied.')}
+                        onClick={copy(field.value, 'Username')}
                         aria-label="Copy username"
                       >
                         <HugeiconsIcon icon={Copy01Icon} size={14} />
@@ -176,7 +181,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                        onClick={copy(field.value, 'Password copied.')}
+                        onClick={copy(field.value, 'Password')}
                         aria-label="Copy password"
                       >
                         <HugeiconsIcon icon={Copy01Icon} size={14} />
@@ -203,7 +208,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                        onClick={copy(field.value, 'URL copied.')}
+                        onClick={copy(field.value, 'URL')}
                         aria-label="Copy URL"
                       >
                         <HugeiconsIcon icon={Copy01Icon} size={14} />
