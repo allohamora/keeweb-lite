@@ -100,7 +100,19 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-title">Title</FieldLabel>
                 <FieldContent>
-                  <Input {...field} className="h-8 text-xs" id="entry-title" placeholder="Title" type="text" />
+                  <div className="relative">
+                    <Input {...field} className="h-8 pr-8 text-xs" id="entry-title" placeholder="Title" type="text" />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'Title copied.')}
+                        aria-label="Copy title"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </FieldContent>
               </Field>
             )}
