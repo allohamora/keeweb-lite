@@ -26,10 +26,6 @@ type PasswordGeneratorProps = {
 };
 
 const passwordGeneratorSchema = z.object({
-  password: z
-    .string()
-    .min(MIN_LENGTH, { message: `Password must be at least ${MIN_LENGTH} characters.` })
-    .max(MAX_LENGTH, { message: `Password must be at most ${MAX_LENGTH} characters.` }),
   length: z.coerce
     .number()
     .int({ message: 'Length must be a whole number.' })
@@ -45,23 +41,19 @@ type PasswordGeneratorFormValues = z.infer<typeof passwordGeneratorSchema>;
 
 export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGeneratorProps) => {
   const [showPassword, setShowPassword] = useState(false);
-  const { control, handleSubmit, setValue, reset } = useForm<PasswordGeneratorFormValues>({
-    defaultValues: {
-      ...derivePasswordOptions(currentPassword),
-      password: currentPassword,
-    },
+  const [password, setPassword] = useState(currentPassword);
+  const { control, handleSubmit } = useForm<PasswordGeneratorFormValues>({
+    defaultValues: derivePasswordOptions(currentPassword),
     resolver: zodResolver(passwordGeneratorSchema),
     mode: 'onChange',
   });
 
-  const handleApply = handleSubmit(({ password: nextPassword }) => {
-    onApply(nextPassword);
-  });
+  const handleApply = () => {
+    onApply(password);
+  };
 
-  const handleGenerate = handleSubmit(({ password, ...values }) => {
-    const nextPassword = generatePassword(values);
-
-    setValue('password', nextPassword);
+  const handleGenerate = handleSubmit((values) => {
+    setPassword(generatePassword(values));
   });
 
   return (
@@ -81,34 +73,25 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
         </DialogHeader>
 
         <div className="space-y-3">
-          <Controller
-            control={control}
-            name="password"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <div className="relative">
-                  <Input
-                    {...field}
-                    type={showPassword ? 'text' : 'password'}
-                    className="h-8 pr-8 font-mono text-xs"
-                    aria-invalid={fieldState.invalid}
-                    aria-label="Generated password"
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center">
-                    <button
-                      type="button"
-                      className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
-                    </button>
-                  </div>
-                </div>
-                <FieldError errors={[fieldState.error]} />
-              </Field>
-            )}
-          />
+          <div className="relative">
+            <Input
+              value={password}
+              type={showPassword ? 'text' : 'password'}
+              className="h-8 pr-8 font-mono text-xs disabled:cursor-default disabled:opacity-100 dark:disabled:bg-input/30"
+              aria-label="Generated password"
+              disabled
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center">
+              <button
+                type="button"
+                className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
+              </button>
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Controller
@@ -213,13 +196,7 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
             Generate
           </Button>
           <DialogClose asChild>
-            <Button
-              type="button"
-              className="h-8 text-xs"
-              onClick={() => {
-                void handleApply();
-              }}
-            >
+            <Button type="button" className="h-8 text-xs" onClick={handleApply}>
               Apply
             </Button>
           </DialogClose>
