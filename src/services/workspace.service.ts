@@ -256,6 +256,25 @@ export const removeEntry = async ({
   return { nextDatabase, nextEntryUuid: null };
 };
 
+export const restoreEntry = async ({
+  database,
+  recordId,
+  entryUuid,
+}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
+  const nextDatabase = await cloneDatabase(database);
+  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
+
+  if (!nextEntry) {
+    throw new Error('Entry not found.');
+  }
+
+  nextDatabase.move(nextEntry, nextDatabase.getDefaultGroup());
+
+  await saveDatabase({ database: nextDatabase, recordId });
+
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
+};
+
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);

@@ -18,6 +18,7 @@ import {
   getTags,
   isEntryInRecycleBin,
   removeEntry,
+  restoreEntry,
   saveEntry,
   saveDatabase,
   sortEntries,
@@ -1155,6 +1156,121 @@ describe('workspace.service', () => {
       await expect(removeEntry({ database, recordId: 'remove-record', entryUuid: 'missing-uuid' })).rejects.toThrow(
         'Entry not found.',
       );
+    });
+  });
+
+  describe('restoreEntry', () => {
+    const createPersistedDatabaseWithEntryInTrash = async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const recycleBin = database.createGroup(root, 'Trash');
+      database.meta.recycleBinEnabled = true;
+      database.meta.recycleBinUuid = recycleBin.uuid;
+      const entry = database.createEntry(recycleBin);
+      entry.fields.set('Title', 'Entry in Trash');
+
+      const initialBytes = new Uint8Array(await database.save());
+      await createRecord({
+        id: 'restore-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'restore.kdbx' },
+      });
+
+      return { database, entry, recycleBin };
+    };
+
+    it('moves entry to the default group', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+
+      const { nextDatabase, nextEntryUuid } = await restoreEntry({
+        database,
+        recordId: 'restore-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      const nextEntry = findEntryByUuid(nextDatabase, nextEntryUuid);
+      expect(nextDatabase.getDefaultGroup().entries).toContain(nextEntry);
+    });
+
+    it('removes entry from the recycle bin after restoring', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+
+      const { nextDatabase } = await restoreEntry({
+        database,
+        recordId: 'restore-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      expect(isEntryInRecycleBin(nextDatabase, findEntryByUuid(nextDatabase, entry.uuid)!)).toBe(false);
+    });
+
+    it('returns a cloned database, not the original', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+
+      const { nextDatabase } = await restoreEntry({
+        database,
+        recordId: 'restore-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      expect(nextDatabase).not.toBe(database);
+    });
+
+    it('returns nextEntryUuid matching the original entry uuid', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+
+      const { nextEntryUuid } = await restoreEntry({
+        database,
+        recordId: 'restore-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      expect(nextEntryUuid.equals(entry.uuid)).toBe(true);
+    });
+
+    it('does not mutate the original database', async () => {
+      const { database, entry, recycleBin } = await createPersistedDatabaseWithEntryInTrash();
+      const originalEntryCount = recycleBin.entries.length;
+
+      await restoreEntry({
+        database,
+        recordId: 'restore-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      expect(recycleBin.entries).toHaveLength(originalEntryCount);
+    });
+
+    it('persists the updated database to the record', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const recordsBefore = await getRecords();
+      const bytesBefore = recordsBefore.find(({ id }) => id === 'restore-record')?.kdbx.encryptedBytes;
+
+      await restoreEntry({
+        database,
+        recordId: 'restore-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      const recordsAfter = await getRecords();
+      const bytesAfter = recordsAfter.find(({ id }) => id === 'restore-record')?.kdbx.encryptedBytes;
+      expect(bytesAfter).not.toEqual(bytesBefore);
+    });
+
+    it('throws when the entry uuid is not found', async () => {
+      const { database } = await createPersistedDatabaseWithEntryInTrash();
+
+      await expect(restoreEntry({ database, recordId: 'restore-record', entryUuid: 'missing-uuid' })).rejects.toThrow(
+        'Entry not found.',
+      );
+    });
+
+    it('throws when the record id does not exist', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+
+      await expect(
+        restoreEntry({ database, recordId: 'nonexistent-record', entryUuid: entry.uuid.toString() }),
+      ).rejects.toThrow('Record not found.');
     });
   });
 
