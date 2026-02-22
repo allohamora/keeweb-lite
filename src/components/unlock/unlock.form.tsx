@@ -58,7 +58,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) 
       toast.error(
         getErrorMessage({
           error,
-          fallback: 'Failed to unlock the database. Please check your password and try again.',
+          fallback: 'Database unlock failed. Please check your password and try again.',
         }),
       );
     }

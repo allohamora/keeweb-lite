@@ -35,9 +35,9 @@ export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemove
 
       onRemove(await removeEntry({ database, recordId, entryUuid }));
 
-      toast.success('The entry has been removed.');
+      toast.success('Entry removed.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to remove the entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Entry removal failed.' }));
     } finally {
       setIsRemoving(false);
     }

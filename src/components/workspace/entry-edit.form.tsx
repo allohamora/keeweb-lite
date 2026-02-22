@@ -60,9 +60,9 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
       onSave?.(result);
-      toast.success('The entry has been saved.');
+      toast.success('Entry saved.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to save the entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
     }
   });
 
@@ -76,7 +76,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     void navigator.clipboard
       .writeText(value)
       .then(() => toast.success(message))
-      .catch((error) => toast.error(getErrorMessage({ error, fallback: 'Failed to copy to clipboard.' })));
+      .catch((error) => toast.error(getErrorMessage({ error, fallback: 'Password copy failed.' })));
   };
 
   const [showPassword, setShowPassword] = useState(false);
@@ -138,7 +138,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                        onClick={copy(field.value, 'Password copied to clipboard.')}
+                        onClick={copy(field.value, 'Password copied.')}
                         aria-label="Copy password"
                       >
                         <HugeiconsIcon icon={Copy01Icon} size={14} />

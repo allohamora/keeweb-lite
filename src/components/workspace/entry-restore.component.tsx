@@ -35,9 +35,9 @@ export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRest
 
       onRestore(await restoreEntry({ database, recordId, entryUuid }));
 
-      toast.success('The entry has been restored.');
+      toast.success('Entry restored.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to restore the entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Entry restore failed.' }));
     } finally {
       setIsRestoring(false);
     }
