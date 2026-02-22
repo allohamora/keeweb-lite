@@ -24,7 +24,7 @@ Allow users to remove entries from their database and restore entries that have 
 ## UI Requirements
 
 - Remove button uses destructive styling.
-- Restore button uses outline styling (non-destructive).
+- Restore button uses default styling (non-destructive).
 - Remove and Restore buttons are placed flush-left in the edit form action row; Save is flush-right.
 - Remove modal title includes a `(?)` tooltip explaining the conditional behavior (recycle bin vs. permanent delete).
 - Restore modal title includes a `(?)` tooltip stating the entry will be moved to the default group.
@@ -57,5 +57,5 @@ Allow users to remove entries from their database and restore entries that have 
 If users need to restore an entry to a specific group rather than the default group, consider introducing a dedicated **Move** action:
 
 - A **Move** button opens a modal with a group selector (default group, recycle bin, and all other user-created groups).
-- The existing **Remove** button in that model would only perform permanent deletion (no recycle bin logic).
+- The existing **Remove** button in that modal would only perform permanent deletion (no recycle bin logic).
 - This approach replaces the current dual-behavior Remove (move-to-trash vs. permanent delete) with explicit, separate actions: Move (for repositioning) and Remove (for permanent deletion only).

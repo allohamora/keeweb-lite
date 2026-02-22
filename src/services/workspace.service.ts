@@ -260,7 +260,7 @@ export const restoreEntry = async ({
   database,
   recordId,
   entryUuid,
-}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
+}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null }> => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
@@ -272,7 +272,7 @@ export const restoreEntry = async ({
 
   await saveDatabase({ database: nextDatabase, recordId });
 
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
+  return { nextDatabase, nextEntryUuid: null };
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {

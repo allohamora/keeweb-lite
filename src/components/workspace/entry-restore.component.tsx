@@ -5,27 +5,25 @@ import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
 import { restoreEntry } from '@/services/workspace.service';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }) => void;
+  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null }) => void;
 };
 
 export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRestoreProps) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
   const handleRestore = async () => {
@@ -44,30 +42,36 @@ export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRest
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogTrigger asChild>
-        <Button className="h-8 px-4 text-xs" disabled={isRestoring}>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" className="h-8 px-4 text-xs" disabled={isRestoring}>
           Restore
         </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent size="sm" onInteractOutside={() => setIsOpen(false)}>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-1.5">
+      </DialogTrigger>
+      <DialogContent showCloseButton={false} className="sm:max-w-xs">
+        <DialogHeader className="grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center">
+          <DialogTitle className="flex items-center gap-1.5">
             Restore entry?
             <Tooltip>
               <TooltipTrigger className="cursor-default text-xs text-muted-foreground">(?)</TooltipTrigger>
               <TooltipContent className="max-w-56">The entry will be moved back to the default group.</TooltipContent>
             </Tooltip>
-          </AlertDialogTitle>
-          <AlertDialogDescription>Are you sure you want to restore this entry?</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={isRestoring} onClick={() => void handleRestore()}>
-            {isRestoring ? 'Restoring...' : 'Restore'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </DialogTitle>
+          <DialogDescription>Are you sure you want to restore this entry?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="grid grid-cols-2">
+          <DialogClose asChild>
+            <Button type="button" variant="secondary">
+              Cancel
+            </Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button type="button" disabled={isRestoring} onClick={() => void handleRestore()}>
+              {isRestoring ? 'Restoring...' : 'Restore'}
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -1044,7 +1044,8 @@ describe('workspace.service', () => {
 
       const nextEntry = findEntryByUuid(nextDatabase, entry.uuid);
       expect(nextEntry).not.toBeNull();
-      expect(isEntryInRecycleBin(nextDatabase, nextEntry!)).toBe(true);
+      if (nextEntry === null) throw new Error('nextEntry is null');
+      expect(isEntryInRecycleBin(nextDatabase, nextEntry)).toBe(true);
     });
 
     it('removes entry from its original group when not already in trash', async () => {
@@ -1056,8 +1057,8 @@ describe('workspace.service', () => {
         entryUuid: entry.uuid.toString(),
       });
 
-      const nextGroup = nextDatabase.groups[0].groups.find((g) => g.name === 'Work');
-      expect(nextGroup?.entries.some((e) => e.uuid.equals(entry.uuid))).toBe(false);
+      const nextGroup = nextDatabase.groups[0].groups.find((group) => group.name === 'Work');
+      expect(nextGroup?.entries.some((entryItem) => entryItem.uuid.equals(entry.uuid))).toBe(false);
     });
 
     it('deletes entry permanently when already in trash', async () => {
@@ -1157,6 +1158,14 @@ describe('workspace.service', () => {
         'Entry not found.',
       );
     });
+
+    it('throws when the record id does not exist', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntry();
+
+      await expect(
+        removeEntry({ database, recordId: 'nonexistent-record', entryUuid: entry.uuid.toString() }),
+      ).rejects.toThrow('Record not found.');
+    });
   });
 
   describe('restoreEntry', () => {
@@ -1182,13 +1191,13 @@ describe('workspace.service', () => {
     it('moves entry to the default group', async () => {
       const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
 
-      const { nextDatabase, nextEntryUuid } = await restoreEntry({
+      const { nextDatabase } = await restoreEntry({
         database,
         recordId: 'restore-record',
         entryUuid: entry.uuid.toString(),
       });
 
-      const nextEntry = findEntryByUuid(nextDatabase, nextEntryUuid);
+      const nextEntry = findEntryByUuid(nextDatabase, entry.uuid);
       expect(nextDatabase.getDefaultGroup().entries).toContain(nextEntry);
     });
 
@@ -1201,7 +1210,10 @@ describe('workspace.service', () => {
         entryUuid: entry.uuid.toString(),
       });
 
-      expect(isEntryInRecycleBin(nextDatabase, findEntryByUuid(nextDatabase, entry.uuid)!)).toBe(false);
+      const nextEntry = findEntryByUuid(nextDatabase, entry.uuid);
+      expect(nextEntry).not.toBeNull();
+      if (nextEntry === null) throw new Error('nextEntry is null');
+      expect(isEntryInRecycleBin(nextDatabase, nextEntry)).toBe(false);
     });
 
     it('returns a cloned database, not the original', async () => {
@@ -1216,7 +1228,7 @@ describe('workspace.service', () => {
       expect(nextDatabase).not.toBe(database);
     });
 
-    it('returns nextEntryUuid matching the original entry uuid', async () => {
+    it('returns nextEntryUuid as null', async () => {
       const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextEntryUuid } = await restoreEntry({
@@ -1225,7 +1237,7 @@ describe('workspace.service', () => {
         entryUuid: entry.uuid.toString(),
       });
 
-      expect(nextEntryUuid.equals(entry.uuid)).toBe(true);
+      expect(nextEntryUuid).toBeNull();
     });
 
     it('does not mutate the original database', async () => {
