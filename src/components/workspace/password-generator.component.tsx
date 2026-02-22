@@ -9,15 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldError } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { derivePasswordOptions, generatePassword, MAX_LENGTH, MIN_LENGTH } from '@/services/password-generator.service';
 
 type PasswordGeneratorProps = {
@@ -40,6 +32,7 @@ const passwordGeneratorSchema = z.object({
 type PasswordGeneratorFormValues = z.infer<typeof passwordGeneratorSchema>;
 
 export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGeneratorProps) => {
+  const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(currentPassword);
   const { control, handleSubmit } = useForm<PasswordGeneratorFormValues>({
@@ -48,16 +41,17 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
     mode: 'onChange',
   });
 
-  const handleApply = () => {
+  const handleApply = handleSubmit(() => {
     onApply(password);
-  };
+    setOpen(false);
+  });
 
   const handleGenerate = handleSubmit((values) => {
     setPassword(generatePassword(values));
   });
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
           type="button"
@@ -195,11 +189,15 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
           >
             Generate
           </Button>
-          <DialogClose asChild>
-            <Button type="button" className="h-8 text-xs" onClick={handleApply}>
-              Apply
-            </Button>
-          </DialogClose>
+          <Button
+            type="button"
+            className="h-8 text-xs"
+            onClick={() => {
+              void handleApply();
+            }}
+          >
+            Apply
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
