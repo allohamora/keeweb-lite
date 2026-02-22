@@ -1,8 +1,11 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
@@ -69,6 +72,8 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     }
   };
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const tagOptions = getAllTags(database);
   const isInTrash = isEntryInRecycleBin(database, entry);
 
@@ -114,13 +119,23 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-password">Password</FieldLabel>
                 <FieldContent>
-                  <Input
-                    {...field}
-                    className="h-8 text-xs"
-                    id="entry-password"
-                    placeholder="Password"
-                    type="password"
-                  />
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      className="h-8 pr-8 text-xs"
+                      id="entry-password"
+                      placeholder="Password"
+                      type={showPassword ? 'text' : 'password'}
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
+                    </button>
+                  </div>
                 </FieldContent>
               </Field>
             )}
