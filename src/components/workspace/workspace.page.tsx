@@ -49,9 +49,9 @@ export const WorkspacePage = ({ session: { database, recordId }, setSession }: W
   const handleCreateEntry = async () => {
     try {
       handleSave(await createEntry({ database, recordId, selectFilter }));
-      toast.success('The entry has been created.');
+      toast.success('Entry created.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to create the entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
     }
   };
 

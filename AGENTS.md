@@ -136,6 +136,13 @@ src/
 - After delivering the primitive solution, ask follow-up questions such as: "Do we need to handle old browsers?", "Do we need to migrate this data?", and "Do we need to set up cache here?"
 - Do not add overengineering or unrequested scope without explicit user confirmation.
 
+### Toast Messages
+
+- Use telegraphic style — no articles (`a`, `an`, `the`).
+- Success messages: `Subject + past participle.` (e.g., `'Entry saved.'`, `'Record created.'`)
+- Error messages: `Subject + noun phrase + "failed."` (e.g., `'Entry save failed.'`, `'Database unlock failed.'`)
+- Append actionable hints after the failure phrase when helpful (e.g., `'Database unlock failed. Please check your password and try again.'`)
+
 ### Maintenance
 
 - After changes, update [tests](__tests__/), [docs](docs/) and [AGENTS.md](AGENTS.md) when needed to keep behavior and documentation aligned.

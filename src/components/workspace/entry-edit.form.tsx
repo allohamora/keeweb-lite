@@ -1,8 +1,11 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Copy01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
@@ -45,6 +48,8 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     resolver: zodResolver(entryEditSchema),
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
       const entryUuid = entry.uuid.toString();
@@ -57,9 +62,9 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
       onSave?.(result);
-      toast.success('The entry has been saved.');
+      toast.success('Entry saved.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Failed to save the entry.' }));
+      toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
     }
   });
 
@@ -67,6 +72,18 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
     for (const [field, value] of Object.entries(values)) {
       setValue(field as keyof EntryEditValues, value, { shouldDirty: true });
     }
+  };
+
+  const copy = (value: string, name: string) => () => {
+    if (!navigator.clipboard) {
+      toast.error('Clipboard is not available.');
+      return;
+    }
+
+    void navigator.clipboard
+      .writeText(value)
+      .then(() => toast.success(`${name} copied.`))
+      .catch((error) => toast.error(getErrorMessage({ error, fallback: `${name} copy failed.` })));
   };
 
   const tagOptions = getAllTags(database);
@@ -88,7 +105,19 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-title">Title</FieldLabel>
                 <FieldContent>
-                  <Input {...field} className="h-8 text-xs" id="entry-title" placeholder="Title" type="text" />
+                  <div className="relative">
+                    <Input {...field} className="h-8 pr-8 text-xs" id="entry-title" placeholder="Title" type="text" />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'Title')}
+                        aria-label="Copy title"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </FieldContent>
               </Field>
             )}
@@ -101,7 +130,25 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-username">Username</FieldLabel>
                 <FieldContent>
-                  <Input {...field} className="h-8 text-xs" id="entry-username" placeholder="Username" type="text" />
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      className="h-8 pr-8 text-xs"
+                      id="entry-username"
+                      placeholder="Username"
+                      type="text"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'Username')}
+                        aria-label="Copy username"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </FieldContent>
               </Field>
             )}
@@ -114,13 +161,33 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-password">Password</FieldLabel>
                 <FieldContent>
-                  <Input
-                    {...field}
-                    className="h-8 text-xs"
-                    id="entry-password"
-                    placeholder="Password"
-                    type="password"
-                  />
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      className="h-8 pr-16 text-xs"
+                      id="entry-password"
+                      placeholder="Password"
+                      type={showPassword ? 'text' : 'password'}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'Password')}
+                        aria-label="Copy password"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </FieldContent>
               </Field>
             )}
@@ -135,7 +202,19 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-url">URL</FieldLabel>
                 <FieldContent>
-                  <Input {...field} className="h-8 text-xs" id="entry-url" placeholder="https://" type="text" />
+                  <div className="relative">
+                    <Input {...field} className="h-8 pr-8 text-xs" id="entry-url" placeholder="https://" type="text" />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'URL')}
+                        aria-label="Copy URL"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </FieldContent>
               </Field>
             )}
@@ -171,7 +250,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
               <Field>
                 <FieldLabel htmlFor="entry-notes">Notes</FieldLabel>
                 <FieldContent>
-                  <Textarea {...field} className="min-h-24 text-xs" id="entry-notes" placeholder="Notes" />
+                  <Textarea {...field} className="min-h-24 resize-none text-xs" id="entry-notes" placeholder="Notes" />
                 </FieldContent>
               </Field>
             )}
