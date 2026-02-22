@@ -42,7 +42,9 @@ Define KeeWeb-like password generator behavior for lite workflows.
   - lowercase omits `l` and `o`
   - numbers omits `0`
 - If all ranges are disabled, generated password value is an empty string.
-- Password generation uses runtime pseudo-random helpers (`Math.random`-based).
+- Password generation uses runtime random helpers from `src/lib/random.lib.ts`.
+- Random values come from `src/lib/crypto.lib.ts`, which normalizes `kdbx.CryptoEngine.random(4)` bytes to `[0, 1)`.
+- Shuffle behavior is score-based: each item gets one random score, then items are sorted by score to produce a new array.
 
 ## UI Requirements
 
