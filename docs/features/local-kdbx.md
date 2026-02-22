@@ -30,7 +30,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 - Show local source mode as `local-cache` (download/export-based).
 - Show `Download` action when local file is open.
 - If data is cached locally and not yet downloaded, show a clear inline hint (`Stored locally until downloaded`).
-- Provide password generator action in open flow and workspace entry editing flow.
+- Provide password generator action in workspace entry editing flow.
 
 ## Data and Storage
 

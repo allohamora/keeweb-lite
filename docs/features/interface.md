@@ -9,7 +9,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - Unlock screen (startup, unlock, reopen).
 - Detailed startup screen spec: [`docs/screens/unlock-screen.md`](../screens/unlock-screen.md).
 - Workspace page (KeeWeb-like render/edit layout).
-- Password generator access in Unlock screen and workspace contexts.
+- Password generator access in workspace entry-edit context.
 
 ## Functional Requirements
 
@@ -21,7 +21,6 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - Unlock screen includes:
   - password input and enter/open action
   - optional key file control
-  - password generator action
   - inline unlock message area
 - Selecting source/file context pre-fills unlock context and focuses unlock.
 - Successful unlock closes the Unlock screen and shows workspace.

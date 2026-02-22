@@ -42,7 +42,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Displays selected entry tags when present.
    - Supports editing flow and history access/restore actions.
 5. Context panel area
-   - Used for temporary workflows that replace or overlay standard list/details content (for example, generator or import-related flows).
+   - Used for temporary workflows that replace or overlay standard list/details content (for example, import-related flows).
 6. Footer bar
    - Shows opened-record context and quick actions related to workspace/session behavior.
 
