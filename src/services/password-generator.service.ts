@@ -38,7 +38,7 @@ export const derivePasswordOptions = (password: string): PasswordOptions => {
   if (!password.trim()) return { ...DEFAULT_PASSWORD_OPTIONS };
 
   const options = {
-    length: password.length,
+    length: Math.max(MIN_LENGTH, Math.min(MAX_LENGTH, password.length)),
     upper: false,
     lower: false,
     digits: false,

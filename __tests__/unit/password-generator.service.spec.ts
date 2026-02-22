@@ -30,7 +30,7 @@ describe('password-generator.service', () => {
 
     it('derives symbols from symbols-only password', () => {
       expect(derivePasswordOptions('!@#')).toEqual({
-        length: 3,
+        length: MIN_LENGTH,
         upper: false,
         lower: false,
         digits: false,
@@ -50,12 +50,21 @@ describe('password-generator.service', () => {
 
     it('uses untrimmed length for non-empty password', () => {
       expect(derivePasswordOptions(' a ')).toEqual({
-        length: 3,
+        length: MIN_LENGTH,
         upper: false,
         lower: true,
         digits: false,
         symbols: false,
       });
+    });
+
+    it('clamps length to MIN_LENGTH when password is shorter', () => {
+      expect(derivePasswordOptions('a').length).toBe(MIN_LENGTH);
+    });
+
+    it('clamps length to MAX_LENGTH when password is longer', () => {
+      const long = 'a'.repeat(MAX_LENGTH + 10);
+      expect(derivePasswordOptions(long).length).toBe(MAX_LENGTH);
     });
   });
 
