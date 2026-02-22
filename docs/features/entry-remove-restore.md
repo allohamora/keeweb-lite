@@ -24,7 +24,7 @@ Allow users to remove entries from their database and restore entries that have 
 ## UI Requirements
 
 - Remove button uses destructive styling.
-- Restore button uses outline styling (non-destructive).
+- Restore button uses default styling (non-destructive).
 - Remove and Restore buttons are placed flush-left in the edit form action row; Save is flush-right.
 - Remove modal title includes a `(?)` tooltip explaining the conditional behavior (recycle bin vs. permanent delete).
 - Restore modal title includes a `(?)` tooltip stating the entry will be moved to the default group.
