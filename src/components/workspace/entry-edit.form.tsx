@@ -156,18 +156,18 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                        onClick={copy(field.value, 'Password copied.')}
-                        aria-label="Copy password"
-                      >
-                        <HugeiconsIcon icon={Copy01Icon} size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword((prev) => !prev)}
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={copy(field.value, 'Password copied.')}
+                        aria-label="Copy password"
+                      >
+                        <HugeiconsIcon icon={Copy01Icon} size={14} />
                       </button>
                     </div>
                   </div>
