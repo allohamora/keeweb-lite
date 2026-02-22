@@ -22,6 +22,7 @@ Define KeeWeb-like password generator behavior for lite workflows.
 - Generator uses fixed limits:
   - minimum length: `4`
   - maximum length: `64`
+  - Length validation is not applied when all character ranges are disabled; in that case a separate "no character ranges enabled" error takes precedence.
 - Generator default options are:
   - length: `16`
   - uppercase: enabled
@@ -38,7 +39,7 @@ Define KeeWeb-like password generator behavior for lite workflows.
 - Lite keeps generator behavior in-app with fixed defaults (no settings page dependency).
 - Generated password includes at least one character from each enabled range.
 - Character ranges include all standard characters.
-- If all ranges are disabled, generated password value is an empty string.
+- If all ranges are disabled, generated password value is an empty string; this is a distinct "no character ranges enabled" validation error — length validation is not applied in this case.
 - Password generation uses runtime random helpers from `src/lib/random.lib.ts`.
 - Random values come from `src/lib/crypto.lib.ts`, which normalizes `kdbx.CryptoEngine.random(4)` bytes to `[0, 1)`.
 - Shuffle behavior is score-based: each item gets one random score, then items are sorted by score to produce a new array.
