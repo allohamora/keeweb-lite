@@ -1,3 +1,5 @@
+import { random } from './crypto.lib';
+
 export const randomInt = (from: number, to: number) => {
   const min = Math.ceil(Math.min(from, to));
   const max = Math.floor(Math.max(from, to));
@@ -6,7 +8,7 @@ export const randomInt = (from: number, to: number) => {
     throw new Error('from and to must define at least one integer');
   }
 
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(random() * (max - min + 1)) + min;
 };
 
 export const randomElement = <Element>(values: readonly Element[]) => {
@@ -22,7 +24,7 @@ export const randomElement = <Element>(values: readonly Element[]) => {
 
 export const shuffle = <Element>(values: readonly Element[]) => {
   return values
-    .map((value) => ({ value, score: Math.random() }))
+    .map((value) => ({ value, score: random() }))
     .toSorted((left, right) => left.score - right.score)
     .map(({ value }) => value);
 };
