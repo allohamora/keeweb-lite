@@ -64,18 +64,8 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
     setValue('password', nextPassword);
   });
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      // we need that timeout to wait for the dialog close animation to finish before resetting the form, otherwise it will cause a visual glitch
-      setTimeout(() => {
-        reset();
-        setShowPassword(false);
-      }, 100);
-    }
-  };
-
   return (
-    <Dialog onOpenChange={handleOpenChange}>
+    <Dialog>
       <DialogTrigger asChild>
         <button
           type="button"
