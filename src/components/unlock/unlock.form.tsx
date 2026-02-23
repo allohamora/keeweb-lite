@@ -137,7 +137,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   {records.map((record) => (
                     <SelectItem key={record.id} value={record.id}>
                       {record.kdbx.name} ({record.type})
