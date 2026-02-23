@@ -78,6 +78,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: Un
 
   const handleRemove = () => {
     reloadRecords();
+    setShowPassword(false);
     reset();
   };
 
