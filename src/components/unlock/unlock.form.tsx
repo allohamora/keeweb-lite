@@ -123,7 +123,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) 
                 <SelectContent>
                   {records.map((record) => (
                     <SelectItem key={record.id} value={record.id}>
-                      {record.kdbx.name} ({record.type === 'google-drive' ? 'Google Drive' : 'Local'})
+                      {record.kdbx.name} ({record.type})
                     </SelectItem>
                   ))}
                 </SelectContent>

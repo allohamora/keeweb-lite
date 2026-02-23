@@ -5,6 +5,7 @@ import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/work
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
+import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/utils/error.utils';
 
@@ -13,7 +14,10 @@ type WorkspacePageProps = {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({ session: { database, recordId }, setSession }: WorkspacePageProps) => {
+export const WorkspacePage = ({
+  session: { database, recordId, recordName, recordType },
+  setSession,
+}: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
 
@@ -46,6 +50,11 @@ export const WorkspacePage = ({ session: { database, recordId }, setSession }: W
     }
   };
 
+  const handleLock = () => {
+    setSession(null);
+    setSelectedEntryUuid(null);
+  };
+
   const handleCreateEntry = async () => {
     try {
       handleSave(await createEntry({ database, recordId, selectFilter }));
@@ -56,7 +65,8 @@ export const WorkspacePage = ({ session: { database, recordId }, setSession }: W
   };
 
   return (
-    <div className="flex h-dvh min-h-dvh overflow-hidden bg-background text-foreground">
+    <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <WorkspaceControls database={database} recordName={recordName} recordType={recordType} onLock={handleLock} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
           className="flex"
