@@ -19,7 +19,7 @@ import { getErrorMessage } from '@/utils/error.utils';
 import { createLocalRecord } from '@/services/record.service';
 
 export type CreateModalProps = {
-  onRecordCreated: () => Promise<void>;
+  onRecordCreated: () => void;
 };
 
 const createModalSchema = z.object({
@@ -50,7 +50,7 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
     try {
       await createLocalRecord({ databaseFile, keyFile });
 
-      await onRecordCreated();
+      onRecordCreated();
       setIsOpen(false);
 
       toast.success('Record created.');

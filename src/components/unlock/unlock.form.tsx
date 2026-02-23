@@ -10,6 +10,7 @@ import { unlockForSession, type UnlockSession } from '@/services/session.service
 import { getErrorMessage } from '@/utils/error.utils';
 import { getRecords } from '@/services/record.service';
 import { toast } from 'sonner';
+import { RecordRemove } from './record-remove.component';
 
 const unlockFormSchema = z.object({
   selectedRecordId: z.string().min(1, 'Create or select a file before unlocking.'),
@@ -21,13 +22,16 @@ type UnlockFormValues = z.infer<typeof unlockFormSchema>;
 export type UnlockFormProps = {
   recordsReloadToken: number;
   setSession: (session: UnlockSession) => void;
+  update: () => void;
 };
 
-export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) => {
+export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFormProps) => {
   const {
     control,
     formState: { isSubmitting },
     handleSubmit,
+    watch,
+    reset,
   } = useForm<UnlockFormValues>({
     defaultValues: {
       password: '',
@@ -40,6 +44,8 @@ export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) 
     loading: isLoadingRecords,
     value: records = [],
   } = useAsync(async () => await getRecords(), [recordsReloadToken]);
+
+  const selectedRecordId = watch('selectedRecordId');
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     try {
@@ -63,6 +69,11 @@ export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) 
       );
     }
   });
+
+  const handleRemove = () => {
+    update();
+    reset();
+  };
 
   if (isLoadingRecords) {
     return (
@@ -145,7 +156,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) 
                 {...field}
                 autoComplete="current-password"
                 aria-invalid={fieldState.invalid}
-                disabled={records.length === 0 || isSubmitting}
+                disabled={!selectedRecordId || isSubmitting}
                 id="unlock-password"
                 placeholder="Enter password"
                 type="password"
@@ -156,10 +167,16 @@ export const UnlockForm = ({ recordsReloadToken, setSession }: UnlockFormProps) 
         )}
       />
 
-      <div className="flex justify-end pt-3">
+      <div className="flex items-center justify-between pt-3">
+        <RecordRemove
+          recordId={selectedRecordId}
+          disabled={!selectedRecordId || isSubmitting}
+          onRemove={handleRemove}
+        />
+
         <Button
-          className="h-8 px-4 text-xs"
-          disabled={records.length === 0 || isSubmitting}
+          className="ml-auto h-8 px-4 text-xs"
+          disabled={!selectedRecordId || isSubmitting}
           type="submit"
           variant="outline"
         >
