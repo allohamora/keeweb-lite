@@ -21,6 +21,7 @@ type RecordRemoveProps = {
 };
 
 export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleRemove = async () => {
@@ -28,6 +29,7 @@ export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps
     try {
       await removeRecord(recordId);
       onRemove();
+      setIsOpen(false);
       toast.success('Record removed.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Record removal failed.' }));
@@ -37,7 +39,7 @@ export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving || disabled}>
           Remove
@@ -50,20 +52,18 @@ export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps
         </DialogHeader>
         <DialogFooter className="grid grid-cols-2">
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
+            <Button type="button" variant="secondary" disabled={isRemoving}>
               Cancel
             </Button>
           </DialogClose>
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={isRemoving || disabled}
-              onClick={() => void handleRemove()}
-            >
-              {isRemoving ? 'Removing...' : 'Remove'}
-            </Button>
-          </DialogClose>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={isRemoving || disabled}
+            onClick={() => void handleRemove()}
+          >
+            {isRemoving ? 'Removing...' : 'Remove'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
