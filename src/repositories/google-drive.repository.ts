@@ -83,3 +83,20 @@ export const listKdbxFiles = async () => {
   const { files } = (await response.json()) as { files: KdbxFile[] };
   return { files };
 };
+
+export const getKdbxFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
+  const accessToken = await auth.getAccessToken();
+
+  const params = new URLSearchParams({ alt: 'media' });
+
+  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get kdbx file: ${response.status} ${response.statusText}`);
+  }
+
+  const buffer = await response.arrayBuffer();
+  return new Uint8Array(buffer);
+};
