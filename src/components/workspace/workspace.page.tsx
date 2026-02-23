@@ -75,7 +75,7 @@ export const WorkspacePage = ({
     try {
       await download();
 
-      toast.success('Database downloaded.');
+      toast.success('Database download started.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Database download failed.' }));
     }
