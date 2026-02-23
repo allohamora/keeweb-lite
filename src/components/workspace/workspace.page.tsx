@@ -56,31 +56,6 @@ export const WorkspacePage = ({
     setSelectedEntryUuid(null);
   };
 
-  const download = async () => {
-    const bytes = await toEncryptedBytes(database);
-
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = recordName.endsWith('.kdbx') ? recordName : `${recordName}.kdbx`;
-    anchor.style.display = 'none';
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  };
-
-  const handleDownload = async () => {
-    try {
-      await download();
-
-      toast.success('Database download started.');
-    } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Database download failed.' }));
-    }
-  };
-
   const handleCreateEntry = async () => {
     try {
       handleSave(await createEntry({ database, recordId, selectFilter }));
@@ -92,12 +67,7 @@ export const WorkspacePage = ({
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
-      <WorkspaceControls
-        recordName={recordName}
-        recordType={recordType}
-        onLock={handleLock}
-        onDownload={() => void handleDownload()}
-      />
+      <WorkspaceControls database={database} recordName={recordName} recordType={recordType} onLock={handleLock} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
           className="flex"

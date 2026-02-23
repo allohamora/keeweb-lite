@@ -1,14 +1,42 @@
 import { Button } from '@/components/ui/button';
+import { toEncryptedBytes } from '@/services/record.service';
 import type { UnlockSession } from '@/services/session.service';
+import { getErrorMessage } from '@/utils/error.utils';
+import { toast } from 'sonner';
 
 type WorkspaceControlsProps = {
+  database: UnlockSession['database'];
   recordName: UnlockSession['recordName'];
   recordType: UnlockSession['recordType'];
   onLock: () => void;
-  onDownload: () => void;
 };
 
-export const WorkspaceControls = ({ recordName, recordType, onLock, onDownload }: WorkspaceControlsProps) => {
+export const WorkspaceControls = ({ database, recordName, recordType, onLock }: WorkspaceControlsProps) => {
+  const download = async () => {
+    const bytes = await toEncryptedBytes(database);
+
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = recordName.endsWith('.kdbx') ? recordName : `${recordName}.kdbx`;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  const onDownload = async () => {
+    try {
+      await download();
+
+      toast.success('Database download started.');
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'Database download failed.' }));
+    }
+  };
+
   return (
     <header className="flex min-h-8 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
       <div className="min-w-0 text-[11px] text-muted-foreground">
