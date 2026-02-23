@@ -2,6 +2,7 @@ import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { UnlockSession } from '@/services/session.service';
 import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
+import { toEncryptedBytes } from '@/services/record.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
@@ -55,6 +56,28 @@ export const WorkspacePage = ({
     setSelectedEntryUuid(null);
   };
 
+  const download = async () => {
+    const bytes = await toEncryptedBytes(database);
+
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = recordName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownload = async () => {
+    try {
+      await download();
+
+      toast.success('Database downloaded.');
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'Database download failed.' }));
+    }
+  };
+
   const handleCreateEntry = async () => {
     try {
       handleSave(await createEntry({ database, recordId, selectFilter }));
@@ -66,7 +89,12 @@ export const WorkspacePage = ({
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
-      <WorkspaceControls recordName={recordName} recordType={recordType} onLock={handleLock} />
+      <WorkspaceControls
+        recordName={recordName}
+        recordType={recordType}
+        onLock={handleLock}
+        onDownload={() => void handleDownload()}
+      />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
           className="flex"

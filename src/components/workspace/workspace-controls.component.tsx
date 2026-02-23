@@ -5,9 +5,10 @@ type WorkspaceControlsProps = {
   recordName: UnlockSession['recordName'];
   recordType: UnlockSession['recordType'];
   onLock: () => void;
+  onDownload: () => void;
 };
 
-export const WorkspaceControls = ({ recordName, recordType, onLock }: WorkspaceControlsProps) => {
+export const WorkspaceControls = ({ recordName, recordType, onLock, onDownload }: WorkspaceControlsProps) => {
   return (
     <header className="flex min-h-8 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
       <div className="min-w-0 text-[11px] text-muted-foreground">
@@ -18,6 +19,16 @@ export const WorkspaceControls = ({ recordName, recordType, onLock }: WorkspaceC
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        <Button
+          aria-label="Download database"
+          className="h-6 px-1.5 text-[11px]"
+          onClick={onDownload}
+          size="xs"
+          type="button"
+          variant="outline"
+        >
+          Download
+        </Button>
         <Button
           aria-label="Lock workspace"
           className="h-6 px-1.5 text-[11px]"
