@@ -162,7 +162,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: Un
               <div className="relative">
                 <Input
                   {...field}
-                  autoComplete="current-password"
+                  autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
                   disabled={!selectedRecordId || isSubmitting}
