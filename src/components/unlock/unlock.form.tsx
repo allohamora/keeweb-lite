@@ -174,6 +174,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: Un
                   <button
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                    disabled={!selectedRecordId || isSubmitting}
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
