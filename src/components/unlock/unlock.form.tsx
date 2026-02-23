@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { useAsync } from 'react-use';
 import { z } from 'zod';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -39,13 +42,16 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
     },
     resolver: zodResolver(unlockFormSchema),
   });
+
+  const selectedRecordId = watch('selectedRecordId');
+
   const {
     error: recordsLoadError,
     loading: isLoadingRecords,
     value: records = [],
   } = useAsync(async () => await getRecords(), [recordsReloadToken]);
 
-  const selectedRecordId = watch('selectedRecordId');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     try {
@@ -152,15 +158,28 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor="unlock-password">Password</FieldLabel>
             <FieldContent>
-              <Input
-                {...field}
-                autoComplete="current-password"
-                aria-invalid={fieldState.invalid}
-                disabled={!selectedRecordId || isSubmitting}
-                id="unlock-password"
-                placeholder="Enter password"
-                type="password"
-              />
+              <div className="relative">
+                <Input
+                  {...field}
+                  autoComplete="current-password"
+                  aria-invalid={fieldState.invalid}
+                  className="pr-8"
+                  disabled={!selectedRecordId || isSubmitting}
+                  id="unlock-password"
+                  placeholder="Enter password"
+                  type={showPassword ? 'text' : 'password'}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center">
+                  <button
+                    type="button"
+                    className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
+                  </button>
+                </div>
+              </div>
               <FieldError errors={[fieldState.error]} />
             </FieldContent>
           </Field>
