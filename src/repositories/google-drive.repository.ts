@@ -64,7 +64,7 @@ type File = {
   modifiedTime: string;
 };
 
-export const listFiles = async (extension: string) => {
+export const getFiles = async (extension: string) => {
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({
