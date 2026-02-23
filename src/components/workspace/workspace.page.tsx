@@ -63,9 +63,12 @@ export const WorkspacePage = ({
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = recordName;
+    anchor.download = recordName.endsWith('.kdbx') ? recordName : `${recordName}.kdbx`;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const handleDownload = async () => {
