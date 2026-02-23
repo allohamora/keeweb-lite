@@ -2,7 +2,6 @@ import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { UnlockSession } from '@/services/session.service';
 import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
-import { toEncryptedBytes } from '@/services/record.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';

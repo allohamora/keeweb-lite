@@ -50,7 +50,7 @@ export const WorkspaceControls = ({ database, recordName, recordType, onLock }: 
         <Button
           aria-label="Download database"
           className="h-6 px-1.5 text-[11px]"
-          onClick={onDownload}
+          onClick={() => void onDownload()}
           size="xs"
           type="button"
           variant="outline"
