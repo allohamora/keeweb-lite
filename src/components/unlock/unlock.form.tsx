@@ -174,6 +174,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: Un
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword((prev) => !prev)}
+                    aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
