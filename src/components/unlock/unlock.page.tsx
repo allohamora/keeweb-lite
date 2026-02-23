@@ -10,7 +10,7 @@ type UnlockPageProps = {
 export const UnlockPage = ({ setSession }: UnlockPageProps) => {
   const [recordsReloadToken, setRecordsReloadToken] = useState(0);
 
-  const update = useCallback(() => {
+  const reloadRecords = useCallback(() => {
     setRecordsReloadToken((currentValue) => currentValue + 1);
   }, []);
 
@@ -21,10 +21,10 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
           <div className="border border-zinc-700/80 bg-zinc-950/60 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h1 className="text-sm font-semibold tracking-[0.08em] uppercase">Unlock</h1>
-              <CreateModal onRecordCreated={update} />
+              <CreateModal onRecordCreated={reloadRecords} />
             </div>
 
-            <UnlockForm recordsReloadToken={recordsReloadToken} setSession={setSession} update={update} />
+            <UnlockForm recordsReloadToken={recordsReloadToken} setSession={setSession} reloadRecords={reloadRecords} />
           </div>
         </div>
       </section>

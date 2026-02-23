@@ -25,10 +25,10 @@ type UnlockFormValues = z.infer<typeof unlockFormSchema>;
 export type UnlockFormProps = {
   recordsReloadToken: number;
   setSession: (session: UnlockSession) => void;
-  update: () => void;
+  reloadRecords: () => void;
 };
 
-export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFormProps) => {
+export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: UnlockFormProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -77,7 +77,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
   });
 
   const handleRemove = () => {
-    update();
+    reloadRecords();
     reset();
   };
 
