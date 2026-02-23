@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -11,18 +10,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { getErrorMessage } from '@/utils/error.utils';
 import { createLocalRecord } from '@/services/record.service';
 
-export type CreateModalProps = {
+export type CreateLocalModalProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onRecordCreated: () => void;
 };
 
-const createModalSchema = z.object({
+const createLocalModalSchema = z.object({
   databaseFile: z
     .instanceof(FileList, { message: 'Select a .kdbx file to create a record.' })
     .refine((files) => files.length > 0, {
@@ -34,16 +34,15 @@ const createModalSchema = z.object({
   keyFile: z.instanceof(FileList, { message: 'Select a key file.' }).optional(),
 });
 
-type CreateModalFormValues = z.infer<typeof createModalSchema>;
+type CreateLocalModalFormValues = z.infer<typeof createLocalModalSchema>;
 
-export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: CreateLocalModalProps) => {
   const {
     control,
     formState: { isSubmitting },
     handleSubmit,
-  } = useForm<CreateModalFormValues>({
-    resolver: zodResolver(createModalSchema),
+  } = useForm<CreateLocalModalFormValues>({
+    resolver: zodResolver(createLocalModalSchema),
   });
 
   const handleCreateRecordSubmit = handleSubmit(async ({ databaseFile, keyFile }) => {
@@ -51,7 +50,7 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
       await createLocalRecord({ databaseFile, keyFile });
 
       onRecordCreated();
-      setIsOpen(false);
+      onOpenChange(false);
 
       toast.success('Record created.');
     } catch (error) {
@@ -60,12 +59,7 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
   });
 
   return (
-    <Dialog onOpenChange={setIsOpen} open={isOpen}>
-      <DialogTrigger asChild>
-        <Button className="h-8 px-3 text-xs" type="button" variant="outline">
-          Create
-        </Button>
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Create File Record</DialogTitle>
