@@ -1,7 +1,7 @@
 import { Lock } from '@/utils/lock.utils';
 import { PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 
-const lock = new Lock('google-drive-service');
+const lock = new Lock('google-drive-repository');
 
 class Auth {
   private state: { accessToken: string; expiresAt: Date } | null = null;
