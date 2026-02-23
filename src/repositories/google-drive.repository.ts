@@ -2,8 +2,9 @@ import { Lock } from '@/utils/lock.utils';
 import { PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
+const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
-const lock = new Lock('google-drive-repository');
+const lock = new Lock('google-drive.repository');
 
 class Auth {
   private state: { accessToken: string; expiresAt: Date } | null = null;
@@ -57,17 +58,17 @@ class Auth {
 
 const auth = new Auth();
 
-export type KdbxFile = {
+type File = {
   id: string;
   name: string;
   modifiedTime: string;
 };
 
-export const listKdbxFiles = async () => {
+export const listFiles = async (extension: string) => {
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({
-    q: "name contains '.kdbx' and trashed=false",
+    q: `name contains '${extension}' and trashed=false`,
     fields: 'files(id,name,modifiedTime)',
     orderBy: 'name',
   });
@@ -77,14 +78,14 @@ export const listKdbxFiles = async () => {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to list kdbx files: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to list files: ${response.status} ${response.statusText}`);
   }
 
-  const { files } = (await response.json()) as { files: KdbxFile[] };
+  const { files } = (await response.json()) as { files: File[] };
   return { files };
 };
 
-export const getKdbxFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
+export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({ alt: 'media' });
@@ -94,16 +95,14 @@ export const getKdbxFile = async (fileId: string): Promise<Uint8Array<ArrayBuffe
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to get kdbx file: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to get file: ${response.status} ${response.statusText}`);
   }
 
   const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
 };
 
-const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
-
-export const updateKdbxFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<KdbxFile> => {
+export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<File> => {
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime' });
@@ -118,8 +117,8 @@ export const updateKdbxFile = async (fileId: string, data: Uint8Array<ArrayBuffe
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to update kdbx file: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to update file: ${response.status} ${response.statusText}`);
   }
 
-  return (await response.json()) as KdbxFile;
+  return (await response.json()) as File;
 };
