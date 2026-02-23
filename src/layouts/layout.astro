@@ -15,6 +15,7 @@ const { title } = Astro.props;
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>{title} - Keeweb Lite</title>
+    <script is:inline src="https://accounts.google.com/gsi/client" async></script>
     <script is:inline>
       const getThemePreference = () => {
         if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
