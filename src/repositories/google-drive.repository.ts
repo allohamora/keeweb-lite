@@ -100,3 +100,26 @@ export const getKdbxFile = async (fileId: string): Promise<Uint8Array<ArrayBuffe
   const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
 };
+
+const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
+
+export const updateKdbxFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<KdbxFile> => {
+  const accessToken = await auth.getAccessToken();
+
+  const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime' });
+
+  const response = await fetch(`${DRIVE_UPLOAD_BASE}/files/${fileId}?${params}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/octet-stream',
+    },
+    body: data,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update kdbx file: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as KdbxFile;
+};
