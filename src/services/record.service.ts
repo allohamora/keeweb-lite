@@ -1,5 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
-import { getFile } from '@/repositories/google-drive.repository';
+import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { createRecord, getRecords as getRepositoryRecords, type FileRecord } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
 import { getErrorMessage } from '@/utils/error.utils';
@@ -30,11 +30,9 @@ export const unlockKdbx = async ({
 
 export const syncKdbx = async ({
   record,
-  password,
   localDatabase,
 }: {
   record: FileRecord;
-  password: string;
   localDatabase: kdbx.Kdbx;
 }): Promise<{ database: kdbx.Kdbx; syncError: string | null }> => {
   if (record.type === 'local') {
@@ -43,13 +41,10 @@ export const syncKdbx = async ({
 
   try {
     const remoteBytes = await getFile(record.source.id);
-    const remoteDatabase = await unlockKdbx({
-      encryptedBytes: remoteBytes,
-      keyFileHashBase64: record.key?.hash,
-      password,
-    });
+    const remoteDatabase = await kdbx.Kdbx.load(asArrayBuffer(remoteBytes), localDatabase.credentials);
 
     localDatabase.merge(remoteDatabase);
+    await updateFile(record.source.id, asUint8Array(await localDatabase.save()));
 
     return { database: localDatabase, syncError: null };
   } catch (error) {

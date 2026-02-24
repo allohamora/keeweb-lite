@@ -22,7 +22,7 @@ export const unlockForSession = async ({ record, password }: { record: FileRecor
     password,
   });
 
-  const { database, syncError } = await syncKdbx({ record, password, localDatabase });
+  const { database, syncError } = await syncKdbx({ record, localDatabase });
 
   await updateRecord({
     ...record,
