@@ -8,6 +8,26 @@ export type UnlockSession = {
   syncError: string | null;
 };
 
+export const syncForSession = async ({
+  record,
+  database,
+}: {
+  record: FileRecord;
+  database: kdbx.Kdbx;
+}): Promise<UnlockSession> => {
+  const { database: syncedDatabase, syncError } = await syncKdbx({ record, localDatabase: database });
+
+  const updatedRecord = await updateRecord({
+    ...record,
+    kdbx: {
+      ...record.kdbx,
+      encryptedBytes: await toEncryptedBytes(syncedDatabase),
+    },
+  });
+
+  return { database: syncedDatabase, record: updatedRecord, syncError };
+};
+
 export const unlockForSession = async ({ record, password }: { record: FileRecord; password: string }) => {
   const encryptedBytes = record.kdbx.encryptedBytes;
   const keyFileHashBase64 = record.key?.hash;

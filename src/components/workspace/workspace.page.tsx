@@ -1,6 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import type { UnlockSession } from '@/services/session.service';
+import { syncForSession, type UnlockSession } from '@/services/session.service';
 import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
@@ -50,6 +50,14 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
     }
   };
 
+  const handleSync = async () => {
+    try {
+      setSession(await syncForSession({ record, database }));
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'Database sync failed.' }));
+    }
+  };
+
   const handleLock = () => {
     setSession(null);
     setSelectedEntryUuid(null);
@@ -72,6 +80,7 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
         recordType={record.type}
         syncError={syncError}
         onLock={handleLock}
+        onSync={handleSync}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane

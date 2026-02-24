@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { toEncryptedBytes } from '@/services/record.service';
 import type { UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 type WorkspaceControlsProps = {
@@ -10,9 +11,28 @@ type WorkspaceControlsProps = {
   recordType: string;
   syncError: UnlockSession['syncError'];
   onLock: () => void;
+  onSync: () => Promise<void>;
 };
 
-export const WorkspaceControls = ({ database, recordName, recordType, syncError, onLock }: WorkspaceControlsProps) => {
+export const WorkspaceControls = ({
+  database,
+  recordName,
+  recordType,
+  syncError,
+  onLock,
+  onSync,
+}: WorkspaceControlsProps) => {
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await onSync();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const download = async () => {
     const bytes = await toEncryptedBytes(database);
 
@@ -55,6 +75,19 @@ export const WorkspaceControls = ({ database, recordName, recordType, syncError,
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {syncError !== null && recordType !== 'local' && (
+          <Button
+            aria-label="Sync database"
+            className="h-6 px-1.5 text-[11px]"
+            disabled={isSyncing}
+            onClick={() => void handleSync()}
+            size="xs"
+            type="button"
+            variant="outline"
+          >
+            Sync
+          </Button>
+        )}
         <Button
           aria-label="Download database"
           className="h-6 px-1.5 text-[11px]"
