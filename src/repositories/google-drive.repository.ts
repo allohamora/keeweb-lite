@@ -66,10 +66,16 @@ type File = {
   modifiedTime: string;
 };
 
-export type DriveItem = {
+type DriveFile = {
   id: string;
   name: string;
   mimeType: string;
+};
+
+export type DriveItem = {
+  id: string;
+  name: string;
+  isFolder: boolean;
 };
 
 export const getFolderItems = async (folderId: string, extension: string): Promise<DriveItem[]> => {
@@ -89,8 +95,8 @@ export const getFolderItems = async (folderId: string, extension: string): Promi
     throw new Error(`Failed to list folder: ${response.status} ${response.statusText}`);
   }
 
-  const { files } = (await response.json()) as { files: DriveItem[] };
-  return files;
+  const { files } = (await response.json()) as { files: DriveFile[] };
+  return files.map(({ id, name, mimeType }) => ({ id, name, isFolder: mimeType === FOLDER_MIME_TYPE }));
 };
 
 export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
