@@ -121,4 +121,6 @@ export const updateRecord = async (record: FileRecord) => {
       return parsedRecord;
     }),
   );
+
+  return parsedRecord;
 };

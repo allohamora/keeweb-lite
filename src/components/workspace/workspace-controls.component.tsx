@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 
 type WorkspaceControlsProps = {
   database: UnlockSession['database'];
-  recordName: UnlockSession['recordName'];
-  recordType: UnlockSession['recordType'];
+  recordName: string;
+  recordType: string;
   syncError: UnlockSession['syncError'];
   onLock: () => void;
 };

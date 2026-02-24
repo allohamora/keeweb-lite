@@ -4,10 +4,7 @@ import { updateRecord, type FileRecord } from '@/repositories/record.repository'
 
 export type UnlockSession = {
   database: kdbx.Kdbx;
-  recordId: string;
-  recordName: string;
-  recordType: 'google-drive' | 'local';
-  unlockedAt: string;
+  record: FileRecord;
   syncError: string | null;
 };
 
@@ -24,7 +21,7 @@ export const unlockForSession = async ({ record, password }: { record: FileRecor
 
   const { database, syncError } = await syncKdbx({ record, localDatabase });
 
-  await updateRecord({
+  const updatedRecord = await updateRecord({
     ...record,
     kdbx: {
       ...record.kdbx,
@@ -35,10 +32,7 @@ export const unlockForSession = async ({ record, password }: { record: FileRecor
 
   return {
     database,
-    recordId: record.id,
-    recordName: record.kdbx.name,
-    recordType: record.type,
-    unlockedAt,
+    record: updatedRecord,
     syncError,
   };
 };

@@ -42,11 +42,10 @@ describe('session.service', () => {
 
       const result = await unlockForSession({ password, record });
 
-      expect(result.recordId).toBe('test-record');
-      expect(result.recordName).toBe('vault.kdbx');
-      expect(result.recordType).toBe('local');
+      expect(result.record.id).toBe('test-record');
+      expect(result.record.kdbx.name).toBe('vault.kdbx');
+      expect(result.record.type).toBe('local');
       expect(result.database).toBeDefined();
-      expect(result.unlockedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     });
 
     it('updates lastOpenedAt on the record in the repository', async () => {
@@ -57,11 +56,11 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const { unlockedAt } = await unlockForSession({ password, record });
+      const result = await unlockForSession({ password, record });
 
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'test-record');
-      expect(updatedRecord?.lastOpenedAt).toBe(unlockedAt);
+      expect(updatedRecord?.lastOpenedAt).toBe(result.record.lastOpenedAt);
     });
 
     it('throws on incorrect password', async () => {
@@ -114,7 +113,7 @@ describe('session.service', () => {
       const result = await unlockForSession({ password, record });
 
       expect(result.database).toBeDefined();
-      expect(result.recordId).toBe('test-record');
+      expect(result.record.id).toBe('test-record');
     });
   });
 });

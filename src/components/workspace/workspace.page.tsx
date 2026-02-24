@@ -14,10 +14,7 @@ type WorkspacePageProps = {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({
-  session: { database, recordId, recordName, recordType, syncError },
-  setSession,
-}: WorkspacePageProps) => {
+export const WorkspacePage = ({ session: { database, record, syncError }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
 
@@ -57,7 +54,7 @@ export const WorkspacePage = ({
 
   const handleCreateEntry = async () => {
     try {
-      handleSave(await createEntry({ database, recordId, selectFilter }));
+      handleSave(await createEntry({ database, recordId: record.id, selectFilter }));
       toast.success('Entry created.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
@@ -68,8 +65,8 @@ export const WorkspacePage = ({
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
       <WorkspaceControls
         database={database}
-        recordName={recordName}
-        recordType={recordType}
+        recordName={record.kdbx.name}
+        recordType={record.type}
         syncError={syncError}
         onLock={handleLock}
       />
@@ -92,7 +89,7 @@ export const WorkspacePage = ({
           className="flex"
           selectedEntry={selectedEntry}
           database={database}
-          recordId={recordId}
+          recordId={record.id}
           onSave={handleSave}
         />
       </div>
