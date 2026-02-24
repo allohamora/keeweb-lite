@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { toEncryptedBytes } from '@/services/record.service';
 import type { UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
@@ -66,10 +67,18 @@ export const WorkspaceControls = ({
             {recordName} ({recordType})
           </span>
           {recordType !== 'local' && (
-            <span
-              aria-label={syncError ? `Sync failed: ${syncError}` : 'Synced'}
-              className={`inline-block size-2 shrink-0 rounded-full ${syncError ? 'bg-destructive' : 'bg-green-500'}`}
-              title={syncError ?? 'Synced'}
+            <button
+              aria-label="Show sync status"
+              className={cn(
+                'inline-block size-2 shrink-0 cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none',
+                {
+                  'bg-destructive': syncError,
+                  'bg-green-500': !syncError,
+                },
+              )}
+              onClick={() => (syncError ? toast.error(syncError) : toast.success('Database synced.'))}
+              title={syncError ? 'Sync failed' : 'Synced'}
+              type="button"
             />
           )}
         </p>
