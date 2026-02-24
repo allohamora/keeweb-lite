@@ -31,12 +31,14 @@ export const unlockKdbx = async ({
 export const syncKdbx = async ({
   record,
   localDatabase,
+  syncError,
 }: {
   record: FileRecord;
   localDatabase: kdbx.Kdbx;
+  syncError?: string | null;
 }): Promise<{ database: kdbx.Kdbx; syncError: string | null }> => {
-  if (record.type === 'local') {
-    return { database: localDatabase, syncError: null };
+  if (record.type === 'local' || syncError) {
+    return { database: localDatabase, syncError: syncError ?? null };
   }
 
   try {

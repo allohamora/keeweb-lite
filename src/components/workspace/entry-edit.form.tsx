@@ -34,11 +34,17 @@ type EntryEditValues = z.infer<typeof entryEditSchema>;
 type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
-  recordId: string;
-  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
+  record: FileRecord;
+  syncError: string | null;
+  onSave: (payload: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextRecord: FileRecord;
+    nextSyncError: string | null;
+  }) => void;
 };
 
-export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {
+export const EntryEditForm = ({ database, entry, record, syncError, onSave }: EntryEditFormProps) => {
   const {
     control,
     handleSubmit,
@@ -57,9 +63,10 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
       const entryUuid = entry.uuid.toString();
       const result = await saveEntry({
         database,
-        recordId,
+        record,
         entryUuid,
         values,
+        syncError,
       });
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
@@ -293,8 +300,16 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} recordId={recordId} onRemove={onSave} />
-            {isInTrash && <EntryRestore database={database} entry={entry} recordId={recordId} onRestore={onSave} />}
+            <EntryRemove database={database} entry={entry} record={record} syncError={syncError} onRemove={onSave} />
+            {isInTrash && (
+              <EntryRestore
+                database={database}
+                entry={entry}
+                record={record}
+                syncError={syncError}
+                onRestore={onSave}
+              />
+            )}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}

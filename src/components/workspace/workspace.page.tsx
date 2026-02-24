@@ -34,15 +34,17 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
     nextDatabase,
     nextEntryUuid,
     nextRecord,
+    nextSyncError,
   }: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
     nextRecord: FileRecord;
+    nextSyncError: string | null;
   }) => {
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
-      return { ...previousSession, database: nextDatabase, record: nextRecord };
+      return { ...previousSession, database: nextDatabase, record: nextRecord, syncError: nextSyncError };
     });
 
     if (nextEntryUuid !== undefined) {
@@ -65,7 +67,7 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
 
   const handleCreateEntry = async () => {
     try {
-      handleSave(await createEntry({ database, recordId: record.id, selectFilter }));
+      handleSave(await createEntry({ database, record, selectFilter, syncError }));
       toast.success('Entry created.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
@@ -101,7 +103,8 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
           className="flex"
           selectedEntry={selectedEntry}
           database={database}
-          recordId={record.id}
+          record={record}
+          syncError={syncError}
           onSave={handleSave}
         />
       </div>

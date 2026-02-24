@@ -683,21 +683,21 @@ describe('workspace.service', () => {
       entry.tags = ['first'];
 
       const initialBytes = new Uint8Array(await database.save());
-      await createRecord({
+      const record = await createRecord({
         id: 'update-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'update.kdbx' },
       });
 
-      return { database, entry, initialBytes };
+      return { database, entry, initialBytes, record };
     };
 
     it('clones database, updates the entry, and persists encrypted bytes', async () => {
-      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+      const { database, entry, initialBytes, record } = await createPersistedDatabaseWithEntry();
 
       const { nextDatabase, nextEntryUuid } = await saveEntry({
         database,
-        recordId: 'update-record',
+        record,
         entryUuid: entry.uuid.toString(),
         values: {
           title: 'Updated Title',
@@ -726,12 +726,12 @@ describe('workspace.service', () => {
     });
 
     it('throws when entry uuid is missing in the copied database', async () => {
-      const { database } = await createPersistedDatabaseWithEntry();
+      const { database, record } = await createPersistedDatabaseWithEntry();
 
       await expect(
         saveEntry({
           database,
-          recordId: 'update-record',
+          record,
           entryUuid: 'missing-entry-uuid',
           values: {
             title: 'Should fail',
@@ -745,36 +745,12 @@ describe('workspace.service', () => {
       ).rejects.toThrow('Entry not found.');
     });
 
-    it('keeps original database unchanged when saving updated copy fails', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
-      const initialHistoryLength = entry.history.length;
-
-      await expect(
-        saveEntry({
-          database,
-          recordId: 'nonexistent-record-id',
-          entryUuid: entry.uuid.toString(),
-          values: {
-            title: 'Should not persist',
-            username: 'user',
-            password: 'password',
-            url: 'https://example.com',
-            notes: 'notes',
-            tags: ['tag'],
-          },
-        }),
-      ).rejects.toThrow('Record not found.');
-
-      expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
-      expect(entry.history).toHaveLength(initialHistoryLength);
-    });
-
     it('still clones and persists when same values are provided', async () => {
-      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+      const { database, entry, initialBytes, record } = await createPersistedDatabaseWithEntry();
 
       const { nextDatabase } = await saveEntry({
         database,
-        recordId: 'update-record',
+        record,
         entryUuid: entry.uuid.toString(),
         values: {
           title: 'Original Title',
@@ -795,11 +771,11 @@ describe('workspace.service', () => {
     });
 
     it('returns the updated record as nextRecord', async () => {
-      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+      const { database, entry, initialBytes, record } = await createPersistedDatabaseWithEntry();
 
       const { nextRecord } = await saveEntry({
         database,
-        recordId: 'update-record',
+        record,
         entryUuid: entry.uuid.toString(),
         values: {
           title: 'Updated Title',
@@ -820,22 +796,21 @@ describe('workspace.service', () => {
     const createPersistedDatabase = async () => {
       const database = await createDatabase();
       const initialBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const record = await createRecord({
         id: 'create-entry-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
       });
 
-      return { database, initialBytes };
+      return { database, initialBytes, record };
     };
 
     it('returns a cloned database and a new entry', async () => {
-      const { database } = await createPersistedDatabase();
+      const { database, record } = await createPersistedDatabase();
 
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: null,
       });
 
@@ -844,11 +819,11 @@ describe('workspace.service', () => {
     });
 
     it('places entry in the default group when selectFilter is null', async () => {
-      const { database } = await createPersistedDatabase();
+      const { database, record } = await createPersistedDatabase();
 
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: null,
       });
 
@@ -856,11 +831,11 @@ describe('workspace.service', () => {
     });
 
     it('sets no tags when selectFilter is null', async () => {
-      const { database } = await createPersistedDatabase();
+      const { database, record } = await createPersistedDatabase();
 
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: null,
       });
 
@@ -868,11 +843,11 @@ describe('workspace.service', () => {
     });
 
     it('places entry in the default group when selectFilter is a tag', async () => {
-      const { database } = await createPersistedDatabase();
+      const { database, record } = await createPersistedDatabase();
 
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: 'work',
       });
 
@@ -880,11 +855,11 @@ describe('workspace.service', () => {
     });
 
     it('sets the tag on the entry when selectFilter is a tag', async () => {
-      const { database } = await createPersistedDatabase();
+      const { database, record } = await createPersistedDatabase();
 
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: 'work',
       });
 
@@ -896,8 +871,7 @@ describe('workspace.service', () => {
       const root = database.getDefaultGroup();
       const targetGroup = database.createGroup(root, 'Target');
       const initialBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const record = await createRecord({
         id: 'create-entry-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
@@ -905,7 +879,7 @@ describe('workspace.service', () => {
 
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: targetGroup.uuid,
       });
 
@@ -919,8 +893,7 @@ describe('workspace.service', () => {
       const root = database.getDefaultGroup();
       const targetGroup = database.createGroup(root, 'Target');
       const initialBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const record = await createRecord({
         id: 'create-entry-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'create.kdbx' },
@@ -928,7 +901,7 @@ describe('workspace.service', () => {
 
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: targetGroup.uuid,
       });
 
@@ -936,19 +909,19 @@ describe('workspace.service', () => {
     });
 
     it('throws when group uuid is not found in the cloned database', async () => {
-      const { database } = await createPersistedDatabase();
+      const { database, record } = await createPersistedDatabase();
 
-      await expect(
-        createEntry({ database, recordId: 'create-entry-record', selectFilter: kdbx.KdbxUuid.random() }),
-      ).rejects.toThrow('Group not found.');
+      await expect(createEntry({ database, record, selectFilter: kdbx.KdbxUuid.random() })).rejects.toThrow(
+        'Group not found.',
+      );
     });
 
     it('persists the database to the record', async () => {
-      const { database, initialBytes } = await createPersistedDatabase();
+      const { database, initialBytes, record } = await createPersistedDatabase();
 
       await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: null,
       });
 
@@ -958,20 +931,12 @@ describe('workspace.service', () => {
       expect(updatedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
     });
 
-    it('throws when the record id does not exist', async () => {
-      const database = await createDatabase();
-
-      await expect(createEntry({ database, recordId: 'nonexistent-record', selectFilter: null })).rejects.toThrow(
-        'Record not found.',
-      );
-    });
-
     it('returns the updated record as nextRecord', async () => {
-      const { database, initialBytes } = await createPersistedDatabase();
+      const { database, initialBytes, record } = await createPersistedDatabase();
 
       const { nextRecord } = await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: null,
       });
 
@@ -980,13 +945,13 @@ describe('workspace.service', () => {
     });
 
     it('does not mutate the original database when selectFilter is null', async () => {
-      const { database } = await createPersistedDatabase();
+      const { database, record } = await createPersistedDatabase();
       const defaultGroup = database.getDefaultGroup();
       const initialEntryCount = defaultGroup.entries.length;
 
       await createEntry({
         database,
-        recordId: 'create-entry-record',
+        record,
         selectFilter: null,
       });
 
@@ -1039,13 +1004,13 @@ describe('workspace.service', () => {
       entry.fields.set('Title', 'Entry to Remove');
 
       const initialBytes = new Uint8Array(await database.save());
-      await createRecord({
+      const record = await createRecord({
         id: 'remove-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'remove.kdbx' },
       });
 
-      return { database, entry, group };
+      return { database, entry, group, record };
     };
 
     const createPersistedDatabaseWithEntryInTrash = async () => {
@@ -1058,21 +1023,21 @@ describe('workspace.service', () => {
       entry.fields.set('Title', 'Entry in Trash');
 
       const initialBytes = new Uint8Array(await database.save());
-      await createRecord({
+      const record = await createRecord({
         id: 'remove-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'remove.kdbx' },
       });
 
-      return { database, entry, recycleBin };
+      return { database, entry, recycleBin, record };
     };
 
     it('moves entry to the recycle bin when not already in trash', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
 
       const { nextDatabase } = await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1083,11 +1048,11 @@ describe('workspace.service', () => {
     });
 
     it('removes entry from its original group when not already in trash', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
 
       const { nextDatabase } = await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1096,11 +1061,11 @@ describe('workspace.service', () => {
     });
 
     it('deletes entry permanently when already in trash', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextDatabase } = await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1108,11 +1073,11 @@ describe('workspace.service', () => {
     });
 
     it('adds entry uuid to deletedObjects when deleting permanently', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextDatabase } = await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1120,11 +1085,11 @@ describe('workspace.service', () => {
     });
 
     it('returns a cloned database, not the original', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
 
       const { nextDatabase } = await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1132,12 +1097,12 @@ describe('workspace.service', () => {
     });
 
     it('does not mutate the original database when moving to trash', async () => {
-      const { database, entry, group } = await createPersistedDatabaseWithEntry();
+      const { database, entry, group, record } = await createPersistedDatabaseWithEntry();
       const originalEntryCount = group.entries.length;
 
       await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1145,12 +1110,12 @@ describe('workspace.service', () => {
     });
 
     it('does not mutate the original database when deleting permanently', async () => {
-      const { database, entry, recycleBin } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, recycleBin, record } = await createPersistedDatabaseWithEntryInTrash();
       const originalEntryCount = recycleBin.entries.length;
 
       await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1158,13 +1123,13 @@ describe('workspace.service', () => {
     });
 
     it('persists the updated database to the record', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
       const recordsBefore = await getRecords();
       const bytesBefore = recordsBefore.find(({ id }) => id === 'remove-record')?.kdbx.encryptedBytes;
 
       await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1174,11 +1139,11 @@ describe('workspace.service', () => {
     });
 
     it('returns nextEntryUuid as null', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
 
       const { nextEntryUuid } = await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1186,13 +1151,13 @@ describe('workspace.service', () => {
     });
 
     it('returns the updated record as nextRecord', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
       const recordsBefore = await getRecords();
       const bytesBefore = recordsBefore.find(({ id }) => id === 'remove-record')?.kdbx.encryptedBytes;
 
       const { nextRecord } = await removeEntry({
         database,
-        recordId: 'remove-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1201,19 +1166,9 @@ describe('workspace.service', () => {
     });
 
     it('throws when the entry uuid is not found', async () => {
-      const { database } = await createPersistedDatabaseWithEntry();
+      const { database, record } = await createPersistedDatabaseWithEntry();
 
-      await expect(removeEntry({ database, recordId: 'remove-record', entryUuid: 'missing-uuid' })).rejects.toThrow(
-        'Entry not found.',
-      );
-    });
-
-    it('throws when the record id does not exist', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntry();
-
-      await expect(
-        removeEntry({ database, recordId: 'nonexistent-record', entryUuid: entry.uuid.toString() }),
-      ).rejects.toThrow('Record not found.');
+      await expect(removeEntry({ database, record, entryUuid: 'missing-uuid' })).rejects.toThrow('Entry not found.');
     });
   });
 
@@ -1228,21 +1183,21 @@ describe('workspace.service', () => {
       entry.fields.set('Title', 'Entry in Trash');
 
       const initialBytes = new Uint8Array(await database.save());
-      await createRecord({
+      const record = await createRecord({
         id: 'restore-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'restore.kdbx' },
       });
 
-      return { database, entry, recycleBin };
+      return { database, entry, recycleBin, record };
     };
 
     it('moves entry to the default group', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextDatabase } = await restoreEntry({
         database,
-        recordId: 'restore-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1251,11 +1206,11 @@ describe('workspace.service', () => {
     });
 
     it('removes entry from the recycle bin after restoring', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextDatabase } = await restoreEntry({
         database,
-        recordId: 'restore-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1266,11 +1221,11 @@ describe('workspace.service', () => {
     });
 
     it('returns a cloned database, not the original', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextDatabase } = await restoreEntry({
         database,
-        recordId: 'restore-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1278,11 +1233,11 @@ describe('workspace.service', () => {
     });
 
     it('returns nextEntryUuid as null', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
 
       const { nextEntryUuid } = await restoreEntry({
         database,
-        recordId: 'restore-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1290,13 +1245,13 @@ describe('workspace.service', () => {
     });
 
     it('returns the updated record as nextRecord', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
       const recordsBefore = await getRecords();
       const bytesBefore = recordsBefore.find(({ id }) => id === 'restore-record')?.kdbx.encryptedBytes;
 
       const { nextRecord } = await restoreEntry({
         database,
-        recordId: 'restore-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1305,12 +1260,12 @@ describe('workspace.service', () => {
     });
 
     it('does not mutate the original database', async () => {
-      const { database, entry, recycleBin } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, recycleBin, record } = await createPersistedDatabaseWithEntryInTrash();
       const originalEntryCount = recycleBin.entries.length;
 
       await restoreEntry({
         database,
-        recordId: 'restore-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1318,13 +1273,13 @@ describe('workspace.service', () => {
     });
 
     it('persists the updated database to the record', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, entry, record } = await createPersistedDatabaseWithEntryInTrash();
       const recordsBefore = await getRecords();
       const bytesBefore = recordsBefore.find(({ id }) => id === 'restore-record')?.kdbx.encryptedBytes;
 
       await restoreEntry({
         database,
-        recordId: 'restore-record',
+        record,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1334,19 +1289,9 @@ describe('workspace.service', () => {
     });
 
     it('throws when the entry uuid is not found', async () => {
-      const { database } = await createPersistedDatabaseWithEntryInTrash();
+      const { database, record } = await createPersistedDatabaseWithEntryInTrash();
 
-      await expect(restoreEntry({ database, recordId: 'restore-record', entryUuid: 'missing-uuid' })).rejects.toThrow(
-        'Entry not found.',
-      );
-    });
-
-    it('throws when the record id does not exist', async () => {
-      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
-
-      await expect(
-        restoreEntry({ database, recordId: 'nonexistent-record', entryUuid: entry.uuid.toString() }),
-      ).rejects.toThrow('Record not found.');
+      await expect(restoreEntry({ database, record, entryUuid: 'missing-uuid' })).rejects.toThrow('Entry not found.');
     });
   });
 
@@ -1361,8 +1306,7 @@ describe('workspace.service', () => {
     it('saves encrypted bytes back to the repository record', async () => {
       const database = await createUnlockedDatabase();
       const initialBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const persistRecord = await createRecord({
         id: 'persist-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
@@ -1371,7 +1315,7 @@ describe('workspace.service', () => {
       const group = database.getDefaultGroup();
       database.createEntry(group).fields.set('Title', 'New Entry');
 
-      await saveDatabase({ database, recordId: 'persist-record' });
+      await saveDatabase({ database, record: persistRecord });
 
       const records = await getRecords();
       const updated = records.find(({ id }) => id === 'persist-record');
@@ -1382,15 +1326,14 @@ describe('workspace.service', () => {
     it('preserves existing record metadata when updating', async () => {
       const database = await createUnlockedDatabase();
       const encryptedBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const persistRecord = await createRecord({
         id: 'persist-record',
         type: 'local',
         kdbx: { encryptedBytes, name: 'persist.kdbx' },
         lastOpenedAt: '2026-01-01T00:00:00.000Z',
       });
 
-      await saveDatabase({ database, recordId: 'persist-record' });
+      await saveDatabase({ database, record: persistRecord });
 
       const records = await getRecords();
       const updated = records.find(({ id }) => id === 'persist-record');
@@ -1401,8 +1344,7 @@ describe('workspace.service', () => {
     it('returns the updated FileRecord', async () => {
       const database = await createUnlockedDatabase();
       const initialBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const persistRecord = await createRecord({
         id: 'persist-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
@@ -1410,23 +1352,16 @@ describe('workspace.service', () => {
 
       database.createEntry(database.getDefaultGroup()).fields.set('Title', 'New Entry');
 
-      const nextRecord = await saveDatabase({ database, recordId: 'persist-record' });
+      const { record: nextRecord } = await saveDatabase({ database, record: persistRecord });
 
       expect(nextRecord.id).toBe('persist-record');
       expect(nextRecord.kdbx.encryptedBytes).not.toEqual(initialBytes);
     });
 
-    it('throws when the record id does not exist', async () => {
-      const database = await createUnlockedDatabase();
-
-      await expect(saveDatabase({ database, recordId: 'nonexistent' })).rejects.toThrow('Record not found.');
-    });
-
     it('handles concurrent saves without persisting partial state', async () => {
       const database = await createUnlockedDatabase();
       const initialBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const persistRecord = await createRecord({
         id: 'persist-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
@@ -1438,8 +1373,8 @@ describe('workspace.service', () => {
       firstUpdate.createEntry(firstUpdate.getDefaultGroup()).fields.set('Title', 'First Concurrent Save');
       secondUpdate.createEntry(secondUpdate.getDefaultGroup()).fields.set('Title', 'Second Concurrent Save');
 
-      const save1 = saveDatabase({ database: firstUpdate, recordId: 'persist-record' });
-      const save2 = saveDatabase({ database: secondUpdate, recordId: 'persist-record' });
+      const save1 = saveDatabase({ database: firstUpdate, record: persistRecord });
+      const save2 = saveDatabase({ database: secondUpdate, record: persistRecord });
 
       await Promise.all([save1, save2]);
 
@@ -1463,8 +1398,7 @@ describe('workspace.service', () => {
     it('applies the last save when two concurrent saves target the same record', async () => {
       const database = await createUnlockedDatabase();
       const initialBytes = new Uint8Array(await database.save());
-
-      await createRecord({
+      const persistRecord = await createRecord({
         id: 'persist-record',
         type: 'local',
         kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
@@ -1476,8 +1410,8 @@ describe('workspace.service', () => {
       firstSaveDatabase.createEntry(firstSaveDatabase.getDefaultGroup()).fields.set('Title', 'First Save');
       secondSaveDatabase.createEntry(secondSaveDatabase.getDefaultGroup()).fields.set('Title', 'Second Save');
 
-      const save1 = saveDatabase({ database: firstSaveDatabase, recordId: 'persist-record' });
-      const save2 = saveDatabase({ database: secondSaveDatabase, recordId: 'persist-record' });
+      const save1 = saveDatabase({ database: firstSaveDatabase, record: persistRecord });
+      const save2 = saveDatabase({ database: secondSaveDatabase, record: persistRecord });
 
       await Promise.all([save1, save2]);
 

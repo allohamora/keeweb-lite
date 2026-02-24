@@ -20,15 +20,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 type EntryRemoveProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
-  recordId: string;
+  record: FileRecord;
+  syncError: string | null;
   onRemove: (payload: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
     nextRecord: FileRecord;
+    nextSyncError: string | null;
   }) => void;
 };
 
-export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, syncError, onRemove }: EntryRemoveProps) => {
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleRemove = async () => {
@@ -36,7 +38,7 @@ export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemove
     try {
       const entryUuid = entry.uuid.toString();
 
-      onRemove(await removeEntry({ database, recordId, entryUuid }));
+      onRemove(await removeEntry({ database, record, entryUuid, syncError }));
 
       toast.success('Entry removed.');
     } catch (error) {

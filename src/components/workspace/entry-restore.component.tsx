@@ -20,11 +20,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
-  recordId: string;
-  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
+  record: FileRecord;
+  syncError: string | null;
+  onRestore: (payload: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid: null;
+    nextRecord: FileRecord;
+    nextSyncError: string | null;
+  }) => void;
 };
 
-export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, syncError, onRestore }: EntryRestoreProps) => {
   const [isRestoring, setIsRestoring] = useState(false);
 
   const handleRestore = async () => {
@@ -32,7 +38,7 @@ export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRest
     try {
       const entryUuid = entry.uuid.toString();
 
-      onRestore(await restoreEntry({ database, recordId, entryUuid }));
+      onRestore(await restoreEntry({ database, record, entryUuid, syncError }));
 
       toast.success('Entry restored.');
     } catch (error) {
