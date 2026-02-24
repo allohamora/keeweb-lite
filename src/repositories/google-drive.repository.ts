@@ -56,9 +56,15 @@ class Auth {
       throw new Error(`Invalid token response: ${JSON.stringify(res)}`);
     });
   }
+
+  public async clearAccessToken(): Promise<void> {
+    await lock.runInLock(async () => {
+      this.state = null;
+    });
+  }
 }
 
-const auth = new Auth();
+export const auth = new Auth();
 
 type File = {
   id: string;
