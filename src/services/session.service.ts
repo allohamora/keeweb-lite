@@ -1,5 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
-import { unlockKdbx } from '@/services/record.service';
+import { syncKdbx, toEncryptedBytes, unlockKdbx } from '@/services/record.service';
 import { updateRecord, type FileRecord } from '@/repositories/record.repository';
 
 export type UnlockSession = {
@@ -8,6 +8,7 @@ export type UnlockSession = {
   recordName: string;
   recordType: 'google-drive' | 'local';
   unlockedAt: string;
+  syncError: string | null;
 };
 
 export const unlockForSession = async ({ record, password }: { record: FileRecord; password: string }) => {
@@ -15,14 +16,20 @@ export const unlockForSession = async ({ record, password }: { record: FileRecor
   const keyFileHashBase64 = record.key?.hash;
   const unlockedAt = new Date().toISOString();
 
-  const database = await unlockKdbx({
+  const localDatabase = await unlockKdbx({
     encryptedBytes,
     keyFileHashBase64,
     password,
   });
 
+  const { database, syncError } = await syncKdbx({ record, password, localDatabase });
+
   await updateRecord({
     ...record,
+    kdbx: {
+      ...record.kdbx,
+      encryptedBytes: await toEncryptedBytes(database),
+    },
     lastOpenedAt: unlockedAt,
   });
 
@@ -32,5 +39,6 @@ export const unlockForSession = async ({ record, password }: { record: FileRecor
     recordName: record.kdbx.name,
     recordType: record.type,
     unlockedAt,
+    syncError,
   };
 };

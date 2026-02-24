@@ -15,7 +15,7 @@ type WorkspacePageProps = {
 };
 
 export const WorkspacePage = ({
-  session: { database, recordId, recordName, recordType },
+  session: { database, recordId, recordName, recordType, syncError },
   setSession,
 }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
@@ -66,7 +66,13 @@ export const WorkspacePage = ({
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
-      <WorkspaceControls database={database} recordName={recordName} recordType={recordType} onLock={handleLock} />
+      <WorkspaceControls
+        database={database}
+        recordName={recordName}
+        recordType={recordType}
+        syncError={syncError}
+        onLock={handleLock}
+      />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
           className="flex"

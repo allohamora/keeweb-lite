@@ -8,10 +8,11 @@ type WorkspaceControlsProps = {
   database: UnlockSession['database'];
   recordName: UnlockSession['recordName'];
   recordType: UnlockSession['recordType'];
+  syncError: UnlockSession['syncError'];
   onLock: () => void;
 };
 
-export const WorkspaceControls = ({ database, recordName, recordType, onLock }: WorkspaceControlsProps) => {
+export const WorkspaceControls = ({ database, recordName, recordType, syncError, onLock }: WorkspaceControlsProps) => {
   const download = async () => {
     const bytes = await toEncryptedBytes(database);
 
@@ -40,10 +41,17 @@ export const WorkspaceControls = ({ database, recordName, recordType, onLock }: 
   return (
     <header className="flex min-h-8 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
       <div className="min-w-0 text-[11px] text-muted-foreground">
-        <p className="flex items-center whitespace-nowrap">
+        <p className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="min-w-0 truncate font-medium text-foreground">
             {recordName} ({recordType})
           </span>
+          {recordType !== 'local' && (
+            <span
+              aria-label={syncError ? `Sync failed: ${syncError}` : 'Synced'}
+              className={`inline-block size-2 shrink-0 rounded-full ${syncError ? 'bg-destructive' : 'bg-green-500'}`}
+              title={syncError ?? 'Synced'}
+            />
+          )}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">

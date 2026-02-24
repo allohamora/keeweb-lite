@@ -1,7 +1,8 @@
 import kdbx from '@/lib/kdbx.lib';
 import { getFile } from '@/repositories/google-drive.repository';
-import { createRecord, getRecords as getRepositoryRecords } from '@/repositories/record.repository';
+import { createRecord, getRecords as getRepositoryRecords, type FileRecord } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
+import { getErrorMessage } from '@/utils/error.utils';
 
 export const unlockKdbx = async ({
   encryptedBytes,
@@ -24,6 +25,35 @@ export const unlockKdbx = async ({
     }
 
     throw error;
+  }
+};
+
+export const syncKdbx = async ({
+  record,
+  password,
+  localDatabase,
+}: {
+  record: FileRecord;
+  password: string;
+  localDatabase: kdbx.Kdbx;
+}): Promise<{ database: kdbx.Kdbx; syncError: string | null }> => {
+  if (record.type === 'local') {
+    return { database: localDatabase, syncError: null };
+  }
+
+  try {
+    const remoteBytes = await getFile(record.source.id);
+    const remoteDatabase = await unlockKdbx({
+      encryptedBytes: remoteBytes,
+      keyFileHashBase64: record.key?.hash,
+      password,
+    });
+
+    localDatabase.merge(remoteDatabase);
+
+    return { database: localDatabase, syncError: null };
+  } catch (error) {
+    return { database: localDatabase, syncError: getErrorMessage({ error, fallback: 'Drive sync failed.' }) };
   }
 };
 
