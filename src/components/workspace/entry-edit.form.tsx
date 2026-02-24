@@ -14,6 +14,7 @@ import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
 import { getAllTags, getEntryValues, isEntryInRecycleBin, saveEntry } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
@@ -34,7 +35,7 @@ type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
 };
 
 export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {

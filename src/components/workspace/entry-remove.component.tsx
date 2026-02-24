@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
 import { removeEntry } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import {
   Dialog,
   DialogClose,
@@ -20,7 +21,11 @@ type EntryRemoveProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onRemove: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  onRemove: (payload: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextRecord: FileRecord;
+  }) => void;
 };
 
 export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemoveProps) => {

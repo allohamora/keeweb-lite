@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
 import { restoreEntry } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import {
   Dialog,
   DialogClose,
@@ -20,7 +21,7 @@ type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   recordId: string;
-  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null }) => void;
+  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
 };
 
 export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRestoreProps) => {

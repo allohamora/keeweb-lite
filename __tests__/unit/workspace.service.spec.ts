@@ -793,6 +793,27 @@ describe('workspace.service', () => {
       expect(persistedRecord?.kdbx.encryptedBytes).not.toEqual(initialBytes);
       expect(getFieldText(entry.fields.get('Title'))).toBe('Original Title');
     });
+
+    it('returns the updated record as nextRecord', async () => {
+      const { database, entry, initialBytes } = await createPersistedDatabaseWithEntry();
+
+      const { nextRecord } = await saveEntry({
+        database,
+        recordId: 'update-record',
+        entryUuid: entry.uuid.toString(),
+        values: {
+          title: 'Updated Title',
+          username: 'updated-user',
+          password: 'updated-password',
+          url: 'https://updated.example.com',
+          notes: 'Updated notes',
+          tags: ['updated'],
+        },
+      });
+
+      expect(nextRecord.id).toBe('update-record');
+      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
   });
 
   describe('createEntry', () => {
@@ -943,6 +964,19 @@ describe('workspace.service', () => {
       await expect(createEntry({ database, recordId: 'nonexistent-record', selectFilter: null })).rejects.toThrow(
         'Record not found.',
       );
+    });
+
+    it('returns the updated record as nextRecord', async () => {
+      const { database, initialBytes } = await createPersistedDatabase();
+
+      const { nextRecord } = await createEntry({
+        database,
+        recordId: 'create-entry-record',
+        selectFilter: null,
+      });
+
+      expect(nextRecord.id).toBe('create-entry-record');
+      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(initialBytes);
     });
 
     it('does not mutate the original database when selectFilter is null', async () => {
@@ -1151,6 +1185,21 @@ describe('workspace.service', () => {
       expect(nextEntryUuid).toBeNull();
     });
 
+    it('returns the updated record as nextRecord', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntry();
+      const recordsBefore = await getRecords();
+      const bytesBefore = recordsBefore.find(({ id }) => id === 'remove-record')?.kdbx.encryptedBytes;
+
+      const { nextRecord } = await removeEntry({
+        database,
+        recordId: 'remove-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      expect(nextRecord.id).toBe('remove-record');
+      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(bytesBefore);
+    });
+
     it('throws when the entry uuid is not found', async () => {
       const { database } = await createPersistedDatabaseWithEntry();
 
@@ -1238,6 +1287,21 @@ describe('workspace.service', () => {
       });
 
       expect(nextEntryUuid).toBeNull();
+    });
+
+    it('returns the updated record as nextRecord', async () => {
+      const { database, entry } = await createPersistedDatabaseWithEntryInTrash();
+      const recordsBefore = await getRecords();
+      const bytesBefore = recordsBefore.find(({ id }) => id === 'restore-record')?.kdbx.encryptedBytes;
+
+      const { nextRecord } = await restoreEntry({
+        database,
+        recordId: 'restore-record',
+        entryUuid: entry.uuid.toString(),
+      });
+
+      expect(nextRecord.id).toBe('restore-record');
+      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(bytesBefore);
     });
 
     it('does not mutate the original database', async () => {
@@ -1332,6 +1396,24 @@ describe('workspace.service', () => {
       const updated = records.find(({ id }) => id === 'persist-record');
       expect(updated?.lastOpenedAt).toBe('2026-01-01T00:00:00.000Z');
       expect(updated?.kdbx.name).toBe('persist.kdbx');
+    });
+
+    it('returns the updated FileRecord', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+
+      await createRecord({
+        id: 'persist-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+
+      database.createEntry(database.getDefaultGroup()).fields.set('Title', 'New Entry');
+
+      const nextRecord = await saveDatabase({ database, recordId: 'persist-record' });
+
+      expect(nextRecord.id).toBe('persist-record');
+      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(initialBytes);
     });
 
     it('throws when the record id does not exist', async () => {

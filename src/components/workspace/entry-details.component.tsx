@@ -1,13 +1,14 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { cn } from '@/lib/utils';
 import { EntryEditForm } from '@/components/workspace/entry-edit.form';
+import type { FileRecord } from '@/repositories/record.repository';
 
 type EntryDetailsProps = {
   className?: string;
   selectedEntry: kdbx.KdbxEntry | null;
   database: kdbx.Kdbx;
   recordId: string;
-  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
 };
 
 export const EntryDetails = ({ className, selectedEntry, database, recordId, onSave }: EntryDetailsProps) => {

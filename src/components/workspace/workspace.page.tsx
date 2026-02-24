@@ -2,6 +2,7 @@ import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { UnlockSession } from '@/services/session.service';
 import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
@@ -32,14 +33,16 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
   const handleSave = ({
     nextDatabase,
     nextEntryUuid,
+    nextRecord,
   }: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextRecord: FileRecord;
   }) => {
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
-      return { ...previousSession, database: nextDatabase };
+      return { ...previousSession, database: nextDatabase, record: nextRecord };
     });
 
     if (nextEntryUuid !== undefined) {

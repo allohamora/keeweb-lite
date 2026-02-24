@@ -1,7 +1,7 @@
 import kdbx from '@/lib/kdbx.lib';
 import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
-import { getRecord, updateRecord } from '@/repositories/record.repository';
+import { getRecord, updateRecord, type FileRecord } from '@/repositories/record.repository';
 
 export type SelectFilter = kdbx.KdbxUuid | string | null;
 
@@ -161,12 +161,18 @@ export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): v
 
 const saveDatabaseLock = new Lock('workspace.service.saveDatabase');
 
-export const saveDatabase = async ({ database, recordId }: { database: kdbx.Kdbx; recordId: string }) => {
-  await saveDatabaseLock.runInLock(async () => {
+export const saveDatabase = async ({
+  database,
+  recordId,
+}: {
+  database: kdbx.Kdbx;
+  recordId: string;
+}): Promise<FileRecord> => {
+  return saveDatabaseLock.runInLock(async () => {
     const encryptedBytes = await toEncryptedBytes(database);
 
     const record = await getRecord(recordId);
-    await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
+    return updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
   });
 };
 
@@ -175,7 +181,7 @@ export const saveEntry = async ({
   recordId,
   entryUuid,
   values,
-}: UpdateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
+}: UpdateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid; nextRecord: FileRecord }> => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
@@ -185,9 +191,9 @@ export const saveEntry = async ({
 
   updateEntry(nextEntry, values);
 
-  await saveDatabase({ database: nextDatabase, recordId });
+  const nextRecord = await saveDatabase({ database: nextDatabase, recordId });
 
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
 
 type CreateEntryInput = {
@@ -200,7 +206,7 @@ export const createEntry = async ({
   database,
   recordId,
   selectFilter,
-}: CreateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid }> => {
+}: CreateEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: kdbx.KdbxUuid; nextRecord: FileRecord }> => {
   const nextDatabase = await cloneDatabase(database);
 
   const group = isGroupSelect(selectFilter)
@@ -215,9 +221,9 @@ export const createEntry = async ({
     nextEntry.tags = [selectFilter];
   }
 
-  await saveDatabase({ database: nextDatabase, recordId });
+  const nextRecord = await saveDatabase({ database: nextDatabase, recordId });
 
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid };
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
 
 export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbx.KdbxEntry): boolean => {
@@ -237,7 +243,7 @@ export const removeEntry = async ({
   database,
   recordId,
   entryUuid,
-}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null }> => {
+}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }> => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
@@ -251,16 +257,16 @@ export const removeEntry = async ({
     nextDatabase.remove(nextEntry);
   }
 
-  await saveDatabase({ database: nextDatabase, recordId });
+  const nextRecord = await saveDatabase({ database: nextDatabase, recordId });
 
-  return { nextDatabase, nextEntryUuid: null };
+  return { nextDatabase, nextEntryUuid: null, nextRecord };
 };
 
 export const restoreEntry = async ({
   database,
   recordId,
   entryUuid,
-}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null }> => {
+}: RemoveEntryInput): Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }> => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
@@ -270,9 +276,9 @@ export const restoreEntry = async ({
 
   nextDatabase.move(nextEntry, nextDatabase.getDefaultGroup());
 
-  await saveDatabase({ database: nextDatabase, recordId });
+  const nextRecord = await saveDatabase({ database: nextDatabase, recordId });
 
-  return { nextDatabase, nextEntryUuid: null };
+  return { nextDatabase, nextEntryUuid: null, nextRecord };
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {
