@@ -70,15 +70,11 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 - Persist Drive-backed file records in IndexedDB via `src/repositories/record.repository.ts` with `type = google-drive`:
   - `id`
-  - `source` (`id`, optional `locator`, optional `options`)
+  - `source` (`id`)
   - `kdbx` (`name`, `encryptedBytes`)
   - optional `key` (`name`, `hash`) for remember-key behavior
-  - optional `sync` (`status`, optional `revisionId`, optional `lastSuccessfulAt`, optional `lastError`)
-  - optional `oauth` (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
   - optional `lastOpenedAt`
 - Keep active unlocked DB/session and transient sync attempt state in runtime app state (in-memory, non-persistent).
-- Persist OAuth runtime token envelope only as part of Drive record `oauth` field in `record.repository`; malformed persisted records are deleted on read (safe-parse fallback in repository).
-- OAuth requests include offline refresh capability (KeeWeb default).
 
 ## Failure Handling
 
@@ -88,7 +84,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Sync failures should provide inline actions (`Retry sync`, and `Resolve conflict` when applicable).
 - If remote key changed and merge/open fails with invalid key, prompt for remote key update flow before continuing sync.
 - Download/export failures are explicit and retryable.
-- Failed sync attempts must not overwrite previous successful `sync.lastSuccessfulAt`; they set `sync.status = error`, update runtime `activeSyncError`, and persist sanitized `sync.lastError`.
+- Failed sync attempts must not overwrite previous successful `sync.lastSuccessfulAt`; they set `sync.status = error` and update runtime `activeSyncError`.
 
 ## Security and Privacy
 

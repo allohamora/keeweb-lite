@@ -47,20 +47,8 @@ describe('record.repository', () => {
             hash: 'hash-123',
             name: 'unlock.keyx',
           },
-          oauth: {
-            accessToken: 'access-token',
-            expiresAt: '2026-02-12T20:41:30.000Z',
-            refreshToken: 'refresh-token',
-            scope: ['openid', 'email', 'https://www.googleapis.com/auth/drive.file'],
-          },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
-            locator: 'gdrive:fileId=1AbCdEfGhIjKlMnOp',
-            options: { supportsAllDrives: true },
-          },
-          sync: {
-            revisionId: '0123456789',
-            status: 'syncing' as const,
           },
         },
       ];
@@ -126,11 +114,6 @@ describe('record.repository', () => {
             encryptedBytes: new Uint8Array([1, 2, 3]),
             name: 'vault.kdbx',
           },
-          oauth: {
-            accessToken: 'access-token-a',
-            expiresAt: '2026-02-12T20:41:30.000Z',
-            refreshToken: 'refresh-token-a',
-          },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
           },
@@ -144,11 +127,6 @@ describe('record.repository', () => {
             encryptedBytes: new Uint8Array([4, 5, 6]),
             name: 'vault.kdbx',
           },
-          oauth: {
-            accessToken: 'access-token-b',
-            expiresAt: '2026-02-12T20:41:31.000Z',
-            refreshToken: 'refresh-token-b',
-          },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
           },
@@ -161,11 +139,6 @@ describe('record.repository', () => {
           kdbx: {
             encryptedBytes: new Uint8Array([7, 8, 9]),
             name: 'vault.kdbx',
-          },
-          oauth: {
-            accessToken: 'access-token-c',
-            expiresAt: '2026-02-12T20:41:32.000Z',
-            refreshToken: 'refresh-token-c',
           },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
@@ -192,20 +165,8 @@ describe('record.repository', () => {
             hash: 'hash-123',
             name: 'unlock.keyx',
           },
-          oauth: {
-            accessToken: 'access-token',
-            expiresAt: '2026-02-12T20:41:30.000Z',
-            refreshToken: 'refresh-token',
-            scope: ['openid', 'email', 'https://www.googleapis.com/auth/drive.file'],
-          },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
-            locator: 'gdrive:fileId=1AbCdEfGhIjKlMnOp',
-            options: { supportsAllDrives: true },
-          },
-          sync: {
-            revisionId: '0123456789',
-            status: 'syncing' as const,
           },
         },
       ];
@@ -224,7 +185,7 @@ describe('record.repository', () => {
       ]);
     });
 
-    it('strips drive-only fields from local records', async () => {
+    it('strips source field from local records', async () => {
       const records = [
         {
           id: 'local-record-1',
@@ -233,16 +194,8 @@ describe('record.repository', () => {
             encryptedBytes: new Uint8Array([1, 2, 3]),
             name: 'vault.kdbx',
           },
-          oauth: {
-            accessToken: 'access-token',
-            expiresAt: '2026-02-12T20:41:30.000Z',
-            refreshToken: 'refresh-token',
-          },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
-          },
-          sync: {
-            status: 'pending' as const,
           },
         },
       ];
@@ -273,7 +226,6 @@ describe('record.repository', () => {
           },
           source: {
             id: '1AbCdEfGhIjKlMnOp',
-            unexpected: true,
           },
           unknownTopLevel: 'ignored',
         } as unknown as never,
@@ -441,20 +393,8 @@ describe('record.repository', () => {
           hash: 'hash-123',
           name: 'unlock.keyx',
         },
-        oauth: {
-          accessToken: 'access-token',
-          expiresAt: '2026-02-12T20:41:30.000Z',
-          refreshToken: 'refresh-token',
-          scope: ['https://www.googleapis.com/auth/drive.file'],
-        },
         source: {
           id: '1AbCdEfGhIjKlMnOp',
-          locator: 'gdrive:fileId=1AbCdEfGhIjKlMnOp',
-          options: { supportsAllDrives: true },
-        },
-        sync: {
-          revisionId: '0123456789',
-          status: 'idle',
         },
       });
 
@@ -679,59 +619,6 @@ describe('record.repository', () => {
           },
         },
       ]);
-    });
-
-    it('updates a google-drive record with oauth and sync fields', async () => {
-      await setRecords([
-        {
-          id: 'google-drive-record-1',
-          type: 'google-drive',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-        },
-      ]);
-
-      await updateRecord({
-        id: 'google-drive-record-1',
-        type: 'google-drive',
-        kdbx: {
-          encryptedBytes: new Uint8Array([4, 5, 6]),
-          name: 'vault-updated.kdbx',
-        },
-        oauth: {
-          accessToken: 'new-access-token',
-          expiresAt: '2026-02-15T20:41:30.000Z',
-          refreshToken: 'new-refresh-token',
-        },
-        source: {
-          id: '1AbCdEfGhIjKlMnOp',
-        },
-        sync: {
-          revisionId: 'new-revision',
-          status: 'syncing',
-        },
-      });
-
-      const records = await getRecords();
-      expect(records).toHaveLength(1);
-      expect(records[0]).toMatchObject({
-        id: 'google-drive-record-1',
-        type: 'google-drive',
-        oauth: {
-          accessToken: 'new-access-token',
-          expiresAt: '2026-02-15T20:41:30.000Z',
-          refreshToken: 'new-refresh-token',
-        },
-        sync: {
-          revisionId: 'new-revision',
-          status: 'syncing',
-        },
-      });
     });
 
     it('updates lastOpenedAt field', async () => {

@@ -24,7 +24,7 @@ Define a single save pipeline that persists every edit immediately.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
   - `local-cache` fallback mode: update encrypted cache/export state
-  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update record sync fields (`sync.revisionId`, `sync.lastSuccessfulAt`, `sync.status`, runtime `activeSyncError`, `sync.lastError`)
+  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update runtime sync state (`activeSyncError`, sync status)
 
 ## UI Requirements
 
@@ -45,8 +45,7 @@ Define a single save pipeline that persists every edit immediately.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed metadata: persisted in `src/repositories/record.repository.ts` on Drive records (`sync.status`, `sync.revisionId`, `sync.lastSuccessfulAt`, `sync.lastError`); runtime store holds `activeSyncError`
-  - Drive OAuth runtime token data: persisted in Drive records as optional `oauth` field (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
+  - Drive-backed sync state: maintained in runtime app state (`activeSyncError`, sync status)
 
 ## Failure Handling
 

@@ -15,7 +15,6 @@ Use these canonical terms consistently across feature specs.
   - `error`: latest sync attempt failed.
 - Sync errors
   - `activeSyncError` (runtime app state): full active attempt error object/details for current session.
-  - `sync.lastError` (persisted record): sanitized sync error object (`code`, `message`, `timestamp`) for reopen UI context.
 
 ## Canonical Stores
 
@@ -33,11 +32,9 @@ Use these canonical terms consistently across feature specs.
   - Google Drive record shape:
     - `id`
     - `type = google-drive`
-    - `source` (`id`, optional `locator`, optional `options`)
+    - `source` (`id`)
     - `kdbx` (`name`, `encryptedBytes`)
     - optional `key` (`name`, `hash`)
-    - optional `oauth` (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
-    - optional `sync` (`status`, optional `revisionId`, optional `lastSuccessfulAt`, optional `lastError`)
     - optional `lastOpenedAt`
   - If the persisted records array fails validation on read (via `getRecords` with `safeParse`), the entire store is cleared and an empty array is returned.
 - Encrypted Offline Cache (IndexedDB)
