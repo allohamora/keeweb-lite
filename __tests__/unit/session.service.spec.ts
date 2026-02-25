@@ -1,7 +1,10 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
+import { googleDriveApi } from '../mocks/google-drive.repository.mock';
+import { mockServer } from '../mocks/msw.mock';
+import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
-import { unlockForSession } from '@/services/session.service';
+import { syncForSession, unlockForSession } from '@/services/session.service';
 
 describe('session.service', () => {
   const createDatabase = async ({
@@ -29,6 +32,7 @@ describe('session.service', () => {
 
   afterEach(async () => {
     await clearRecords();
+    await auth.clearAccessToken();
   });
 
   describe('unlockForSession', () => {
@@ -46,6 +50,7 @@ describe('session.service', () => {
       expect(result.record.kdbx.name).toBe('vault.kdbx');
       expect(result.record.type).toBe('local');
       expect(result.database).toBeDefined();
+      expect(result.syncError).toBeNull();
     });
 
     it('updates lastOpenedAt on the record in the repository', async () => {
@@ -61,6 +66,7 @@ describe('session.service', () => {
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'test-record');
       expect(updatedRecord?.lastOpenedAt).toBe(result.record.lastOpenedAt);
+      expect(result.syncError).toBeNull();
     });
 
     it('throws on incorrect password', async () => {
@@ -97,6 +103,7 @@ describe('session.service', () => {
         expect(testGroup.entries).toHaveLength(1);
         expect((testGroup.entries[0].fields.get('Title') as kdbx.ProtectedValue).getText()).toBe('My Entry');
       }
+      expect(result.syncError).toBeNull();
     });
 
     it('unlocks a database protected with a key file', async () => {
@@ -114,6 +121,132 @@ describe('session.service', () => {
 
       expect(result.database).toBeDefined();
       expect(result.record.id).toBe('test-record');
+      expect(result.syncError).toBeNull();
+    });
+
+    it('returns syncError null for a Google Drive record when Drive sync succeeds', async () => {
+      const { encryptedBytes, password } = await createDatabase({ keyFileContent: null });
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+
+      const result = await unlockForSession({ password, record });
+
+      expect(result.syncError).toBeNull();
+    });
+
+    it('returns a non-null syncError string for a Google Drive record when Drive sync fails', async () => {
+      const { encryptedBytes, password } = await createDatabase({ keyFileContent: null });
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
+
+      const result = await unlockForSession({ password, record });
+
+      expect(result.syncError).not.toBeNull();
+      expect(typeof result.syncError).toBe('string');
+    });
+  });
+
+  describe('syncForSession', () => {
+    const createSyncableDatabase = async (password = 'sync-test-password') => {
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      await credentials.ready;
+      const database = kdbx.Kdbx.create(credentials, 'Sync DB');
+      const encryptedBytes = new Uint8Array(await database.save());
+      return { database, encryptedBytes, password };
+    };
+
+    it('returns syncError null for a local record', async () => {
+      const { database, encryptedBytes } = await createSyncableDatabase();
+      const record = await createRecord({
+        id: 'local-record',
+        type: 'local',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+      });
+
+      const result = await syncForSession({ database, record });
+
+      expect(result.syncError).toBeNull();
+    });
+
+    it('returns syncError null for a Google Drive record when sync succeeds', async () => {
+      const { database, encryptedBytes } = await createSyncableDatabase();
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+
+      const result = await syncForSession({ database, record });
+
+      expect(result.syncError).toBeNull();
+    });
+
+    it('updates encryptedBytes in the repository after sync', async () => {
+      const { database, encryptedBytes } = await createSyncableDatabase();
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+
+      await syncForSession({ database, record });
+
+      const records = await getRecords();
+      const updated = records.find(({ id }) => id === 'gd-record');
+      expect(updated).toBeDefined();
+      expect(updated?.kdbx.encryptedBytes).toBeInstanceOf(Uint8Array);
+    });
+
+    it('returns the updated FileRecord from the repository', async () => {
+      const { database, encryptedBytes } = await createSyncableDatabase();
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+
+      const result = await syncForSession({ database, record });
+
+      expect(result.record.id).toBe('gd-record');
+      expect(result.record.type).toBe('google-drive');
+    });
+
+    it('returns a non-null syncError for a Google Drive record when sync fails', async () => {
+      const { database, encryptedBytes } = await createSyncableDatabase();
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
+
+      const result = await syncForSession({ database, record });
+
+      expect(result.syncError).not.toBeNull();
+      expect(typeof result.syncError).toBe('string');
     });
   });
 });

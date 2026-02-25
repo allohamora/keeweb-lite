@@ -1,5 +1,9 @@
 import kdbx from '@/lib/kdbx.lib';
-import { afterEach, describe, expect, it } from 'vitest';
+import { HttpResponse } from 'msw';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { googleDriveApi, type UpdateFileRequestContext } from '../mocks/google-drive.repository.mock';
+import { mockServer } from '../mocks/msw.mock';
+import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
 import { unlockKdbx } from '@/services/record.service';
 import {
@@ -1296,6 +1300,10 @@ describe('workspace.service', () => {
   });
 
   describe('saveDatabase', () => {
+    afterEach(async () => {
+      await auth.clearAccessToken();
+    });
+
     const createUnlockedDatabase = async () => {
       const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('persist-test-password'));
       await credentials.ready;
@@ -1431,6 +1439,83 @@ describe('workspace.service', () => {
         .entries.map((entry) => getFieldText(entry.fields.get('Title')));
 
       expect(persistedTitles).toEqual(['Second Save']);
+    });
+
+    it('syncs with Drive for Google Drive records', async () => {
+      const database = await createUnlockedDatabase();
+      const encryptedBytes = new Uint8Array(await database.save());
+      const persistRecord = await createRecord({
+        id: 'gd-persist-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      const getFileResolver = vi.fn(
+        () => new HttpResponse(encryptedBytes, { headers: { 'Content-Type': 'application/octet-stream' } }),
+      );
+      const updateFileResolver = vi.fn(({ fileId }: UpdateFileRequestContext) =>
+        HttpResponse.json({ id: fileId, modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+      );
+      mockServer.addHandlers(
+        googleDriveApi.getFile.mock(getFileResolver),
+        googleDriveApi.updateFile.mock(updateFileResolver),
+      );
+
+      await saveDatabase({ database, record: persistRecord });
+
+      expect(getFileResolver).toHaveBeenCalledOnce();
+      expect(updateFileResolver).toHaveBeenCalledOnce();
+    });
+
+    it('returns syncError null when Drive sync succeeds', async () => {
+      const database = await createUnlockedDatabase();
+      const encryptedBytes = new Uint8Array(await database.save());
+      const persistRecord = await createRecord({
+        id: 'gd-persist-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+
+      const { syncError } = await saveDatabase({ database, record: persistRecord });
+
+      expect(syncError).toBeNull();
+    });
+
+    it('returns a non-null syncError string when Drive sync fails', async () => {
+      const database = await createUnlockedDatabase();
+      const encryptedBytes = new Uint8Array(await database.save());
+      const persistRecord = await createRecord({
+        id: 'gd-persist-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
+
+      const { syncError } = await saveDatabase({ database, record: persistRecord });
+
+      expect(syncError).not.toBeNull();
+      expect(typeof syncError).toBe('string');
+    });
+
+    it('passes an existing syncError through to the result without calling Drive', async () => {
+      const database = await createUnlockedDatabase();
+      const encryptedBytes = new Uint8Array(await database.save());
+      const persistRecord = await createRecord({
+        id: 'gd-persist-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      const { syncError } = await saveDatabase({ database, record: persistRecord, syncError: 'Previous sync error' });
+
+      expect(syncError).toBe('Previous sync error');
     });
   });
 });

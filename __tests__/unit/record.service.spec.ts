@@ -1,8 +1,19 @@
 import kdbx from '@/lib/kdbx.lib';
-import { afterEach, describe, expect, it } from 'vitest';
-import { createLocalRecord, getRecords, toEncryptedBytes, unlockKdbx } from '@/services/record.service';
-import { unlockForSession } from '@/services/session.service';
+import { HttpResponse } from 'msw';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { googleDriveApi } from '../mocks/google-drive.repository.mock';
+import { mockServer } from '../mocks/msw.mock';
+import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord } from '@/repositories/record.repository';
+import {
+  createGoogleDriveRecord,
+  createLocalRecord,
+  getRecords,
+  syncKdbx,
+  toEncryptedBytes,
+  unlockKdbx,
+} from '@/services/record.service';
+import { unlockForSession } from '@/services/session.service';
 
 type DatabaseRecordInput = {
   name: string;
@@ -609,6 +620,329 @@ describe('record.service', () => {
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');
       expect(getFieldText(entry, 'UserName')).toBe('test-user');
+    });
+  });
+
+  describe('createGoogleDriveRecord', () => {
+    afterEach(async () => {
+      await clearRecords();
+      await auth.clearAccessToken();
+    });
+
+    const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
+
+    const testFileId = 'drive-file-id-123';
+    const testFileName = 'vault.kdbx';
+    const testBytes = new Uint8Array([1, 2, 3, 4, 5]);
+
+    it('creates a Google Drive record with file bytes fetched from Drive', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+      expect(records[0].type).toBe('google-drive');
+      expect(records[0].kdbx.name).toBe(testFileName);
+      expect(records[0].kdbx.encryptedBytes).toEqual(testBytes);
+    });
+
+    it('sets type google-drive and source.id equal to the provided fileId', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+
+      const records = await getRecords();
+      expect(records[0].type).toBe('google-drive');
+      const record = records[0];
+      if (record.type === 'google-drive') {
+        expect(record.source.id).toBe(testFileId);
+      }
+    });
+
+    it('does not add a key when keyFile is not provided', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeUndefined();
+    });
+
+    it('adds a key hash and name when keyFile FileList is provided', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      const keyFile = new File([new Uint8Array([10, 20, 30])], 'vault.keyx');
+      await createGoogleDriveRecord({
+        fileId: testFileId,
+        fileName: testFileName,
+        keyFile: createFileList(keyFile),
+      });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeDefined();
+      expect(records[0].key?.name).toBe('vault.keyx');
+      expect(typeof records[0].key?.hash).toBe('string');
+    });
+
+    it('throws when a record with the same source.id already exists', async () => {
+      await createRecord({
+        id: 'existing-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: testFileId },
+      });
+
+      await expect(createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName })).rejects.toThrow(
+        'A record for this file already exists.',
+      );
+    });
+
+    it('does not persist the duplicate record when source.id conflict throws', async () => {
+      await createRecord({
+        id: 'existing-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: testFileId },
+      });
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }).catch(() => undefined);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+  });
+
+  describe('syncKdbx', () => {
+    afterEach(async () => {
+      await clearRecords();
+      await auth.clearAccessToken();
+    });
+
+    const createSyncableDatabase = async (password: string) => {
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      await credentials.ready;
+      const database = kdbx.Kdbx.create(credentials, 'Sync Test DB');
+      const encryptedBytes = new Uint8Array(await database.save());
+      return { database, encryptedBytes };
+    };
+
+    it('returns the local database and syncError null for local records', async () => {
+      const { database } = await createSyncableDatabase('local-pass');
+      const record = await createRecord({
+        id: 'local-record',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+      });
+
+      const result = await syncKdbx({ record, localDatabase: database });
+
+      expect(result.database).toBe(database);
+      expect(result.syncError).toBeNull();
+    });
+
+    it('returns the database and original syncError unchanged when syncError is already set', async () => {
+      const { database } = await createSyncableDatabase('gd-pass');
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      const result = await syncKdbx({ record, localDatabase: database, syncError: 'Previous error' });
+
+      expect(result.database).toBe(database);
+      expect(result.syncError).toBe('Previous error');
+    });
+
+    it('fetches the remote file from Drive and merges it into the local database', async () => {
+      const password = 'sync-pass';
+      const { database: localDatabase, encryptedBytes: localBytes } = await createSyncableDatabase(password);
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: localBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: localBytes }), googleDriveApi.updateFile.ok());
+
+      const result = await syncKdbx({ record, localDatabase });
+
+      expect(result.database).toBe(localDatabase);
+      expect(result.syncError).toBeNull();
+    });
+
+    it('entry created in the remote database is present in local after merge', async () => {
+      const password = 'merge-pass';
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      await credentials.ready;
+
+      const localDatabase = kdbx.Kdbx.create(credentials, 'Merge DB');
+      const baseBytes = new Uint8Array(await localDatabase.save());
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: baseBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      const remoteDatabase = await kdbx.Kdbx.load(
+        new Uint8Array(baseBytes).buffer as ArrayBuffer,
+        localDatabase.credentials,
+      );
+      const remoteEntry = remoteDatabase.createEntry(remoteDatabase.getDefaultGroup());
+      remoteEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Remote Entry'));
+      const remoteBytes = new Uint8Array(await remoteDatabase.save());
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: remoteBytes }), googleDriveApi.updateFile.ok());
+
+      const { database } = await syncKdbx({ record, localDatabase });
+
+      const titles = database
+        .getDefaultGroup()
+        .entries.map((e) => (e.fields.get('Title') as kdbx.ProtectedValue | undefined)?.getText());
+      expect(titles).toContain('Remote Entry');
+    });
+
+    it('entry deleted in the remote database is absent from the default group after merge', async () => {
+      const password = 'merge-pass';
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      await credentials.ready;
+
+      const localDatabase = kdbx.Kdbx.create(credentials, 'Merge DB');
+      const localEntry = localDatabase.createEntry(localDatabase.getDefaultGroup());
+      localEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Entry To Delete'));
+      const baseBytes = new Uint8Array(await localDatabase.save());
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: baseBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      const remoteDatabase = await kdbx.Kdbx.load(
+        new Uint8Array(baseBytes).buffer as ArrayBuffer,
+        localDatabase.credentials,
+      );
+      const remoteEntry = remoteDatabase.getDefaultGroup().entries[0];
+      if (!remoteEntry) throw new Error('Remote entry not found');
+      vi.setSystemTime(Date.now() + 10000);
+      remoteDatabase.remove(remoteEntry);
+      vi.useRealTimers();
+      const remoteBytes = new Uint8Array(await remoteDatabase.save());
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: remoteBytes }), googleDriveApi.updateFile.ok());
+
+      const { database } = await syncKdbx({ record, localDatabase });
+
+      expect(database.getDefaultGroup().entries).toHaveLength(0);
+    });
+
+    it('entry updated in the remote database is reflected in local after merge', async () => {
+      const password = 'merge-pass';
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      await credentials.ready;
+
+      const localDatabase = kdbx.Kdbx.create(credentials, 'Merge DB');
+      const localEntry = localDatabase.createEntry(localDatabase.getDefaultGroup());
+      localEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Original Title'));
+      const baseBytes = new Uint8Array(await localDatabase.save());
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: baseBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      const remoteDatabase = await kdbx.Kdbx.load(
+        new Uint8Array(baseBytes).buffer as ArrayBuffer,
+        localDatabase.credentials,
+      );
+      const remoteEntry = remoteDatabase.getDefaultGroup().entries[0];
+      if (!remoteEntry) throw new Error('Remote entry not found');
+      remoteEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Updated Title'));
+      vi.setSystemTime(Date.now() + 10000);
+      remoteEntry.times.update();
+      vi.useRealTimers();
+      const remoteBytes = new Uint8Array(await remoteDatabase.save());
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: remoteBytes }), googleDriveApi.updateFile.ok());
+
+      const { database } = await syncKdbx({ record, localDatabase });
+
+      const updatedEntry = database.getDefaultGroup().entries[0];
+      const title = (updatedEntry?.fields.get('Title') as kdbx.ProtectedValue | undefined)?.getText();
+      expect(title).toBe('Updated Title');
+    });
+
+    it('uploads the merged database back to Drive', async () => {
+      const password = 'sync-pass';
+      const { database: localDatabase, encryptedBytes: localBytes } = await createSyncableDatabase(password);
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: localBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      let updateFileCalled = false;
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ bytes: localBytes }),
+        googleDriveApi.updateFile.mock(() => {
+          updateFileCalled = true;
+          return HttpResponse.json({
+            id: 'drive-file-id',
+            modifiedTime: '2026-01-01T00:00:00.000Z',
+            name: 'vault.kdbx',
+          });
+        }),
+      );
+
+      await syncKdbx({ record, localDatabase });
+
+      expect(updateFileCalled).toBe(true);
+    });
+
+    it('returns syncError (not thrown) when getFile returns a Drive error', async () => {
+      const { database: localDatabase } = await createSyncableDatabase('sync-pass');
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
+
+      const result = await syncKdbx({ record, localDatabase });
+
+      expect(result.database).toBe(localDatabase);
+      expect(result.syncError).not.toBeNull();
+      expect(typeof result.syncError).toBe('string');
+    });
+
+    it('returns syncError (not thrown) when updateFile returns a Drive error', async () => {
+      const password = 'sync-pass';
+      const { database: localDatabase, encryptedBytes: localBytes } = await createSyncableDatabase(password);
+      const record = await createRecord({
+        id: 'gd-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: localBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ bytes: localBytes }),
+        googleDriveApi.updateFile.error({ status: 500, statusText: 'Internal Server Error' }),
+      );
+
+      const result = await syncKdbx({ record, localDatabase });
+
+      expect(result.database).toBe(localDatabase);
+      expect(result.syncError).not.toBeNull();
+      expect(typeof result.syncError).toBe('string');
     });
   });
 });
