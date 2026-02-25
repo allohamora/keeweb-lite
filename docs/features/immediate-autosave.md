@@ -17,14 +17,14 @@ Define a single save pipeline that persists every edit immediately.
   - `autoSaveInterval = -1` (sync/save on each dirty change event)
 - Any data mutation triggers save immediately.
 - Save pipeline is serialized (one write in flight).
-- Save serialization uses browser Web Locks API (`navigator.locks`) with a single save lock name (`keeweb-save`).
+- Save serialization uses browser Web Locks API (`navigator.locks`) with a single save lock name (`workspace.service.saveDatabase`).
 - If edits happen during save, queue another save run through the same Web Locks queue.
 - Never drop pending edits; queued save requests execute in lock-queue order.
 - Save runs may coalesce rapid dirty events into one write of the latest encrypted state before releasing the lock.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
   - `local-cache` fallback mode: update encrypted cache/export state
-  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update runtime sync state (`activeSyncError`, sync status)
+  - Drive-backed: sync via Drive repository, use 2-way merge on remote changes, and update runtime sync state (`syncError`)
 
 ## UI Requirements
 
@@ -45,14 +45,14 @@ Define a single save pipeline that persists every edit immediately.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed sync state: maintained in runtime app state (`activeSyncError`, sync status)
+  - Drive-backed sync state: maintained in runtime app state (`syncError`)
 
 ## Failure Handling
 
 - Save errors keep unsaved/error indicators visible.
 - Retry path must exist (auto-retry and/or explicit user action).
 - Failed save must never be marked as successful.
-- Failed Drive sync retries must preserve previous successful `sync.lastSuccessfulAt` value.
+- Failed Drive sync must not overwrite the locally-stored encrypted bytes; only `syncError` is updated.
 
 ## Security and Privacy
 

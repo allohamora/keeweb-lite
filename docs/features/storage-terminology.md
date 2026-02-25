@@ -7,14 +7,9 @@ Use these canonical terms consistently across feature specs.
 - Record type (`type`)
   - `local`: browser-local file flow.
   - `google-drive`: Drive-backed file flow.
-- Sync status (`sync.status`)
-  - `idle`: no local changes and no in-flight sync.
-  - `pending`: local changes exist and are not yet synced.
-  - `syncing`: sync currently in flight.
-  - `conflict`: sync requires explicit conflict resolution.
-  - `error`: latest sync attempt failed.
-- Sync errors
-  - `activeSyncError` (runtime app state): full active attempt error object/details for current session.
+- Sync error (`syncError`)
+  - `null`: last sync succeeded (or no sync has been attempted yet for local records).
+  - non-null string: last sync attempt failed; value is the error message.
 
 ## Canonical Stores
 
@@ -46,7 +41,7 @@ Use these canonical terms consistently across feature specs.
     - selected/open record context
     - entered password and raw key bytes during unlock lifecycle
     - save queue/transient UI state
-    - full active sync error details (`activeSyncError`)
+    - sync error string (`syncError: string | null`)
   - Must be cleared on lock/logout/close-file flows.
 
 ## External Persistence Targets

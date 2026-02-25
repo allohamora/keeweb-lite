@@ -94,8 +94,6 @@ Fields used by Unlock list and selection:
   - `lastOpenedAt` (optional in schema, used for default ordering when present)
 - Google Drive specific on selected record:
   - `source.id`
-  - optional `sync.status`
-  - optional `oauth`
 
 Default selection contract:
 

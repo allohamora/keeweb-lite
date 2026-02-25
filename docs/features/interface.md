@@ -32,13 +32,11 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
   - entry list pane
   - entry details pane
   - password generator action for entry editing
-  - footer with file/save/sync state
+  - footer with file/session state
 - Top workspace status bar contains:
-  - status circle 1: Save status
-  - status circle 2: Sync status
+  - sync status dot (Drive-backed files only; green = synced, red = error)
   - `Download` button
-  - `Sync` button (Drive-backed files only)
-  - sync metadata text (last successful sync time + result + last error when present)
+  - `Sync` button (Drive-backed files only, shown when last sync failed)
 - Workspace render/edit layout follows KeeWeb-like menu/list/details behavior.
 - Import/panel workflows temporarily replace list/details content.
 
@@ -47,14 +45,10 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - Keyboard support on Unlock screen:
   - `Enter` submits unlock for the selected source/file context
 - `Esc` closes the Unlock screen and returns to entries only when files are already open.
-- Save and sync state must be visible without developer tools.
-- Save and sync indicators must include color + text labels (not color-only).
-- Save/sync status text should use `aria-live="polite"` updates for assistive technologies.
-- Two status circles must be visible at top of opened DB view.
+- Sync state must be visible without developer tools for Drive-backed files.
 - `Download` must be visible at top of opened DB view.
-- `Sync` must be visible for Drive-backed files at top of opened DB view.
-- Sync metadata must be visible at top of opened DB view.
-- Drive-backed sync state uses canonical status model semantics (`sync.status`, `sync.lastError`) for status-circle rendering.
+- `Sync` must be visible for Drive-backed files when last sync failed.
+- Drive-backed sync state uses `syncError: string | null` (`null` = synced, non-null string = error message).
 - Source selector labels must use canonical names: `Local` and `Google Drive`.
 
 ## Data and Storage
@@ -76,5 +70,5 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 
 - Unlock screen is sufficient for both first open and reopen.
 - Workspace page reliably renders KeeWeb-like menu/list/details edit structure.
-- Opened DB view shows two status circles, download button, and sync metadata at top.
+- Opened DB view shows sync status dot (Drive-backed only) and download button at top.
 - Navigation between Unlock screen and workspace is clear and predictable.
