@@ -15,21 +15,21 @@ type UpdatedDriveFile = {
   name: string;
 };
 
-type ListFolderRequestContext = {
+export type ListFolderRequestContext = {
   authorization: string | null;
   extension: string | null;
   folderId: string | null;
   request: Request;
 };
 
-type GetFileRequestContext = {
+export type GetFileRequestContext = {
   alt: string | null;
   authorization: string | null;
   fileId: string;
   request: Request;
 };
 
-type UpdateFileRequestContext = {
+export type UpdateFileRequestContext = {
   authorization: string | null;
   body: Uint8Array;
   fields: string | null;
