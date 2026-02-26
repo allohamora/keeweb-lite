@@ -39,6 +39,16 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
   - `Sync` button (Drive-backed files only, shown when last sync failed)
 - Workspace render/edit layout follows KeeWeb-like menu/list/details behavior.
 - Import/panel workflows temporarily replace list/details content.
+- Mobile breakpoint for layout switching is `<=768px`.
+- Mobile workspace behavior:
+  - menu pane is hidden by default and opened from list header menu button
+  - list pane is default mobile pane
+  - selecting an entry opens details pane
+  - details pane provides back action to list pane
+- Unlock mobile behavior:
+  - top-anchored unlock layout
+  - stacked action row controls
+  - viewport-safe modal and file-picker scrolling
 
 ## UI Requirements
 
@@ -50,6 +60,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - `Sync` must be visible for Drive-backed files when last sync failed.
 - Drive-backed sync state uses `syncError: string | null` (`null` = synced, non-null string = error message).
 - Source selector labels must use canonical names: `Local` and `Google Drive`.
+- Mobile menu and mobile details back actions must be keyboard accessible.
 
 ## Data and Storage
 
@@ -72,3 +83,5 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - Workspace page reliably renders KeeWeb-like menu/list/details edit structure.
 - Opened DB view shows sync status dot (Drive-backed only) and download button at top.
 - Navigation between Unlock screen and workspace is clear and predictable.
+- At `<=768px`, workspace follows menu/list/details single-pane mobile flow.
+- At `>768px`, workspace keeps desktop three-pane layout.

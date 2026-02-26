@@ -7,7 +7,9 @@ import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
+import { WorkspaceMobileMenu } from '@/components/workspace/workspace-mobile-menu.component';
 import { toast } from 'sonner';
+import { useMedia } from 'react-use';
 import { getErrorMessage } from '@/utils/error.utils';
 import { useIdleLock } from '@/hooks/use-idle-lock.hook';
 import { useSync } from '@/hooks/use-sync.hook';
@@ -20,6 +22,8 @@ type WorkspacePageProps = {
 export const WorkspacePage = ({ session: { database, record, version }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isMobile = useMedia('(max-width: 768px)', false);
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
@@ -41,6 +45,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const handleSelectFilter = (nextSelectFilter: SelectFilter) => {
     setSelectFilter(nextSelectFilter);
     setSelectedEntryUuid(null);
+    setIsMobileMenuOpen(false);
   };
 
   const handleSave = ({
@@ -71,6 +76,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const handleLock = () => {
     setSession(null);
     setSelectedEntryUuid(null);
+    setIsMobileMenuOpen(false);
   };
 
   useIdleLock({ onLock: handleLock });
@@ -86,6 +92,9 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
 
   const syncStatus = isSyncing ? 'syncing' : syncError ? 'error' : 'synced';
   const syncErrorMessage = syncError?.message ?? null;
+  const isDesktopMode = !isMobile;
+  const showListPane = isDesktopMode || !selectedEntryUuid;
+  const showDetailsPane = isDesktopMode || Boolean(selectedEntryUuid);
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
@@ -99,28 +108,47 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
         onSyncRetry={retrySync}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <MenuPane
-          className="flex"
+        {isDesktopMode && (
+          <MenuPane
+            className="flex"
+            database={database}
+            onSelectFilter={handleSelectFilter}
+            selectFilter={selectFilter}
+          />
+        )}
+        {showListPane && (
+          <EntryList
+            className={isMobile ? 'flex w-full border-r-0' : 'flex'}
+            database={database}
+            onCreateEntry={() => void handleCreateEntry()}
+            onSelectEntry={handleSelectEntry}
+            selectFilter={selectFilter}
+            selectedEntryUuid={selectedEntryUuid}
+            showMenuButton={isMobile}
+            onMenuOpen={() => setIsMobileMenuOpen(true)}
+          />
+        )}
+        {showDetailsPane && (
+          <EntryDetails
+            className={isMobile ? 'flex w-full' : 'flex'}
+            selectedEntry={selectedEntry}
+            database={database}
+            record={record}
+            onSave={handleSave}
+            showBackButton={isMobile}
+            onBack={() => setSelectedEntryUuid(null)}
+          />
+        )}
+      </div>
+      {isMobile && (
+        <WorkspaceMobileMenu
+          open={isMobile && isMobileMenuOpen}
+          onOpenChange={setIsMobileMenuOpen}
           database={database}
           onSelectFilter={handleSelectFilter}
           selectFilter={selectFilter}
         />
-        <EntryList
-          className="flex"
-          database={database}
-          onCreateEntry={() => void handleCreateEntry()}
-          onSelectEntry={handleSelectEntry}
-          selectFilter={selectFilter}
-          selectedEntryUuid={selectedEntryUuid}
-        />
-        <EntryDetails
-          className="flex"
-          selectedEntry={selectedEntry}
-          database={database}
-          record={record}
-          onSave={handleSave}
-        />
-      </div>
+      )}
     </div>
   );
 };

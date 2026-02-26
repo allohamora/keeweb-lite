@@ -2,7 +2,7 @@ import type kdbx from '@/lib/kdbx.lib';
 import { useState } from 'react';
 import { useDebounce } from 'react-use';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Search01Icon, Add01Icon, ArrangeByLettersAZIcon } from '@hugeicons/core-free-icons';
+import { Search01Icon, Add01Icon, ArrangeByLettersAZIcon, Menu01Icon } from '@hugeicons/core-free-icons';
 import { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput } from '@/components/ui/input-group';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,8 @@ type EntryListProps = {
   selectedEntryUuid: kdbx.KdbxUuid | null;
   onSelectEntry: (uuid: kdbx.KdbxUuid) => void;
   onCreateEntry: () => void;
+  showMenuButton?: boolean;
+  onMenuOpen?: () => void;
 };
 
 export const EntryList = ({
@@ -39,6 +41,8 @@ export const EntryList = ({
   selectedEntryUuid,
   onSelectEntry,
   onCreateEntry,
+  showMenuButton = false,
+  onMenuOpen,
 }: EntryListProps) => {
   const entries = getEntriesForList({ database, selectFilter });
 
@@ -58,6 +62,18 @@ export const EntryList = ({
         </p>
       </div>
       <div className="flex items-center gap-1 border-b border-border p-2">
+        {showMenuButton && (
+          <Button
+            aria-label="Open menu"
+            className="h-7 w-7 shrink-0 rounded-sm"
+            onClick={onMenuOpen}
+            size="icon"
+            type="button"
+            variant="outline"
+          >
+            <HugeiconsIcon icon={Menu01Icon} size={14} strokeWidth={1.5} />
+          </Button>
+        )}
         <InputGroup className="h-7 flex-1 rounded-sm">
           <InputGroupAddon>
             <InputGroupText>
