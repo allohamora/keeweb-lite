@@ -72,6 +72,7 @@ src/
 ├── components/
 │   ├── ui/          # shadcn/ui primitives, wrappers, and ui-scoped custom components
 │   └── **/*.component.tsx  # Custom app components outside components/ui (non-shadcn, nested folders allowed)
+├── hooks/           # Custom React hooks
 ├── layouts/         # Astro layouts
 ├── pages/           # Astro pages
 ├── lib/             # Custom libs and third party GOF wrappers
@@ -158,5 +159,7 @@ src/
 
 - Never log secrets (passwords, key file data, decrypted values, OAuth tokens).
 - Never persist plaintext database unlock credentials (passwords, key-file bytes, decrypted values).
-- Prefer least-privilege Drive scopes (`drive.file`).
+- Do not use Google Drive Picker API due to poor UX for this product; use Drive `files.list` to power a custom in-app file browser UI.
+- Use `https://www.googleapis.com/auth/drive.file` for Google Drive access.
+- With `drive.file`, file browser visibility is limited to app-visible files (for example files created by app or explicitly granted to app context); custom UI must handle empty results clearly.
 - Persist only minimum metadata needed for reopen/sync.

@@ -1,36 +1,70 @@
 import kdbx from '@/lib/kdbx.lib';
-import { unlockKdbx } from '@/services/record.service';
+import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { updateRecord, type FileRecord } from '@/repositories/record.repository';
+import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
+import { toEncryptedBytes, unlockKdbx } from '@/services/record.service';
+import { Lock } from '@/utils/lock.utils';
+import { cloneDatabase } from './workspace.service';
 
 export type UnlockSession = {
   database: kdbx.Kdbx;
-  recordId: string;
-  recordName: string;
-  recordType: 'google-drive' | 'local';
-  unlockedAt: string;
+  record: FileRecord;
+  version: number;
 };
 
-export const unlockForSession = async ({ record, password }: { record: FileRecord; password: string }) => {
-  const encryptedBytes = record.kdbx.encryptedBytes;
-  const keyFileHashBase64 = record.key?.hash;
-  const unlockedAt = new Date().toISOString();
+type SyncSessionResult = {
+  database: kdbx.Kdbx;
+  record: FileRecord;
+};
 
+const syncForSessionLock = new Lock('session.service.syncForSession');
+
+export const syncForSession = async ({
+  record,
+  database,
+}: {
+  record: FileRecord;
+  database: kdbx.Kdbx;
+}): Promise<SyncSessionResult> => {
+  if (record.type !== 'google-drive') {
+    return { database, record };
+  }
+
+  return syncForSessionLock.runInLock(async () => {
+    const nextDatabase = await cloneDatabase(database);
+
+    const remoteBytes = await getFile(record.source.id);
+    const remoteDatabase = await kdbx.Kdbx.load(asArrayBuffer(remoteBytes), nextDatabase.credentials);
+
+    nextDatabase.merge(remoteDatabase);
+    await updateFile(record.source.id, asUint8Array(await nextDatabase.save()));
+
+    const nextRecord = await updateRecord({
+      ...record,
+      kdbx: { ...record.kdbx, encryptedBytes: await toEncryptedBytes(nextDatabase) },
+    });
+
+    return { database: nextDatabase, record: nextRecord };
+  });
+};
+
+export const unlockForSession = async ({
+  record,
+  password,
+}: {
+  record: FileRecord;
+  password: string;
+}): Promise<UnlockSession> => {
   const database = await unlockKdbx({
-    encryptedBytes,
-    keyFileHashBase64,
+    encryptedBytes: record.kdbx.encryptedBytes,
+    keyFileHashBase64: record.key?.hash,
     password,
   });
 
-  await updateRecord({
+  const updatedRecord = await updateRecord({
     ...record,
-    lastOpenedAt: unlockedAt,
+    lastOpenedAt: new Date().toISOString(),
   });
 
-  return {
-    database,
-    recordId: record.id,
-    recordName: record.kdbx.name,
-    recordType: record.type,
-    unlockedAt,
-  };
+  return { database, record: updatedRecord, version: 0 };
 };

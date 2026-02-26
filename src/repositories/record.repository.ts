@@ -11,32 +11,6 @@ const keySchema = z.object({
   name: z.string(),
 });
 
-const sourceSchema = z.object({
-  id: z.string(),
-  locator: z.string().optional(),
-  options: z.record(z.string(), z.unknown()).optional(),
-});
-
-const oauthSchema = z.object({
-  accessToken: z.string(),
-  expiresAt: z.string(),
-  refreshToken: z.string(),
-  scope: z.array(z.string()).optional(),
-});
-
-const syncErrorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  timestamp: z.string(),
-});
-
-const syncSchema = z.object({
-  lastError: syncErrorSchema.optional(),
-  lastSuccessfulAt: z.string().optional(),
-  revisionId: z.string().optional(),
-  status: z.enum(['idle', 'pending', 'syncing', 'conflict', 'error']),
-});
-
 const kdbxSchema = z.object({
   encryptedBytes: z.instanceof(Uint8Array),
   name: z.string(),
@@ -55,9 +29,9 @@ const googleDriveFileRecordSchema = z.object({
   kdbx: kdbxSchema,
   key: keySchema.optional(),
   lastOpenedAt: z.string().optional(),
-  oauth: oauthSchema.optional(),
-  source: sourceSchema,
-  sync: syncSchema.optional(),
+  source: z.object({
+    id: z.string(),
+  }),
   type: z.literal('google-drive'),
 });
 
@@ -147,4 +121,6 @@ export const updateRecord = async (record: FileRecord) => {
       return parsedRecord;
     }),
   );
+
+  return parsedRecord;
 };

@@ -1,16 +1,17 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { cn } from '@/lib/utils';
 import { EntryEditForm } from '@/components/workspace/entry-edit.form';
+import type { FileRecord } from '@/repositories/record.repository';
 
 type EntryDetailsProps = {
   className?: string;
   selectedEntry: kdbx.KdbxEntry | null;
   database: kdbx.Kdbx;
-  recordId: string;
-  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  record: FileRecord;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryDetails = ({ className, selectedEntry, database, recordId, onSave }: EntryDetailsProps) => {
+export const EntryDetails = ({ className, selectedEntry, database, record, onSave }: EntryDetailsProps) => {
   if (!selectedEntry) {
     return (
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
@@ -33,7 +34,7 @@ export const EntryDetails = ({ className, selectedEntry, database, recordId, onS
         key={selectedEntry.uuid.toString()}
         database={database}
         entry={selectedEntry}
-        recordId={recordId}
+        record={record}
         onSave={onSave}
       />
     </aside>

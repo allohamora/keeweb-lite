@@ -1,4 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
+import { getFile } from '@/repositories/google-drive.repository';
 import { createRecord, getRecords as getRepositoryRecords } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
 
@@ -74,6 +75,34 @@ const toKey = async (keyFile?: FileList | undefined) => {
   if (!selectedKeyFile) return;
 
   return await readKeyFile(selectedKeyFile);
+};
+
+export const createGoogleDriveRecord = async ({
+  fileId,
+  fileName,
+  keyFile,
+}: {
+  fileId: string;
+  fileName: string;
+  keyFile?: FileList;
+}) => {
+  const id = crypto.randomUUID();
+
+  const records = await getRepositoryRecords();
+  if (records.some((record) => record.type === 'google-drive' && record.source.id === fileId)) {
+    throw new Error('A record for this file already exists.');
+  }
+
+  const encryptedBytes = await getFile(fileId);
+  const key = await toKey(keyFile);
+
+  await createRecord({
+    id,
+    kdbx: { encryptedBytes, name: fileName },
+    key,
+    source: { id: fileId },
+    type: 'google-drive',
+  });
 };
 
 export const createLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {

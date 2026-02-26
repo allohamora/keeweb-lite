@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -11,47 +10,48 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { getErrorMessage } from '@/utils/error.utils';
-import { createLocalRecord } from '@/services/record.service';
+import { createGoogleDriveRecord } from '@/services/record.service';
+import { GoogleDriveFilePicker } from './google-drive.file-picker';
 
-export type CreateModalProps = {
+export type CreateGoogleDriveModalProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onRecordCreated: () => void;
 };
 
-const createModalSchema = z.object({
-  databaseFile: z
-    .instanceof(FileList, { message: 'Select a .kdbx file to create a record.' })
-    .refine((files) => files.length > 0, {
-      message: 'Select a .kdbx file to create a record.',
-    })
-    .refine((files) => files.length === 0 || files[0]?.name.toLowerCase().endsWith('.kdbx'), {
-      message: 'Only .kdbx files are supported.',
-    }),
+const driveFileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+const createGoogleDriveModalSchema = z.object({
+  driveFile: driveFileSchema,
   keyFile: z.instanceof(FileList, { message: 'Select a key file.' }).optional(),
 });
 
-type CreateModalFormValues = z.infer<typeof createModalSchema>;
+type CreateGoogleDriveModalFormValues = z.infer<typeof createGoogleDriveModalSchema>;
 
-export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: CreateGoogleDriveModalProps) => {
   const {
     control,
     formState: { isSubmitting },
     handleSubmit,
-  } = useForm<CreateModalFormValues>({
-    resolver: zodResolver(createModalSchema),
+    reset,
+  } = useForm<CreateGoogleDriveModalFormValues>({
+    resolver: zodResolver(createGoogleDriveModalSchema),
   });
 
-  const handleCreateRecordSubmit = handleSubmit(async ({ databaseFile, keyFile }) => {
+  const handleCreateRecordSubmit = handleSubmit(async ({ driveFile, keyFile }) => {
     try {
-      await createLocalRecord({ databaseFile, keyFile });
+      await createGoogleDriveRecord({ fileId: driveFile.id, fileName: driveFile.name, keyFile });
 
       onRecordCreated();
-      setIsOpen(false);
+      onOpenChange(false);
+      reset();
 
       toast.success('Record created.');
     } catch (error) {
@@ -60,17 +60,12 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
   });
 
   return (
-    <Dialog onOpenChange={setIsOpen} open={isOpen}>
-      <DialogTrigger asChild>
-        <Button className="h-8 px-3 text-xs" type="button" variant="outline">
-          Create
-        </Button>
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create File Record</DialogTitle>
+          <DialogTitle>Create Google Drive Record</DialogTitle>
           <DialogDescription>
-            Choose a local .kdbx file and optional key file. The new record becomes selected immediately.
+            Select a .kdbx file from Google Drive. The new record becomes selected immediately.
           </DialogDescription>
         </DialogHeader>
 
@@ -82,18 +77,15 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
         >
           <Controller
             control={control}
-            name="databaseFile"
+            name="driveFile"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-database-file">File</FieldLabel>
-                <Input
-                  {...field}
-                  value={undefined}
-                  onChange={(event) => field.onChange(event.target.files)}
-                  accept=".kdbx"
+                <FieldLabel htmlFor="create-drive-file">File</FieldLabel>
+                <GoogleDriveFilePicker
+                  id="create-drive-file"
+                  value={field.value}
+                  onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
-                  id="create-database-file"
-                  type="file"
                 />
                 <FieldError errors={[fieldState.error]} />
               </Field>
@@ -105,13 +97,13 @@ export const CreateModal = ({ onRecordCreated }: CreateModalProps) => {
             name="keyFile"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-key-file">Key file (optional)</FieldLabel>
+                <FieldLabel htmlFor="create-drive-key-file">Key file (optional)</FieldLabel>
                 <Input
                   {...field}
                   value={undefined}
                   onChange={(event) => field.onChange(event.target.files)}
                   aria-invalid={fieldState.invalid}
-                  id="create-key-file"
+                  id="create-drive-key-file"
                   type="file"
                 />
                 <FieldError errors={[fieldState.error]} />

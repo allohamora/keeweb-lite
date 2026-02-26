@@ -1,27 +1,37 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import type { UnlockSession } from '@/services/session.service';
-import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
+import { type UnlockSession } from '@/services/session.service';
+import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/utils/error.utils';
+import { useSync } from '@/hooks/use-sync.hook';
 
 type WorkspacePageProps = {
   session: UnlockSession;
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({
-  session: { database, recordId, recordName, recordType },
-  setSession,
-}: WorkspacePageProps) => {
+export const WorkspacePage = ({ session: { database, record, version }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
+
+  const {
+    loading: isSyncing,
+    error: syncError,
+    retrySync,
+  } = useSync({
+    record,
+    database,
+    version,
+    setSession,
+  });
 
   const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
     setSelectedEntryUuid(uuid);
@@ -35,14 +45,21 @@ export const WorkspacePage = ({
   const handleSave = ({
     nextDatabase,
     nextEntryUuid,
+    nextRecord,
   }: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextRecord: FileRecord;
   }) => {
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
-      return { ...previousSession, database: nextDatabase };
+      return {
+        ...previousSession,
+        database: nextDatabase,
+        record: nextRecord,
+        version: previousSession.version + 1,
+      };
     });
 
     if (nextEntryUuid !== undefined) {
@@ -57,16 +74,27 @@ export const WorkspacePage = ({
 
   const handleCreateEntry = async () => {
     try {
-      handleSave(await createEntry({ database, recordId, selectFilter }));
+      handleSave(await createEntry({ database, record, selectFilter }));
       toast.success('Entry created.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
     }
   };
 
+  const syncStatus = isSyncing ? 'syncing' : syncError ? 'error' : 'synced';
+  const syncErrorMessage = syncError?.message ?? null;
+
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
-      <WorkspaceControls database={database} recordName={recordName} recordType={recordType} onLock={handleLock} />
+      <WorkspaceControls
+        database={database}
+        recordName={record.kdbx.name}
+        recordType={record.type}
+        syncStatus={syncStatus}
+        syncErrorMessage={syncErrorMessage}
+        onLock={handleLock}
+        onSyncRetry={retrySync}
+      />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
           className="flex"
@@ -86,7 +114,7 @@ export const WorkspacePage = ({
           className="flex"
           selectedEntry={selectedEntry}
           database={database}
-          recordId={recordId}
+          record={record}
           onSave={handleSave}
         />
       </div>

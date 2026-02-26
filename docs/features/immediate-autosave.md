@@ -17,14 +17,14 @@ Define a single save pipeline that persists every edit immediately.
   - `autoSaveInterval = -1` (sync/save on each dirty change event)
 - Any data mutation triggers save immediately.
 - Save pipeline is serialized (one write in flight).
-- Save serialization uses browser Web Locks API (`navigator.locks`) with a single save lock name (`keeweb-save`).
+- Save serialization uses browser Web Locks API (`navigator.locks`) with a single save lock name (`workspace.service.saveDatabase`).
 - If edits happen during save, queue another save run through the same Web Locks queue.
 - Never drop pending edits; queued save requests execute in lock-queue order.
 - Save runs may coalesce rapid dirty events into one write of the latest encrypted state before releasing the lock.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
   - `local-cache` fallback mode: update encrypted cache/export state
-  - Drive-backed: sync via Drive adapter, use 2-way merge on remote changes/rev conflicts, and update record sync fields (`sync.revisionId`, `sync.lastSuccessfulAt`, `sync.status`, runtime `activeSyncError`, `sync.lastError`)
+  - Drive-backed: save pipeline writes to IndexedDB only; Drive sync runs as a separate background job after each save
 
 ## UI Requirements
 
@@ -45,15 +45,14 @@ Define a single save pipeline that persists every edit immediately.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed metadata: persisted in `src/repositories/record.repository.ts` on Drive records (`sync.status`, `sync.revisionId`, `sync.lastSuccessfulAt`, `sync.lastError`); runtime store holds `activeSyncError`
-  - Drive OAuth runtime token data: persisted in Drive records as optional `oauth` field (`refreshToken`, `accessToken`, `expiresAt`, optional `scope`)
+  - Drive-backed sync state: maintained in runtime component state (loading/error from `useAsyncFn`)
 
 ## Failure Handling
 
 - Save errors keep unsaved/error indicators visible.
 - Retry path must exist (auto-retry and/or explicit user action).
 - Failed save must never be marked as successful.
-- Failed Drive sync retries must preserve previous successful `sync.lastSuccessfulAt` value.
+- Failed Drive sync must not overwrite the locally-stored encrypted bytes; sync state is updated independently of the save pipeline.
 
 ## Security and Privacy
 

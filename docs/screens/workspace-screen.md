@@ -11,9 +11,8 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
   - rendering unlocked record context
   - navigating groups and entries
   - selecting entries and showing editable details
-  - showing save and sync status continuously
-  - exposing source-aware actions (`Download` for all opened records, `Sync` for Drive-backed records)
-  - showing sync metadata and actionable sync feedback for Drive-backed records
+  - showing sync status dot for Drive-backed records
+  - exposing source-aware actions (`Download` for all opened records, `Sync` for Drive-backed records when last sync failed)
 - Workspace must support both record types:
   - `local`
   - `google-drive`
@@ -22,11 +21,8 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
 ## Layout Regions
 
 1. Top workspace status bar
-   - Shows save status circle and label.
-   - Shows sync status circle and label.
+   - Shows three-state sync status element for `google-drive` records (always visible, never for `local`): orange "Syncing" while in progress, green "Synced" on success, red "Sync error" on failure; clicking "Sync error" retries sync and shows an error toast.
    - Shows `Download` action.
-   - Shows `Sync` action when current record type is `google-drive`.
-   - Shows sync metadata (last successful sync and last error context when present).
 2. Left menu pane
    - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
    - Tag items are clickable and filter the entry list to only entries that carry the selected tag.
@@ -61,12 +57,10 @@ View states:
 
 Transient operation flags (not top-level view states):
 
-- `saveStatus`
-  - `saving` | `saved` | `error`.
 - `syncStatus`
-  - `idle` | `pending` | `syncing` | `conflict` | `error` for Drive-backed records.
+  - `'syncing' | 'synced' | 'error'` for Drive-backed records; derived from background sync job state.
 - `inlineStatusMessage`
-  - Holds actionable save/sync/panel feedback while keeping current view state.
+  - Holds actionable sync/panel feedback while keeping current view state.
 
 View-state transitions:
 
@@ -100,8 +94,9 @@ View-state transitions:
    - On success, a confirmation notification is shown.
    - On failure, an error notification is shown with the failure reason.
 5. Sync feedback for Drive-backed records
-   - On edits or manual sync action, sync status updates by canonical sync state.
-   - Metadata and retry/conflict actions are shown when needed.
+   - On unlock, sync runs as a background job; sync status shows orange "Syncing" then resolves to green "Synced" or red "Sync error".
+   - On each save, sync fires again in background.
+   - Clicking the "Sync error" element retries sync.
 6. Download current encrypted state
    - User triggers `Download`.
    - Current encrypted record state is exported without changing sync state.
@@ -114,15 +109,8 @@ View-state transitions:
 
 - Workspace actions requiring an opened record are blocked when no unlocked session exists.
 - Entry-edit actions are blocked when no entry is selected.
-- `Sync` action is available only when current record type is `google-drive`.
+- Sync status element is shown only for `google-drive` records; never for `local` records.
 - Recycle Bin entries are excluded from `All Items` and tag-derived entry lists unless Recycle Bin itself is explicitly selected.
-- Save/sync status must always include text labels alongside color indicators.
-- Drive sync state rendering must use canonical sync status semantics:
-  - `idle`
-  - `pending`
-  - `syncing`
-  - `conflict`
-  - `error`
 
 ## Accessibility Requirements
 
@@ -152,8 +140,8 @@ View-state transitions:
   - keep unsaved/error status visible
   - keep retry/recovery path available
 - Sync failure (Drive-backed):
-  - keep sync error/conflict state visible
-  - keep retry and conflict-resolution actions available
+  - keep "Sync error" status element visible
+  - clicking it retries sync
 - Download failure:
   - show explicit error and retry path
 - Non-blocking metadata update failures:
@@ -164,16 +152,14 @@ View-state transitions:
 
 1. After successful Unlock, app transitions to Workspace and renders status bar, menu, list, details, and footer regions.
 2. Workspace supports both `local` and `google-drive` record contexts.
-3. Top bar always shows two status indicators with text labels for save/sync visibility.
+3. Top bar shows three-state sync status element for Drive-backed records and `Download` action for all records.
 4. `Download` action is visible for opened records.
-5. `Sync` action is visible only for Drive-backed records.
-6. Save state changes are visible as `saving`, `saved`, and `error`.
-7. Drive sync state changes are visible as canonical statuses (`idle`, `pending`, `syncing`, `conflict`, `error`).
-8. Entry selection updates details context without leaving workspace.
-9. Search input in the entry list filters by title with a debounce delay, updates the record count, and shows "No matching entries." when nothing matches.
-10. Temporary panel flows can open and close without breaking main workspace state.
-11. Lock/close session returns user to Unlock and clears unlocked runtime session data.
-12. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
+5. Sync status element shows "Syncing" (orange), "Synced" (green), or "Sync error" (red); clicking "Sync error" retries and shows toast.
+6. Entry selection updates details context without leaving workspace.
+7. Search input in the entry list filters by title with a debounce delay, updates the record count, and shows "No matching entries." when nothing matches.
+8. Temporary panel flows can open and close without breaking main workspace state.
+9. Lock/close session returns user to Unlock and clears unlocked runtime session data.
+10. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
 
 ## Out of Scope
 

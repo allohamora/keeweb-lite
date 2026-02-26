@@ -14,6 +14,7 @@ import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
 import { getAllTags, getEntryValues, isEntryInRecycleBin, saveEntry } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
@@ -33,11 +34,11 @@ type EntryEditValues = z.infer<typeof entryEditSchema>;
 type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
-  recordId: string;
-  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  record: FileRecord;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFormProps) => {
+export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
   const {
     control,
     handleSubmit,
@@ -54,12 +55,7 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
       const entryUuid = entry.uuid.toString();
-      const result = await saveEntry({
-        database,
-        recordId,
-        entryUuid,
-        values,
-      });
+      const result = await saveEntry({ database, record, entryUuid, values });
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
       onSave?.(result);
@@ -292,8 +288,8 @@ export const EntryEditForm = ({ database, entry, recordId, onSave }: EntryEditFo
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} recordId={recordId} onRemove={onSave} />
-            {isInTrash && <EntryRestore database={database} entry={entry} recordId={recordId} onRestore={onSave} />}
+            <EntryRemove database={database} entry={entry} record={record} onRemove={onSave} />
+            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={onSave} />}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}

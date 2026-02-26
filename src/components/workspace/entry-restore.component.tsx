@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
 import { restoreEntry } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import {
   Dialog,
   DialogClose,
@@ -19,11 +20,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
-  recordId: string;
-  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null }) => void;
+  record: FileRecord;
+  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {
   const [isRestoring, setIsRestoring] = useState(false);
 
   const handleRestore = async () => {
@@ -31,7 +32,7 @@ export const EntryRestore = ({ database, entry, recordId, onRestore }: EntryRest
     try {
       const entryUuid = entry.uuid.toString();
 
-      onRestore(await restoreEntry({ database, recordId, entryUuid }));
+      onRestore(await restoreEntry({ database, record, entryUuid }));
 
       toast.success('Entry restored.');
     } catch (error) {

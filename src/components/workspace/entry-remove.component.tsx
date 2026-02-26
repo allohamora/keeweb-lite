@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
 import { removeEntry } from '@/services/workspace.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import {
   Dialog,
   DialogClose,
@@ -19,11 +20,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 type EntryRemoveProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
-  recordId: string;
-  onRemove: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null }) => void;
+  record: FileRecord;
+  onRemove: (payload: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextRecord: FileRecord;
+  }) => void;
 };
 
-export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleRemove = async () => {
@@ -31,7 +36,7 @@ export const EntryRemove = ({ database, entry, recordId, onRemove }: EntryRemove
     try {
       const entryUuid = entry.uuid.toString();
 
-      onRemove(await removeEntry({ database, recordId, entryUuid }));
+      onRemove(await removeEntry({ database, record, entryUuid }));
 
       toast.success('Entry removed.');
     } catch (error) {

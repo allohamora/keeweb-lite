@@ -1,8 +1,17 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createLocalRecord, getRecords, toEncryptedBytes, unlockKdbx } from '@/services/record.service';
-import { unlockForSession } from '@/services/session.service';
+import { googleDriveApi } from '../mocks/google-drive.repository.mock';
+import { mockServer } from '../mocks/msw.mock';
+import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord } from '@/repositories/record.repository';
+import {
+  createGoogleDriveRecord,
+  createLocalRecord,
+  getRecords,
+  toEncryptedBytes,
+  unlockKdbx,
+} from '@/services/record.service';
+import { unlockForSession } from '@/services/session.service';
 
 type DatabaseRecordInput = {
   name: string;
@@ -609,6 +618,96 @@ describe('record.service', () => {
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');
       expect(getFieldText(entry, 'UserName')).toBe('test-user');
+    });
+  });
+
+  describe('createGoogleDriveRecord', () => {
+    afterEach(async () => {
+      await clearRecords();
+      await auth.clearAccessToken();
+    });
+
+    const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
+
+    const testFileId = 'drive-file-id-123';
+    const testFileName = 'vault.kdbx';
+    const testBytes = new Uint8Array([1, 2, 3, 4, 5]);
+
+    it('creates a Google Drive record with file bytes fetched from Drive', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+      expect(records[0].type).toBe('google-drive');
+      expect(records[0].kdbx.name).toBe(testFileName);
+      expect(records[0].kdbx.encryptedBytes).toEqual(testBytes);
+    });
+
+    it('sets type google-drive and source.id equal to the provided fileId', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+
+      const records = await getRecords();
+      expect(records[0].type).toBe('google-drive');
+      const record = records[0];
+      if (record.type === 'google-drive') {
+        expect(record.source.id).toBe(testFileId);
+      }
+    });
+
+    it('does not add a key when keyFile is not provided', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeUndefined();
+    });
+
+    it('adds a key hash and name when keyFile FileList is provided', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      const keyFile = new File([new Uint8Array([10, 20, 30])], 'vault.keyx');
+      await createGoogleDriveRecord({
+        fileId: testFileId,
+        fileName: testFileName,
+        keyFile: createFileList(keyFile),
+      });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeDefined();
+      expect(records[0].key?.name).toBe('vault.keyx');
+      expect(typeof records[0].key?.hash).toBe('string');
+    });
+
+    it('throws when a record with the same source.id already exists', async () => {
+      await createRecord({
+        id: 'existing-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: testFileId },
+      });
+
+      await expect(createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName })).rejects.toThrow(
+        'A record for this file already exists.',
+      );
+    });
+
+    it('does not persist the duplicate record when source.id conflict throws', async () => {
+      await createRecord({
+        id: 'existing-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: testFileId },
+      });
+
+      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }).catch(() => undefined);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
     });
   });
 });

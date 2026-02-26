@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
-import { CreateModal } from './create.modal';
-import { UnlockForm } from './unlock.form';
 import type { UnlockSession } from '@/services/session.service';
+import { CreateMenu } from './create.menu';
+import { UnlockForm } from './unlock.form';
 
 type UnlockPageProps = {
   setSession: (session: UnlockSession) => void;
@@ -10,7 +10,7 @@ type UnlockPageProps = {
 export const UnlockPage = ({ setSession }: UnlockPageProps) => {
   const [recordsReloadToken, setRecordsReloadToken] = useState(0);
 
-  const reloadRecords = useCallback(() => {
+  const update = useCallback(() => {
     setRecordsReloadToken((currentValue) => currentValue + 1);
   }, []);
 
@@ -21,10 +21,10 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
           <div className="border border-zinc-700/80 bg-zinc-950/60 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h1 className="text-sm font-semibold tracking-[0.08em] uppercase">Unlock</h1>
-              <CreateModal onRecordCreated={reloadRecords} />
+              <CreateMenu onRecordCreated={update} />
             </div>
 
-            <UnlockForm recordsReloadToken={recordsReloadToken} setSession={setSession} reloadRecords={reloadRecords} />
+            <UnlockForm recordsReloadToken={recordsReloadToken} setSession={setSession} update={update} />
           </div>
         </div>
       </section>

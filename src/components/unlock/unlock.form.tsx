@@ -25,10 +25,10 @@ type UnlockFormValues = z.infer<typeof unlockFormSchema>;
 export type UnlockFormProps = {
   recordsReloadToken: number;
   setSession: (session: UnlockSession) => void;
-  reloadRecords: () => void;
+  update: () => void;
 };
 
-export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: UnlockFormProps) => {
+export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFormProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -77,7 +77,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: Un
   });
 
   const handleRemove = () => {
-    reloadRecords();
+    update();
     setShowPassword(false);
     reset();
   };
@@ -138,7 +138,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, reloadRecords }: Un
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   {records.map((record) => (
                     <SelectItem key={record.id} value={record.id}>
                       {record.kdbx.name} ({record.type})
