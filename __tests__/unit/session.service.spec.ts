@@ -130,7 +130,7 @@ describe('session.service', () => {
       return { database, encryptedBytes, password };
     };
 
-    it('resolves without error for a local record', async () => {
+    it('returns unchanged session state for a local record', async () => {
       const { database, encryptedBytes } = await createSyncableDatabase();
       const record = await createRecord({
         id: 'local-record',
@@ -138,10 +138,13 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      await expect(syncForSession({ database, record })).resolves.toBeUndefined();
+      const result = await syncForSession({ database, record });
+
+      expect(result.database).toBe(database);
+      expect(result.record).toBe(record);
     });
 
-    it('resolves without error for a Google Drive record when sync succeeds', async () => {
+    it('returns next session state for a Google Drive record when sync succeeds', async () => {
       const { database, encryptedBytes } = await createSyncableDatabase();
       const record = await createRecord({
         id: 'gd-record',
@@ -152,10 +155,14 @@ describe('session.service', () => {
 
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
 
-      await expect(syncForSession({ database, record })).resolves.toBeUndefined();
+      const result = await syncForSession({ database, record });
+
+      expect(result.database).not.toBe(database);
+      expect(result.record.id).toBe(record.id);
+      expect(result.record.type).toBe('google-drive');
     });
 
-    it('updates encryptedBytes in the repository after sync', async () => {
+    it('updates encryptedBytes in repository and returns updated record after sync', async () => {
       const { database, encryptedBytes } = await createSyncableDatabase();
       const record = await createRecord({
         id: 'gd-record',
@@ -166,12 +173,13 @@ describe('session.service', () => {
 
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
 
-      await syncForSession({ database, record });
+      const result = await syncForSession({ database, record });
 
       const records = await getRecords();
       const updated = records.find(({ id }) => id === 'gd-record');
       expect(updated).toBeDefined();
       expect(updated?.kdbx.encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(result.record.kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
     });
 
     it('throws on Drive sync failure', async () => {

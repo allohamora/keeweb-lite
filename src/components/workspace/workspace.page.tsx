@@ -24,8 +24,9 @@ export const WorkspacePage = ({ session: { database, record }, setSession }: Wor
 
   const [{ loading: isSyncing, error: syncError }, sync] = useAsyncFn(
     async ({ record, database }: { record: FileRecord; database: kdbx.Kdbx }) => {
-      await syncForSession({ record, database });
+      setSession(await syncForSession({ record, database }));
     },
+    [setSession],
   );
 
   // Initial sync on unlock
