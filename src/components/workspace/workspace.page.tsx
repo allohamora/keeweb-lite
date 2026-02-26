@@ -1,7 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { useAsync } from 'react-use';
-import { syncForSession, type UnlockSession } from '@/services/session.service';
+import { type UnlockSession, useSync } from '@/services/session.service';
 import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
@@ -22,28 +21,16 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
-  const { loading: isSyncing, error: syncError } = useAsync(async () => {
-    if (record.type === 'local') {
-      return;
-    }
-
-    const syncedSession = await syncForSession({ record, database });
-
-    setSession((previousSession) => {
-      if (!previousSession) {
-        return previousSession;
-      }
-
-      if (previousSession.version !== version) {
-        return previousSession;
-      }
-
-      return {
-        ...syncedSession,
-        version,
-      };
-    });
-  }, [version]);
+  const {
+    loading: isSyncing,
+    error: syncError,
+    retrySync,
+  } = useSync({
+    record,
+    database,
+    version,
+    setSession,
+  });
 
   const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
     setSelectedEntryUuid(uuid);
@@ -79,16 +66,6 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     }
   };
 
-  const handleSyncRetry = () => {
-    setSession((previousSession) => {
-      if (!previousSession || previousSession.record.type === 'local') {
-        return previousSession;
-      }
-
-      return { ...previousSession, version: previousSession.version + 1 };
-    });
-  };
-
   const handleLock = () => {
     setSession(null);
     setSelectedEntryUuid(null);
@@ -115,7 +92,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
         syncStatus={syncStatus}
         syncErrorMessage={syncErrorMessage}
         onLock={handleLock}
-        onSyncRetry={handleSyncRetry}
+        onSyncRetry={retrySync}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
