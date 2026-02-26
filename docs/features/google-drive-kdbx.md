@@ -57,7 +57,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   - `id`
   - `source` (`id`)
   - `kdbx` (`name`, `encryptedBytes`)
-  - optional `key` (`name`, `hash`) for remember-key behavior
+  - optional `key` for remember-key behavior; stored `key` contains Base64-encoded key-file bytes (cryptographic key material required for KDBX decryption), must be treated as secret, and is used to decrypt KDBX files; we store Base64 bytes because unlock requires original key bytes, and storing only a SHA-256 hash would not work for decryption
   - optional `lastOpenedAt`
 - Keep active unlocked DB/session and transient sync error state in runtime app state (in-memory, non-persistent).
 
