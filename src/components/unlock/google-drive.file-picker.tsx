@@ -61,6 +61,7 @@ export const GoogleDriveFilePicker = ({
   const items = state.value ?? [];
   const folders = items.filter((item) => item.isFolder);
   const files = items.filter((item) => !item.isFolder);
+  const hasLoadedItems = state.value !== undefined;
   const error = state.error ? getErrorMessage({ error: state.error, fallback: 'Failed to load Drive files.' }) : null;
 
   return (
@@ -103,7 +104,7 @@ export const GoogleDriveFilePicker = ({
           <div className="max-h-72 space-y-0.5 overflow-y-auto">
             {state.loading && <p className="py-4 text-center text-muted-foreground">Loading...</p>}
             {!state.loading && error && <p className="py-4 text-center text-destructive">{error}</p>}
-            {!state.loading && !error && items.length === 0 && (
+            {!state.loading && hasLoadedItems && !error && items.length === 0 && (
               <p className="py-4 text-center text-muted-foreground">No files found.</p>
             )}
             {!state.loading && !error && (
