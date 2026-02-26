@@ -40,6 +40,7 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
     control,
     formState: { isSubmitting },
     handleSubmit,
+    reset,
   } = useForm<CreateGoogleDriveModalFormValues>({
     resolver: zodResolver(createGoogleDriveModalSchema),
   });
@@ -50,6 +51,7 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
 
       onRecordCreated();
       onOpenChange(false);
+      reset();
 
       toast.success('Record created.');
     } catch (error) {

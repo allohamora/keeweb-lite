@@ -41,6 +41,7 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
     control,
     formState: { isSubmitting },
     handleSubmit,
+    reset,
   } = useForm<CreateLocalModalFormValues>({
     resolver: zodResolver(createLocalModalSchema),
   });
@@ -51,6 +52,7 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
 
       onRecordCreated();
       onOpenChange(false);
+      reset();
 
       toast.success('Record created.');
     } catch (error) {
