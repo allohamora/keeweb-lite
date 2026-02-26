@@ -52,11 +52,21 @@ export const WorkspaceControls = ({
   };
 
   const handleSyncClick = () => {
-    if (syncStatus === 'error') {
-      toast.error(syncErrorMessage ?? 'Drive sync failed.');
-      onSyncRetry();
-    } else if (syncStatus === 'synced') {
-      toast.success('Database synced.');
+    switch (syncStatus) {
+      case 'error':
+        toast.error(syncErrorMessage ?? 'Drive sync failed.');
+        onSyncRetry();
+        break;
+      case 'syncing':
+        toast.success('Database syncing.');
+        break;
+      case 'synced':
+        toast.success('Database synced.');
+        break;
+      default: {
+        const exhaustiveCheck: never = syncStatus;
+        throw new Error(`Unhandled sync status: ${exhaustiveCheck}`);
+      }
     }
   };
 
