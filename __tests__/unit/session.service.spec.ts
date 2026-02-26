@@ -1,4 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
+import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../mocks/msw.mock';
@@ -199,6 +200,87 @@ describe('session.service', () => {
       mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
 
       await expect(syncForSession({ database, record })).rejects.toThrow();
+    });
+
+    it('accumulates mutations from both concurrent calls in the final merged result', async () => {
+      const creds = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
+      await creds.ready;
+      const initialDb = kdbx.Kdbx.create(creds, 'Lock Test DB');
+      const group = initialDb.getDefaultGroup();
+
+      const entryA = initialDb.createEntry(group);
+      entryA.fields.set('Title', kdbx.ProtectedValue.fromString('Original A'));
+
+      const entryB = initialDb.createEntry(group);
+      entryB.fields.set('Title', kdbx.ProtectedValue.fromString('Original B'));
+
+      const initialBytes = new Uint8Array(await initialDb.save());
+
+      // First caller's database: only Entry A updated
+      const credsForA = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
+      await credsForA.ready;
+      const dbWithAUpdated = await kdbx.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForA);
+      const entryAToUpdate = dbWithAUpdated.getDefaultGroup().entries.find((entry) => {
+        const title = entry.fields.get('Title');
+        return title instanceof kdbx.ProtectedValue && title.getText() === 'Original A';
+      });
+      if (entryAToUpdate) {
+        entryAToUpdate.fields.set('Title', kdbx.ProtectedValue.fromString('Updated A'));
+        entryAToUpdate.times.lastModTime = new Date(Date.now() + 1000);
+      }
+
+      // Second caller's database: only Entry B updated
+      const credsForB = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
+      await credsForB.ready;
+      const dbWithBUpdated = await kdbx.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForB);
+      const entryBToUpdate = dbWithBUpdated.getDefaultGroup().entries.find((entry) => {
+        const title = entry.fields.get('Title');
+        return title instanceof kdbx.ProtectedValue && title.getText() === 'Original B';
+      });
+      if (entryBToUpdate) {
+        entryBToUpdate.fields.set('Title', kdbx.ProtectedValue.fromString('Updated B'));
+        entryBToUpdate.times.lastModTime = new Date(Date.now() + 1000);
+      }
+
+      const record = await createRecord({
+        id: 'gd-lock-concurrent',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      // Dynamic handler: getFile always returns the latest uploaded bytes so
+      // the second lock holder sees the first lock holder's result and both
+      // mutations accumulate in the final merge.
+      let remoteFileBytes = initialBytes;
+
+      mockServer.addHandlers(
+        googleDriveApi.getFile.mock(
+          () => new HttpResponse(remoteFileBytes, { headers: { 'Content-Type': 'application/octet-stream' } }),
+        ),
+        googleDriveApi.updateFile.mock(({ body }) => {
+          remoteFileBytes = new Uint8Array(body);
+          return HttpResponse.json({ id: 'drive-file-id', modifiedTime: new Date().toISOString(), name: 'vault.kdbx' });
+        }),
+      );
+
+      const [, lastResult] = await Promise.all([
+        syncForSession({ database: dbWithAUpdated, record }),
+        syncForSession({ database: dbWithBUpdated, record }),
+      ]);
+
+      const entries = lastResult.database.getDefaultGroup().entries;
+      const getTitle = (entry: (typeof entries)[number]) => {
+        const title = entry.fields.get('Title');
+        return title instanceof kdbx.ProtectedValue ? title.getText() : String(title ?? '');
+      };
+
+      expect(entries.find((entry) => getTitle(entry) === 'Updated A')).toBeDefined();
+      expect(entries.find((entry) => getTitle(entry) === 'Updated B')).toBeDefined();
+
+      const records = await getRecords();
+      const updated = records.find(({ id }) => id === 'gd-lock-concurrent');
+      expect(updated?.kdbx.encryptedBytes).toEqual(lastResult.record.kdbx.encryptedBytes);
     });
   });
 });
