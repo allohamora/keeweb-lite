@@ -9,6 +9,7 @@ import { EntryDetails } from '@/components/workspace/entry-details.component';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/utils/error.utils';
+import { useIdleLock } from '@/hooks/use-idle-lock.hook';
 import { useSync } from '@/hooks/use-sync.hook';
 
 type WorkspacePageProps = {
@@ -71,6 +72,8 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     setSession(null);
     setSelectedEntryUuid(null);
   };
+
+  useIdleLock({ onLock: handleLock });
 
   const handleCreateEntry = async () => {
     try {
