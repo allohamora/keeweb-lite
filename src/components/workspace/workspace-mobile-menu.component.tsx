@@ -27,9 +27,9 @@ export const WorkspaceMobileMenu = ({
         <DialogHeader className="sr-only">
           <DialogTitle>Menu</DialogTitle>
         </DialogHeader>
-        <div className="h-full pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:pt-0 sm:pb-0">
+        <div className="box-border flex h-full min-h-0 flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:pt-0 sm:pb-0">
           <MenuPane
-            className="h-full w-full border-r-0"
+            className="min-h-0 w-full flex-1 border-r-0"
             database={database}
             selectFilter={selectFilter}
             onSelectFilter={onSelectFilter}

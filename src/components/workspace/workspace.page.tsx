@@ -97,7 +97,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const showDetailsPane = isDesktopMode || Boolean(selectedEntryUuid);
 
   return (
-    <div className="flex h-svh min-h-svh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-foreground sm:h-dvh sm:min-h-dvh sm:pt-0 sm:pb-0">
+    <div className="box-border flex h-svh min-h-svh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-foreground sm:h-dvh sm:min-h-dvh sm:pt-0 sm:pb-0">
       <WorkspaceControls
         database={database}
         recordName={record.kdbx.name}
