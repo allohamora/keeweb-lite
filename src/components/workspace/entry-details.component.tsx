@@ -2,6 +2,7 @@ import type kdbx from '@/lib/kdbx.lib';
 import { cn } from '@/lib/utils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { Button } from '@/components/ui/button';
 import { EntryEditForm } from '@/components/workspace/entry-edit.form';
 import type { FileRecord } from '@/repositories/record.repository';
 
@@ -29,14 +30,16 @@ export const EntryDetails = ({
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
         {showBackButton && (
           <div className="border-b border-border p-2">
-            <button
-              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            <Button
+              className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
               onClick={onBack}
+              size="xs"
               type="button"
+              variant="ghost"
             >
               <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.5} />
               Back to list
-            </button>
+            </Button>
           </div>
         )}
         <div className="border-b border-border px-3 py-2">
@@ -53,14 +56,16 @@ export const EntryDetails = ({
     <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
       {showBackButton && (
         <div className="border-b border-border p-2">
-          <button
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          <Button
+            className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
             onClick={onBack}
+            size="xs"
             type="button"
+            variant="ghost"
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.5} />
             Back to list
-          </button>
+          </Button>
         </div>
       )}
       <div className="border-b border-border px-3 py-2">
