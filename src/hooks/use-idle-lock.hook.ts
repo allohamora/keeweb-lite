@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'] as const;
@@ -9,6 +9,7 @@ type UseIdleLockProps = {
 
 export const useIdleLock = ({ onLock }: UseIdleLockProps) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onIdle = useEffectEvent(() => onLock());
 
   useEffect(() => {
     const clearTimer = () => {
@@ -18,7 +19,7 @@ export const useIdleLock = ({ onLock }: UseIdleLockProps) => {
     const resetTimer = () => {
       clearTimer();
 
-      timerRef.current = setTimeout(() => onLock(), IDLE_TIMEOUT_MS);
+      timerRef.current = setTimeout(() => onIdle(), IDLE_TIMEOUT_MS);
     };
 
     resetTimer();
