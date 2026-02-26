@@ -78,6 +78,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
 
   const handleRemove = () => {
     update();
+    setShowPassword(false);
     reset();
   };
 
@@ -161,7 +162,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
               <div className="relative">
                 <Input
                   {...field}
-                  autoComplete="current-password"
+                  autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
                   disabled={!selectedRecordId || isSubmitting}
@@ -172,8 +173,10 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
                 <div className="absolute inset-y-0 right-0 flex items-center">
                   <button
                     type="button"
-                    className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                    className="flex items-center px-2 text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
+                    disabled={!selectedRecordId || isSubmitting}
                     onClick={() => setShowPassword((prev) => !prev)}
+                    aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     <HugeiconsIcon icon={showPassword ? ViewOffIcon : ViewIcon} size={14} />
