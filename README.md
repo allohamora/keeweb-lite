@@ -18,7 +18,7 @@ To enable Google Drive integration, you need a Google Cloud project with OAuth 2
 1. Go to **APIs & Services → OAuth consent screen**.
 2. Set **User type** to **External**.
 3. Fill in the app name and required fields.
-4. Go to **Data Access → Add or remove scopes** and add: `https://www.googleapis.com/auth/drive.file`.
+4. Go to **Data Access → Add or remove scopes** and add: `https://www.googleapis.com/auth/drive`.
 5. Add your email as a **test user** while publishing status is **Testing**.
 
 ### 3. Create OAuth 2.0 Credentials

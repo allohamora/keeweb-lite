@@ -202,6 +202,37 @@ describe('session.service', () => {
       await expect(syncForSession({ database, record })).rejects.toThrow();
     });
 
+    it('syncs a key-file-protected Google Drive record successfully', async () => {
+      const { encryptedBytes, keyFileHashBase64, password } = await createDatabase({
+        keyFileContent: 'test-key-file-content',
+      });
+
+      const keyFileHashBytes = keyFileHashBase64 ? kdbx.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyFileHashBytes);
+      await credentials.ready;
+      const database = await kdbx.Kdbx.load(encryptedBytes.buffer as ArrayBuffer, credentials);
+
+      const record = await createRecord({
+        id: 'gd-keyfile-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+        key: keyFileHashBase64 ? { hash: keyFileHashBase64, name: 'key.keyx' } : undefined,
+      });
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+
+      const result = await syncForSession({ database, record });
+
+      expect(result.database).toBeDefined();
+      expect(result.record.id).toBe('gd-keyfile-record');
+
+      const records = await getRecords();
+      const updated = records.find(({ id }) => id === 'gd-keyfile-record');
+      expect(updated?.kdbx.encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(result.record.kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
+    });
+
     it('accumulates mutations from both concurrent calls in the final merged result', async () => {
       const creds = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
       await creds.ready;
