@@ -71,19 +71,19 @@ export const GoogleDriveFilePicker = ({
         type="button"
         variant="outline"
         aria-invalid={ariaInvalid}
-        className="h-8 w-full justify-start px-2.5 py-1 text-xs font-normal"
+        className="h-9 w-full justify-start px-2.5 py-1 text-xs font-normal sm:h-8"
         onClick={() => setIsOpen(true)}
       >
         {`Choose file ${value?.name ?? 'No file chosen'}`}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Select a file</DialogTitle>
           </DialogHeader>
 
-          <div className="flex items-center gap-1 text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-1 text-muted-foreground">
             {folderStack.map((folder, index) => (
               <span key={folder.id} className="flex items-center gap-1">
                 {index > 0 && <span>/</span>}
@@ -101,7 +101,7 @@ export const GoogleDriveFilePicker = ({
             ))}
           </div>
 
-          <div className="max-h-72 space-y-0.5 overflow-y-auto">
+          <div className="max-h-[calc(100dvh-12rem)] space-y-0.5 overflow-y-auto sm:max-h-72">
             {state.loading && <p className="py-4 text-center text-muted-foreground">Loading...</p>}
             {!state.loading && error && <p className="py-4 text-center text-destructive">{error}</p>}
             {!state.loading && hasLoadedItems && !error && items.length === 0 && (

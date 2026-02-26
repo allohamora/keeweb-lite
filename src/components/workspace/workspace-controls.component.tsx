@@ -71,9 +71,9 @@ export const WorkspaceControls = ({
   };
 
   return (
-    <header className="flex min-h-8 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
+    <header className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
       <div className="min-w-0 text-[11px] text-muted-foreground">
-        <p className="flex items-center gap-1.5 whitespace-nowrap">
+        <p className="flex flex-wrap items-center gap-1.5">
           <span className="min-w-0 truncate font-medium text-foreground">
             {recordName} ({recordType})
           </span>
@@ -103,7 +103,7 @@ export const WorkspaceControls = ({
           )}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         <Button
           aria-label="Download database"
           className="h-6 px-1.5 text-[11px]"

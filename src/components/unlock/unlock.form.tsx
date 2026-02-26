@@ -189,13 +189,12 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
         )}
       />
 
-      <div className="flex items-center justify-between pt-3">
+      <div className="flex items-center justify-between gap-2 pt-3">
         <RecordRemove
           recordId={selectedRecordId}
           disabled={!selectedRecordId || isSubmitting}
           onRemove={handleRemove}
         />
-
         <Button
           className="ml-auto h-8 px-4 text-xs"
           disabled={!selectedRecordId || isSubmitting}

@@ -42,6 +42,16 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
 6. Footer bar
    - Shows opened-record context and quick actions related to workspace/session behavior.
 
+## Mobile Layout (`<=768px`)
+
+- Workspace switches to a single-pane flow on mobile:
+  - default pane is `Entry list`
+  - selecting an entry opens `Entry details`
+  - `Back to list` action in details returns to list pane
+- Left menu pane is hidden by default and opened through a menu button in the list header.
+- Mobile menu is shown in an overlay drawer and closes after filter/tag/group selection.
+- Top status bar actions (`Download`, `Lock`, and Drive sync status) remain visible and usable without horizontal clipping.
+
 ## State Model
 
 View states:
@@ -160,6 +170,8 @@ View-state transitions:
 8. Temporary panel flows can open and close without breaking main workspace state.
 9. Lock/close session returns user to Unlock and clears unlocked runtime session data.
 10. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
+11. At viewport width `<=768px`, list pane is default, selecting an entry transitions to details pane, details pane includes a back action returning to list pane, and menu button opens a drawer where selecting a navigation item closes it.
+12. At viewport width `>768px`, three-pane desktop layout (menu, list, details) remains available.
 
 ## Out of Scope
 

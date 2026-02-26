@@ -61,7 +61,7 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Create Google Drive Record</DialogTitle>
           <DialogDescription>
@@ -70,7 +70,7 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
         </DialogHeader>
 
         <form
-          className="space-y-3"
+          className="max-h-[calc(100dvh-12rem)] space-y-3 overflow-y-auto pr-1"
           onSubmit={(event) => {
             void handleCreateRecordSubmit(event);
           }}
