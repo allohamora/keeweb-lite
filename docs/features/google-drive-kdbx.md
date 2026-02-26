@@ -25,6 +25,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Drive file selection implementation:
   - must use Drive REST `files.list` for folder/file discovery
   - must not use Google Drive Picker API because its UX is not acceptable for this app
+  - with `drive.file` scope, browser only shows app-visible files (for example files created by app or explicitly granted to app context)
 - Save/sync flow:
   - save pipeline writes to IndexedDB only (fast, no Drive calls during save)
   - sync runs as a background job after unlock and after each save
@@ -69,8 +70,8 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 ## Security and Privacy
 
-- Use scope `https://www.googleapis.com/auth/drive` (full Drive access).
-  - `drive.file` scope is incompatible with listing pre-existing KDBX files in arbitrary Drive folders because it only exposes files created or explicitly opened through the app.
+- Use scope `https://www.googleapis.com/auth/drive.file`.
+- `drive.file` limits listing/open/update to app-visible files; arbitrary pre-existing KDBX files across all folders are not guaranteed to be visible.
 - Do not use Google Drive Picker API; provide file/folder selection with custom UI backed by Drive `files.list`.
 - Do not log OAuth tokens or plaintext secrets.
 - Persist only minimum metadata required for reopen/sync.

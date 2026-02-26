@@ -9,7 +9,7 @@ const createSuccessTokenResponse = (accessToken: string): google.accounts.oauth2
     expires_in: '3600',
     hd: '',
     prompt: 'select_account',
-    scope: 'https://www.googleapis.com/auth/drive',
+    scope: 'https://www.googleapis.com/auth/drive.file',
     state: '',
     token_type: 'Bearer',
   };

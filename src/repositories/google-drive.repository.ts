@@ -18,7 +18,7 @@ class Auth {
     // without storing them, so we can just create a new instance
     const client = google.accounts.oauth2.initTokenClient({
       client_id: PUBLIC_GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive',
+      scope: 'https://www.googleapis.com/auth/drive.file',
       prompt: 'select_account',
       callback: (res) => {
         resolve(res);

@@ -63,7 +63,7 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
         <DialogHeader>
           <DialogTitle>Create Google Drive Record</DialogTitle>
           <DialogDescription>
-            Browse your Google Drive and select a .kdbx file. The new record becomes selected immediately.
+            Select a .kdbx file from Google Drive. The new record becomes selected immediately.
           </DialogDescription>
         </DialogHeader>
 

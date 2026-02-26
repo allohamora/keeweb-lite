@@ -159,5 +159,6 @@ src/
 - Never log secrets (passwords, key file data, decrypted values, OAuth tokens).
 - Never persist plaintext database unlock credentials (passwords, key-file bytes, decrypted values).
 - Do not use Google Drive Picker API due to poor UX for this product; use Drive `files.list` to power a custom in-app file browser UI.
-- Do not use `drive.file` scope for Drive file browsing. Use `https://www.googleapis.com/auth/drive` because `drive.file` cannot reliably list pre-existing KDBX files across user folders.
+- Use `https://www.googleapis.com/auth/drive.file` for Google Drive access.
+- With `drive.file`, file browser visibility is limited to app-visible files (for example files created by app or explicitly granted to app context); custom UI must handle empty results clearly.
 - Persist only minimum metadata needed for reopen/sync.
