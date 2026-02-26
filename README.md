@@ -2,11 +2,7 @@
 
 keeweb-lite is a lightweight, web-only password manager inspired by [KeeWeb](https://github.com/keeweb/keeweb). It stays intentionally small and practical: static app, client-side only, and focused on core vault workflows.
 
-## Screenshot
-
 ![Workspace screenshot](images/workspace.png)
-
-Main workspace view with navigation, entries, editing panel, sync status, and actions.
 
 ## Features
 
@@ -49,10 +45,11 @@ npm run format       # Prettier check
 npm run format:fix   # Prettier write
 ```
 
-## Docs
+## Resources
 
 - Feature specs: [docs/features](docs/features/)
 - Screen specs: [docs/screens](docs/screens/)
+- Screenshots: [workspace](images/workspace.png), [unlock](images/unlock.png), [workspace mobile](images/workspace-mobile.png), [unlock mobile](images/unlock-mobile.png)
 
 ## Google Drive Setup
 
