@@ -171,6 +171,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
                   <div className="relative">
                     <Input
                       {...field}
+                      autoComplete="off"
                       aria-invalid={fieldState.invalid}
                       className="h-8 pr-24 text-xs"
                       id="entry-password"

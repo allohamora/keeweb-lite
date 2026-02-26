@@ -70,6 +70,7 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
           <div className="relative">
             <Input
               value={password}
+              autoComplete="off"
               type={showPassword ? 'text' : 'password'}
               className="h-8 pr-8 font-mono text-xs disabled:cursor-default disabled:opacity-100 dark:disabled:bg-input/30"
               aria-label="Generated password"
