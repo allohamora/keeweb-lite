@@ -30,8 +30,8 @@ type EntryListProps = {
   selectedEntryUuid: kdbx.KdbxUuid | null;
   onSelectEntry: (uuid: kdbx.KdbxUuid) => void;
   onCreateEntry: () => void;
-  showMenuButton?: boolean;
-  onMenuOpen?: () => void;
+  showMenuButton: boolean;
+  onMenuOpen: () => void;
 };
 
 export const EntryList = ({

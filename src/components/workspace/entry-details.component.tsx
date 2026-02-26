@@ -12,8 +12,8 @@ type EntryDetailsProps = {
   database: kdbx.Kdbx;
   record: FileRecord;
   onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
-  showBackButton?: boolean;
-  onBack?: () => void;
+  showBackButton: boolean;
+  onBack: () => void;
 };
 
 type BackToListButtonProps = {
