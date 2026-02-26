@@ -10,6 +10,8 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - Detailed startup screen spec: [`docs/screens/unlock-screen.md`](../screens/unlock-screen.md).
 - Workspace page (KeeWeb-like render/edit layout).
 - Password generator access in workspace entry-edit context.
+- Homescreen installability for mobile browsers.
+- Detailed installability spec: [`docs/features/homescreen-install.md`](./homescreen-install.md).
 
 ## Functional Requirements
 
@@ -49,6 +51,11 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
   - top-anchored unlock layout
   - stacked action row controls
   - viewport-safe modal and file-picker scrolling
+- Mobile install behavior:
+  - app exposes PWA manifest metadata for browser-native install entry points
+  - Android install is browser menu driven
+  - iOS install is Share -> Add to Home Screen driven
+  - no custom in-app install prompt/button in this phase
 
 ## UI Requirements
 
