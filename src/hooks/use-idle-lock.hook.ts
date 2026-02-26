@@ -21,6 +21,8 @@ export const useIdleLock = ({ onLock }: UseIdleLockProps) => {
       timerRef.current = setTimeout(() => onLock(), IDLE_TIMEOUT_MS);
     };
 
+    resetTimer();
+
     for (const event of ACTIVITY_EVENTS) {
       window.addEventListener(event, resetTimer, { passive: true });
     }
