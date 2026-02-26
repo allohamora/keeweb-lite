@@ -1,5 +1,5 @@
 import { useMountedState } from 'react-use';
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { syncForSession, type UnlockSession } from '@/services/session.service';
 
 type UseSyncProps = UnlockSession & {
@@ -68,13 +68,17 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
     triggerSync();
   };
 
-  useEffect(() => {
+  const handleVersionSync = useEffectEvent(() => {
     // if an error was received, then we disable auto syncing
     if (state.error) {
       return;
     }
 
     triggerSync();
+  });
+
+  useEffect(() => {
+    handleVersionSync();
   }, [version]);
 
   return {
