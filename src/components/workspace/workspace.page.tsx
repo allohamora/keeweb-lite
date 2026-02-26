@@ -1,6 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { type UnlockSession, useSync } from '@/services/session.service';
+import { type UnlockSession } from '@/services/session.service';
 import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
@@ -9,6 +9,7 @@ import { EntryDetails } from '@/components/workspace/entry-details.component';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/utils/error.utils';
+import { useSync } from '@/hooks/use-sync.hook';
 
 type WorkspacePageProps = {
   session: UnlockSession;

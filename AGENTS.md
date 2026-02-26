@@ -72,6 +72,7 @@ src/
 ├── components/
 │   ├── ui/          # shadcn/ui primitives, wrappers, and ui-scoped custom components
 │   └── **/*.component.tsx  # Custom app components outside components/ui (non-shadcn, nested folders allowed)
+├── hooks/           # Custom React hooks
 ├── layouts/         # Astro layouts
 ├── pages/           # Astro pages
 ├── lib/             # Custom libs and third party GOF wrappers
