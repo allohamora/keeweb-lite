@@ -22,11 +22,11 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
   6. user enters password
   7. app downloads bytes and unlocks DB
 - Save/sync flow:
-  - after edits, sync to same Drive file
-  - sync error state is derived from a single `syncError: string | null` value (`null` = synced, non-null = error message)
-  - sync strategy: download remote bytes, load with local credentials, merge remote into local (`db.merge(remoteDb)`), upload merged result back to Drive
-  - single sync attempt per save cycle (no retry loop)
-- Manual `Sync` action triggers immediate sync; available only when `syncError !== null`.
+  - save pipeline writes to IndexedDB only (fast, no Drive calls during save)
+  - sync runs as a background job after unlock and after each save
+  - sync strategy: download remote bytes, load with local credentials, merge remote into local (`db.merge(remoteDb)`), upload merged result back to Drive, then update IndexedDB with merged bytes
+  - sync throws on failure; errors are shown in the sync status indicator
+- Clicking the "Sync error" status element retries sync immediately.
 - `Download` action exports current encrypted `.kdbx` bytes without changing remote sync state.
 - Repository functions:
   - `getFolderItems(folderId, extension)` — list folders and matching files in a Drive folder
@@ -38,14 +38,13 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 ## UI Requirements
 
-- Show sync state via a colored dot for Drive-backed records:
-  - green dot: last sync succeeded (`syncError === null`)
-  - red dot: last sync failed (`syncError !== null`)
-- Clicking the dot shows a toast with the sync result.
+- Show a three-state sync status element for Drive-backed records (always visible, never for local):
+  - orange dot + "Syncing": sync is in progress
+  - green dot + "Synced": last sync succeeded
+  - red dot + "Sync error": last sync failed; clicking retries sync and shows error toast
 - At top of opened DB view show:
-  - sync status dot (Drive-backed records only)
+  - sync status element (Drive-backed records only)
   - `Download` button
-  - `Sync` button (shown only when `syncError !== null` for Drive-backed records)
 
 ## Data and Storage
 
@@ -60,7 +59,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 ## Failure Handling
 
 - Expired or invalid auth token triggers a new token request popup.
-- Permission/network errors set `syncError` with the error message; sync dot turns red.
+- Permission/network errors cause sync to throw; sync status turns red "Sync error".
 - Sync failures do not overwrite the encrypted cache; the locally-stored bytes remain intact.
 - Download/export failures surface an explicit error toast.
 
@@ -75,5 +74,5 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 ## Acceptance Criteria
 
 - User can open and sync a Drive-backed `.kdbx`.
-- Manual and automatic sync both work.
-- Auth and network failures are visible via sync dot and recoverable via Sync button.
+- Background sync fires on unlock and after each save.
+- Auth and network failures are visible via "Sync error" status element and recoverable by clicking it.

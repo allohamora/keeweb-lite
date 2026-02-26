@@ -35,16 +35,10 @@ type EntryEditFormProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   record: FileRecord;
-  syncError: string | null;
-  onSave: (payload: {
-    nextDatabase: kdbx.Kdbx;
-    nextEntryUuid?: kdbx.KdbxUuid | null;
-    nextRecord: FileRecord;
-    nextSyncError: string | null;
-  }) => void;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryEditForm = ({ database, entry, record, syncError, onSave }: EntryEditFormProps) => {
+export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
   const {
     control,
     handleSubmit,
@@ -61,13 +55,7 @@ export const EntryEditForm = ({ database, entry, record, syncError, onSave }: En
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
       const entryUuid = entry.uuid.toString();
-      const result = await saveEntry({
-        database,
-        record,
-        entryUuid,
-        values,
-        syncError,
-      });
+      const result = await saveEntry({ database, record, entryUuid, values });
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
       onSave?.(result);
@@ -300,16 +288,8 @@ export const EntryEditForm = ({ database, entry, record, syncError, onSave }: En
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} syncError={syncError} onRemove={onSave} />
-            {isInTrash && (
-              <EntryRestore
-                database={database}
-                entry={entry}
-                record={record}
-                syncError={syncError}
-                onRestore={onSave}
-              />
-            )}
+            <EntryRemove database={database} entry={entry} record={record} onRemove={onSave} />
+            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={onSave} />}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}

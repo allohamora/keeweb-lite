@@ -21,16 +21,10 @@ type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   record: FileRecord;
-  syncError: string | null;
-  onRestore: (payload: {
-    nextDatabase: kdbx.Kdbx;
-    nextEntryUuid: null;
-    nextRecord: FileRecord;
-    nextSyncError: string | null;
-  }) => void;
+  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryRestore = ({ database, entry, record, syncError, onRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {
   const [isRestoring, setIsRestoring] = useState(false);
 
   const handleRestore = async () => {
@@ -38,7 +32,7 @@ export const EntryRestore = ({ database, entry, record, syncError, onRestore }: 
     try {
       const entryUuid = entry.uuid.toString();
 
-      onRestore(await restoreEntry({ database, record, entryUuid, syncError }));
+      onRestore(await restoreEntry({ database, record, entryUuid }));
 
       toast.success('Entry restored.');
     } catch (error) {

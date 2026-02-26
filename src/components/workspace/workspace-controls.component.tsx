@@ -3,37 +3,29 @@ import { cn } from '@/lib/utils';
 import { toEncryptedBytes } from '@/services/record.service';
 import type { UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
-import { useState } from 'react';
 import { toast } from 'sonner';
+
+type SyncStatus = 'synced' | 'syncing' | 'error';
 
 type WorkspaceControlsProps = {
   database: UnlockSession['database'];
   recordName: string;
   recordType: string;
-  syncError: UnlockSession['syncError'];
+  syncStatus: SyncStatus;
+  syncErrorMessage: string | null;
   onLock: () => void;
-  onSync: () => Promise<void>;
+  onSyncRetry: () => void;
 };
 
 export const WorkspaceControls = ({
   database,
   recordName,
   recordType,
-  syncError,
+  syncStatus,
+  syncErrorMessage,
   onLock,
-  onSync,
+  onSyncRetry,
 }: WorkspaceControlsProps) => {
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      await onSync();
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const download = async () => {
     const bytes = await toEncryptedBytes(database);
 
@@ -59,6 +51,15 @@ export const WorkspaceControls = ({
     }
   };
 
+  const handleSyncClick = () => {
+    if (syncStatus === 'error') {
+      toast.error(syncErrorMessage ?? 'Drive sync failed.');
+      onSyncRetry();
+    } else if (syncStatus === 'synced') {
+      toast.success('Database synced.');
+    }
+  };
+
   return (
     <header className="flex min-h-8 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
       <div className="min-w-0 text-[11px] text-muted-foreground">
@@ -68,35 +69,34 @@ export const WorkspaceControls = ({
           </span>
           {recordType !== 'local' && (
             <button
-              aria-label="Show sync status"
+              aria-label={`Sync status: ${syncStatus}`}
               className={cn(
-                'inline-block size-2 shrink-0 cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none',
-                {
-                  'bg-destructive': syncError,
-                  'bg-green-500': !syncError,
-                },
+                'flex shrink-0 cursor-pointer items-center gap-1 appearance-none border-0 bg-transparent p-0 text-[11px] text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none',
+                { 'pointer-events-none': syncStatus === 'syncing' },
               )}
-              onClick={() => (syncError ? toast.error(syncError) : toast.success('Database synced.'))}
-              title={syncError ? 'Sync failed' : 'Synced'}
+              onClick={handleSyncClick}
+              title={
+                syncStatus === 'error' ? 'Sync error — click to retry' : syncStatus === 'syncing' ? 'Syncing' : 'Synced'
+              }
               type="button"
-            />
+            >
+              <span
+                className={cn('inline-block size-2 rounded-full', {
+                  'bg-green-500': syncStatus === 'synced',
+                  'bg-orange-500': syncStatus === 'syncing',
+                  'bg-destructive': syncStatus === 'error',
+                })}
+              />
+              <span>
+                {syncStatus === 'synced' && 'Synced'}
+                {syncStatus === 'syncing' && 'Syncing'}
+                {syncStatus === 'error' && 'Sync error'}
+              </span>
+            </button>
           )}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        {syncError !== null && recordType !== 'local' && (
-          <Button
-            aria-label="Sync database"
-            className="h-6 px-1.5 text-[11px]"
-            disabled={isSyncing}
-            onClick={() => void handleSync()}
-            size="xs"
-            type="button"
-            variant="outline"
-          >
-            Sync
-          </Button>
-        )}
         <Button
           aria-label="Download database"
           className="h-6 px-1.5 text-[11px]"

@@ -1,7 +1,8 @@
 import type kdbx from '@/lib/kdbx.lib';
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useAsyncFn } from 'react-use';
 import { syncForSession, type UnlockSession } from '@/services/session.service';
-import { findEntryByUuid, createEntry, type SelectFilter } from '@/services/workspace.service';
+import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
@@ -15,11 +16,22 @@ type WorkspacePageProps = {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({ session: { database, record, syncError }, setSession }: WorkspacePageProps) => {
+export const WorkspacePage = ({ session: { database, record }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
+
+  const [{ loading: isSyncing, error: syncError }, sync] = useAsyncFn(
+    async ({ record, database }: { record: FileRecord; database: kdbx.Kdbx }) => {
+      await syncForSession({ record, database });
+    },
+  );
+
+  // Initial sync on unlock
+  useEffect(() => {
+    void sync({ record, database });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
     setSelectedEntryUuid(uuid);
@@ -34,31 +46,25 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
     nextDatabase,
     nextEntryUuid,
     nextRecord,
-    nextSyncError,
   }: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
     nextRecord: FileRecord;
-    nextSyncError: string | null;
   }) => {
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
-      return { ...previousSession, database: nextDatabase, record: nextRecord, syncError: nextSyncError };
+      return { ...previousSession, database: nextDatabase, record: nextRecord };
     });
 
     if (nextEntryUuid !== undefined) {
       setSelectedEntryUuid(nextEntryUuid);
     }
+
+    void sync({ record: nextRecord, database: nextDatabase });
   };
 
-  const handleSync = async () => {
-    try {
-      setSession(await syncForSession({ record, database }));
-    } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Database sync failed.' }));
-    }
-  };
+  const handleSyncRetry = () => void sync({ record, database });
 
   const handleLock = () => {
     setSession(null);
@@ -67,12 +73,15 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
 
   const handleCreateEntry = async () => {
     try {
-      handleSave(await createEntry({ database, record, selectFilter, syncError }));
+      handleSave(await createEntry({ database, record, selectFilter }));
       toast.success('Entry created.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
     }
   };
+
+  const syncStatus = isSyncing ? 'syncing' : syncError ? 'error' : 'synced';
+  const syncErrorMessage = syncError?.message ?? null;
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground">
@@ -80,9 +89,10 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
         database={database}
         recordName={record.kdbx.name}
         recordType={record.type}
-        syncError={syncError}
+        syncStatus={syncStatus}
+        syncErrorMessage={syncErrorMessage}
         onLock={handleLock}
-        onSync={handleSync}
+        onSyncRetry={handleSyncRetry}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <MenuPane
@@ -104,7 +114,6 @@ export const WorkspacePage = ({ session: { database, record, syncError }, setSes
           selectedEntry={selectedEntry}
           database={database}
           record={record}
-          syncError={syncError}
           onSave={handleSave}
         />
       </div>

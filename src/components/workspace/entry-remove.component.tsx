@@ -21,16 +21,14 @@ type EntryRemoveProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   record: FileRecord;
-  syncError: string | null;
   onRemove: (payload: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
     nextRecord: FileRecord;
-    nextSyncError: string | null;
   }) => void;
 };
 
-export const EntryRemove = ({ database, entry, record, syncError, onRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleRemove = async () => {
@@ -38,7 +36,7 @@ export const EntryRemove = ({ database, entry, record, syncError, onRemove }: En
     try {
       const entryUuid = entry.uuid.toString();
 
-      onRemove(await removeEntry({ database, record, entryUuid, syncError }));
+      onRemove(await removeEntry({ database, record, entryUuid }));
 
       toast.success('Entry removed.');
     } catch (error) {

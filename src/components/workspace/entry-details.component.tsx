@@ -8,16 +8,10 @@ type EntryDetailsProps = {
   selectedEntry: kdbx.KdbxEntry | null;
   database: kdbx.Kdbx;
   record: FileRecord;
-  syncError: string | null;
-  onSave: (payload: {
-    nextDatabase: kdbx.Kdbx;
-    nextEntryUuid?: kdbx.KdbxUuid | null;
-    nextRecord: FileRecord;
-    nextSyncError: string | null;
-  }) => void;
+  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryDetails = ({ className, selectedEntry, database, record, syncError, onSave }: EntryDetailsProps) => {
+export const EntryDetails = ({ className, selectedEntry, database, record, onSave }: EntryDetailsProps) => {
   if (!selectedEntry) {
     return (
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
@@ -41,7 +35,6 @@ export const EntryDetails = ({ className, selectedEntry, database, record, syncE
         database={database}
         entry={selectedEntry}
         record={record}
-        syncError={syncError}
         onSave={onSave}
       />
     </aside>

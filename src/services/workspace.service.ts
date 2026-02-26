@@ -1,5 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
-import { syncKdbx, toEncryptedBytes } from '@/services/record.service';
+import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 import { updateRecord, type FileRecord } from '@/repositories/record.repository';
 
@@ -129,7 +129,6 @@ type UpdateEntryInput = {
   record: FileRecord;
   entryUuid: string;
   values: EntryUpdateValues;
-  syncError?: string | null;
 };
 
 export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => {
@@ -165,23 +164,15 @@ const saveDatabaseLock = new Lock('workspace.service.saveDatabase');
 export const saveDatabase = async ({
   database,
   record,
-  syncError,
 }: {
   database: kdbx.Kdbx;
   record: FileRecord;
-  syncError?: string | null;
-}): Promise<{ record: FileRecord; syncError: string | null }> => {
+}): Promise<{ record: FileRecord }> => {
   return saveDatabaseLock.runInLock(async () => {
-    const { database: syncedDatabase, syncError: nextSyncError } = await syncKdbx({
-      record,
-      localDatabase: database,
-      syncError,
-    });
-
-    const encryptedBytes = await toEncryptedBytes(syncedDatabase);
+    const encryptedBytes = await toEncryptedBytes(database);
     const savedRecord = await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
 
-    return { record: savedRecord, syncError: nextSyncError };
+    return { record: savedRecord };
   });
 };
 
@@ -190,12 +181,10 @@ export const saveEntry = async ({
   record,
   entryUuid,
   values,
-  syncError,
 }: UpdateEntryInput): Promise<{
   nextDatabase: kdbx.Kdbx;
   nextEntryUuid: kdbx.KdbxUuid;
   nextRecord: FileRecord;
-  nextSyncError: string | null;
 }> => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
@@ -206,32 +195,25 @@ export const saveEntry = async ({
 
   updateEntry(nextEntry, values);
 
-  const { record: nextRecord, syncError: nextSyncError } = await saveDatabase({
-    database: nextDatabase,
-    record,
-    syncError,
-  });
+  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
 
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord, nextSyncError };
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
 
 type CreateEntryInput = {
   database: kdbx.Kdbx;
   record: FileRecord;
   selectFilter: SelectFilter;
-  syncError?: string | null;
 };
 
 export const createEntry = async ({
   database,
   record,
   selectFilter,
-  syncError,
 }: CreateEntryInput): Promise<{
   nextDatabase: kdbx.Kdbx;
   nextEntryUuid: kdbx.KdbxUuid;
   nextRecord: FileRecord;
-  nextSyncError: string | null;
 }> => {
   const nextDatabase = await cloneDatabase(database);
 
@@ -247,13 +229,9 @@ export const createEntry = async ({
     nextEntry.tags = [selectFilter];
   }
 
-  const { record: nextRecord, syncError: nextSyncError } = await saveDatabase({
-    database: nextDatabase,
-    record,
-    syncError,
-  });
+  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
 
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord, nextSyncError };
+  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
 
 export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbx.KdbxEntry): boolean => {
@@ -267,19 +245,16 @@ type RemoveEntryInput = {
   database: kdbx.Kdbx;
   record: FileRecord;
   entryUuid: string;
-  syncError?: string | null;
 };
 
 export const removeEntry = async ({
   database,
   record,
   entryUuid,
-  syncError,
 }: RemoveEntryInput): Promise<{
   nextDatabase: kdbx.Kdbx;
   nextEntryUuid: null;
   nextRecord: FileRecord;
-  nextSyncError: string | null;
 }> => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
@@ -294,25 +269,19 @@ export const removeEntry = async ({
     nextDatabase.remove(nextEntry);
   }
 
-  const { record: nextRecord, syncError: nextSyncError } = await saveDatabase({
-    database: nextDatabase,
-    record,
-    syncError,
-  });
+  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
 
-  return { nextDatabase, nextEntryUuid: null, nextRecord, nextSyncError };
+  return { nextDatabase, nextEntryUuid: null, nextRecord };
 };
 
 export const restoreEntry = async ({
   database,
   record,
   entryUuid,
-  syncError,
 }: RemoveEntryInput): Promise<{
   nextDatabase: kdbx.Kdbx;
   nextEntryUuid: null;
   nextRecord: FileRecord;
-  nextSyncError: string | null;
 }> => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
@@ -323,13 +292,9 @@ export const restoreEntry = async ({
 
   nextDatabase.move(nextEntry, nextDatabase.getDefaultGroup());
 
-  const { record: nextRecord, syncError: nextSyncError } = await saveDatabase({
-    database: nextDatabase,
-    record,
-    syncError,
-  });
+  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
 
-  return { nextDatabase, nextEntryUuid: null, nextRecord, nextSyncError };
+  return { nextDatabase, nextEntryUuid: null, nextRecord };
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {

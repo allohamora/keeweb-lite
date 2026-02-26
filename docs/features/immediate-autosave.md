@@ -24,7 +24,7 @@ Define a single save pipeline that persists every edit immediately.
 - Source-specific persistence:
   - local file-input source: update encrypted cache and latest downloadable export state
   - `local-cache` fallback mode: update encrypted cache/export state
-  - Drive-backed: sync via Drive repository, use 2-way merge on remote changes, and update runtime sync state (`syncError`)
+  - Drive-backed: save pipeline writes to IndexedDB only; Drive sync runs as a separate background job after each save
 
 ## UI Requirements
 
@@ -45,14 +45,14 @@ Define a single save pipeline that persists every edit immediately.
 - Persisted targets depend on source adapter and configuration:
   - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
   - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed sync state: maintained in runtime app state (`syncError`)
+  - Drive-backed sync state: maintained in runtime component state (loading/error from `useAsyncFn`)
 
 ## Failure Handling
 
 - Save errors keep unsaved/error indicators visible.
 - Retry path must exist (auto-retry and/or explicit user action).
 - Failed save must never be marked as successful.
-- Failed Drive sync must not overwrite the locally-stored encrypted bytes; only `syncError` is updated.
+- Failed Drive sync must not overwrite the locally-stored encrypted bytes; sync state is updated independently of the save pipeline.
 
 ## Security and Privacy
 

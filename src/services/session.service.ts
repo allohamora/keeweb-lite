@@ -1,11 +1,12 @@
 import kdbx from '@/lib/kdbx.lib';
-import { syncKdbx, toEncryptedBytes, unlockKdbx } from '@/services/record.service';
+import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { updateRecord, type FileRecord } from '@/repositories/record.repository';
+import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
+import { toEncryptedBytes, unlockKdbx } from '@/services/record.service';
 
 export type UnlockSession = {
   database: kdbx.Kdbx;
   record: FileRecord;
-  syncError: string | null;
 };
 
 export const syncForSession = async ({
@@ -14,45 +15,29 @@ export const syncForSession = async ({
 }: {
   record: FileRecord;
   database: kdbx.Kdbx;
-}): Promise<UnlockSession> => {
-  const { database: syncedDatabase, syncError } = await syncKdbx({ record, localDatabase: database });
+}): Promise<void> => {
+  if (record.type !== 'google-drive') return;
 
-  const updatedRecord = await updateRecord({
-    ...record,
-    kdbx: {
-      ...record.kdbx,
-      encryptedBytes: await toEncryptedBytes(syncedDatabase),
-    },
-  });
+  const remoteBytes = await getFile(record.source.id);
+  const remoteDatabase = await kdbx.Kdbx.load(asArrayBuffer(remoteBytes), database.credentials);
 
-  return { database: syncedDatabase, record: updatedRecord, syncError };
+  database.merge(remoteDatabase);
+  await updateFile(record.source.id, asUint8Array(await database.save()));
+
+  await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes: await toEncryptedBytes(database) } });
 };
 
 export const unlockForSession = async ({ record, password }: { record: FileRecord; password: string }) => {
-  const encryptedBytes = record.kdbx.encryptedBytes;
-  const keyFileHashBase64 = record.key?.hash;
-  const unlockedAt = new Date().toISOString();
-
-  const localDatabase = await unlockKdbx({
-    encryptedBytes,
-    keyFileHashBase64,
+  const database = await unlockKdbx({
+    encryptedBytes: record.kdbx.encryptedBytes,
+    keyFileHashBase64: record.key?.hash,
     password,
   });
 
-  const { database, syncError } = await syncKdbx({ record, localDatabase });
-
   const updatedRecord = await updateRecord({
     ...record,
-    kdbx: {
-      ...record.kdbx,
-      encryptedBytes: await toEncryptedBytes(database),
-    },
-    lastOpenedAt: unlockedAt,
+    lastOpenedAt: new Date().toISOString(),
   });
 
-  return {
-    database,
-    record: updatedRecord,
-    syncError,
-  };
+  return { database, record: updatedRecord };
 };
