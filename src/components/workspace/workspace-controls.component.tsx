@@ -79,15 +79,8 @@ export const WorkspaceControls = ({
           </span>
           {recordType !== 'local' && (
             <button
-              aria-disabled={syncStatus === 'syncing'}
               aria-label={`Sync status: ${syncStatus}`}
-              className={cn(
-                'flex shrink-0 cursor-pointer items-center gap-1 appearance-none border-0 bg-transparent p-0 text-[11px] text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none',
-                {
-                  'cursor-default opacity-70': syncStatus === 'syncing',
-                },
-              )}
-              disabled={syncStatus === 'syncing'}
+              className="flex shrink-0 cursor-pointer appearance-none items-center gap-1 border-0 bg-transparent p-0 text-[11px] text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
               onClick={handleSyncClick}
               title={
                 syncStatus === 'error' ? 'Sync error — click to retry' : syncStatus === 'syncing' ? 'Syncing' : 'Synced'
