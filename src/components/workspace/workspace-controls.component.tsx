@@ -87,7 +87,7 @@ export const WorkspaceControls = ({
                   'bg-destructive': syncStatus === 'error',
                 })}
               />
-              <span>
+              <span className="text-foreground">
                 {syncStatus === 'synced' && 'Synced'}
                 {syncStatus === 'syncing' && 'Syncing'}
                 {syncStatus === 'error' && 'Sync error'}
