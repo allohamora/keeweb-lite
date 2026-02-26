@@ -23,7 +23,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const isMobile = useMedia('(max-width: 768px)', false);
+  const isMobile = useMedia('(max-width: 768px)');
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
