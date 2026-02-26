@@ -16,6 +16,25 @@ type EntryDetailsProps = {
   onBack?: () => void;
 };
 
+type BackToListButtonProps = {
+  onBack?: () => void;
+};
+
+const BackToListButton = ({ onBack }: BackToListButtonProps) => (
+  <div className="border-b border-border p-2">
+    <Button
+      className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+      onClick={onBack}
+      size="xs"
+      type="button"
+      variant="ghost"
+    >
+      <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.5} />
+      Back to list
+    </Button>
+  </div>
+);
+
 export const EntryDetails = ({
   className,
   selectedEntry,
@@ -28,20 +47,7 @@ export const EntryDetails = ({
   if (!selectedEntry) {
     return (
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
-        {showBackButton && (
-          <div className="border-b border-border p-2">
-            <Button
-              className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
-              onClick={onBack}
-              size="xs"
-              type="button"
-              variant="ghost"
-            >
-              <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.5} />
-              Back to list
-            </Button>
-          </div>
-        )}
+        {showBackButton && <BackToListButton onBack={onBack} />}
         <div className="border-b border-border px-3 py-2">
           <p className="truncate text-xs font-medium text-foreground">Entry</p>
         </div>
@@ -54,20 +60,7 @@ export const EntryDetails = ({
 
   return (
     <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
-      {showBackButton && (
-        <div className="border-b border-border p-2">
-          <Button
-            className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
-            onClick={onBack}
-            size="xs"
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.5} />
-            Back to list
-          </Button>
-        </div>
-      )}
+      {showBackButton && <BackToListButton onBack={onBack} />}
       <div className="border-b border-border px-3 py-2">
         <p className="truncate text-xs font-medium text-foreground">Entry</p>
       </div>
