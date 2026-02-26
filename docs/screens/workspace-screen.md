@@ -170,10 +170,8 @@ View-state transitions:
 8. Temporary panel flows can open and close without breaking main workspace state.
 9. Lock/close session returns user to Unlock and clears unlocked runtime session data.
 10. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
-11. At viewport width `<=768px`, list pane is the default and selecting an entry transitions to details pane.
-12. At viewport width `<=768px`, details pane includes a back action that returns to list pane.
-13. At viewport width `<=768px`, menu button opens a menu drawer and selecting a navigation item closes it.
-14. At viewport width `>768px`, three-pane desktop layout (menu, list, details) remains available.
+11. At viewport width `<=768px`, list pane is default, selecting an entry transitions to details pane, details pane includes a back action returning to list pane, and menu button opens a drawer where selecting a navigation item closes it.
+12. At viewport width `>768px`, three-pane desktop layout (menu, list, details) remains available.
 
 ## Out of Scope
 
