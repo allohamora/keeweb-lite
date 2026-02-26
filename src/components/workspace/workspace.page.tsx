@@ -1,6 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
-import { useAsyncFn } from 'react-use';
+import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useAsync } from 'react-use';
 import { syncForSession, type UnlockSession } from '@/services/session.service';
 import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
@@ -16,23 +16,34 @@ type WorkspacePageProps = {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({ session: { database, record }, setSession }: WorkspacePageProps) => {
+export const WorkspacePage = ({ session: { database, record, version }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
-  const [{ loading: isSyncing, error: syncError }, sync] = useAsyncFn(
-    async ({ record, database }: { record: FileRecord; database: kdbx.Kdbx }) => {
-      setSession(await syncForSession({ record, database }));
-    },
-    [setSession],
-  );
+  const { loading: isSyncing, error: syncError } = useAsync(async () => {
+    if (record.type === 'local') {
+      return;
+    }
 
-  // Initial sync on unlock
-  useEffect(() => {
-    void sync({ record, database });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const syncedSession = await syncForSession({ record, database });
+
+    setSession((previousSession) => {
+      if (!previousSession) {
+        return previousSession;
+      }
+
+      if (previousSession.version !== version) {
+        return previousSession;
+      }
+
+      return {
+        ...syncedSession,
+        version,
+      };
+    });
+  }, [version]);
 
   const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
     setSelectedEntryUuid(uuid);
@@ -55,17 +66,28 @@ export const WorkspacePage = ({ session: { database, record }, setSession }: Wor
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
-      return { ...previousSession, database: nextDatabase, record: nextRecord };
+      return {
+        ...previousSession,
+        database: nextDatabase,
+        record: nextRecord,
+        version: previousSession.version + 1,
+      };
     });
 
     if (nextEntryUuid !== undefined) {
       setSelectedEntryUuid(nextEntryUuid);
     }
-
-    void sync({ record: nextRecord, database: nextDatabase });
   };
 
-  const handleSyncRetry = () => void sync({ record, database });
+  const handleSyncRetry = () => {
+    setSession((previousSession) => {
+      if (!previousSession || previousSession.record.type === 'local') {
+        return previousSession;
+      }
+
+      return { ...previousSession, version: previousSession.version + 1 };
+    });
+  };
 
   const handleLock = () => {
     setSession(null);

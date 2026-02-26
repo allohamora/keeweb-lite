@@ -41,6 +41,7 @@ Use these canonical terms consistently across feature specs.
     - selected/open record context
     - entered password and raw key bytes during unlock lifecycle
     - save queue/transient UI state
+    - session sync trigger version (`session.version: number`)
     - sync error string (`syncError: string | null`)
   - Must be cleared on lock/logout/close-file flows.
 

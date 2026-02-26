@@ -1,5 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../mocks/msw.mock';
 import { auth } from '@/repositories/google-drive.repository';
@@ -49,6 +49,7 @@ describe('session.service', () => {
       expect(result.record.id).toBe('test-record');
       expect(result.record.kdbx.name).toBe('vault.kdbx');
       expect(result.record.type).toBe('local');
+      expect(result.version).toBe(0);
       expect(result.database).toBeDefined();
     });
 
@@ -131,6 +132,7 @@ describe('session.service', () => {
     };
 
     it('returns unchanged session state for a local record', async () => {
+      const getAccessTokenSpy = vi.spyOn(auth, 'getAccessToken');
       const { database, encryptedBytes } = await createSyncableDatabase();
       const record = await createRecord({
         id: 'local-record',
@@ -139,9 +141,12 @@ describe('session.service', () => {
       });
 
       const result = await syncForSession({ database, record });
+      const records = await getRecords();
 
       expect(result.database).toBe(database);
       expect(result.record).toBe(record);
+      expect(records).toEqual([record]);
+      expect(getAccessTokenSpy).not.toHaveBeenCalled();
     });
 
     it('returns next session state for a Google Drive record when sync succeeds', async () => {
