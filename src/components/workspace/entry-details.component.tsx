@@ -41,7 +41,7 @@ export const EntryDetails = ({
   database,
   record,
   onSave,
-  showBackButton = false,
+  showBackButton,
   onBack,
 }: EntryDetailsProps) => {
   if (!selectedEntry) {
