@@ -1,0 +1,12 @@
+node_modules
+dist
+.astro
+.git
+.github
+__tests__
+docs
+images
+.env
+.env.production
+npm-debug.log*
+.DS_Store

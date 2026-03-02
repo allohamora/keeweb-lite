@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        PUBLIC_GOOGLE_CLIENT_ID: ${PUBLIC_GOOGLE_CLIENT_ID}
+    ports:
+      - "4321:80"
+    env_file:
+      - .env
