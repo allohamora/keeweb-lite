@@ -51,6 +51,31 @@ npm run format:fix   # Prettier write
 - Screen specs: [docs/screens](docs/screens/)
 - Screenshots: [workspace](images/workspace.png), [unlock](images/unlock.png), [workspace mobile](images/workspace-mobile.png), [unlock mobile](images/unlock-mobile.png)
 
+## Docker
+
+The Docker image builds the Astro app inside the container, then serves the static `dist/` output with Nginx.
+
+`PUBLIC_GOOGLE_CLIENT_ID` is compiled into the client bundle at build time, so changing it requires rebuilding the image.
+
+Build image:
+
+```bash
+docker build --build-arg PUBLIC_GOOGLE_CLIENT_ID=your-client-id -t keeweb-lite .
+```
+
+Run container:
+
+```bash
+docker run --rm -p 4321:80 keeweb-lite
+```
+
+Use Docker Compose:
+
+```bash
+# Set `PUBLIC_GOOGLE_CLIENT_ID` in `.env`, then run:
+docker compose up -d --build # App is available at `http://localhost:4321`.
+```
+
 ## Google Drive Setup
 
 To enable Google Drive integration, you need a Google Cloud project with OAuth 2.0 credentials.
