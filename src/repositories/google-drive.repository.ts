@@ -4,8 +4,6 @@ import { PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
-const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
-
 const lock = new Lock('google-drive.repository');
 
 class Auth {
@@ -70,39 +68,6 @@ type File = {
   id: string;
   name: string;
   modifiedTime: string;
-};
-
-type DriveFile = {
-  id: string;
-  name: string;
-  mimeType: string;
-};
-
-export type DriveItem = {
-  id: string;
-  name: string;
-  isFolder: boolean;
-};
-
-export const getFolderItems = async (folderId: string, extension: string): Promise<DriveItem[]> => {
-  const accessToken = await auth.getAccessToken();
-
-  const params = new URLSearchParams({
-    q: `"${folderId}" in parents and (mimeType = '${FOLDER_MIME_TYPE}' or name contains '.${extension}') and trashed=false`,
-    fields: 'files(id,name,mimeType)',
-    orderBy: 'folder,name',
-  });
-
-  const response = await fetch(`${DRIVE_API_BASE}/files?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to list folder: ${response.status} ${response.statusText}`);
-  }
-
-  const { files } = (await response.json()) as { files: DriveFile[] };
-  return files.map(({ id, name, mimeType }) => ({ id, name, isFolder: mimeType === FOLDER_MIME_TYPE }));
 };
 
 export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {

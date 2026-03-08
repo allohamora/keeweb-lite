@@ -4,6 +4,7 @@ services:
       context: .
       args:
         PUBLIC_GOOGLE_CLIENT_ID: ${PUBLIC_GOOGLE_CLIENT_ID}
+        PUBLIC_GOOGLE_APP_ID: ${PUBLIC_GOOGLE_APP_ID}
     ports:
       - "4321:80"
     env_file:

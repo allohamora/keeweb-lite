@@ -3,23 +3,10 @@ import { http, HttpResponse } from 'msw';
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
-type ListFolderFile = {
-  id: string;
-  mimeType: string;
-  name: string;
-};
-
 type UpdatedDriveFile = {
   id: string;
   modifiedTime: string;
   name: string;
-};
-
-export type ListFolderRequestContext = {
-  authorization: string | null;
-  extension: string | null;
-  folderId: string | null;
-  request: Request;
 };
 
 export type GetFileRequestContext = {
@@ -39,38 +26,6 @@ export type UpdateFileRequestContext = {
 };
 
 type HandlerResponse = Response | Promise<Response>;
-
-const parseFolderId = (query: string | null) => {
-  const match = query?.match(/"([^"]+)"\s+in parents/u);
-  return match?.[1] ?? null;
-};
-
-const parseExtension = (query: string | null) => {
-  const match = query?.match(/name contains '\.([^']+)'/u);
-  return match?.[1] ?? null;
-};
-
-const listFolder = {
-  mock: (resolver: (context: ListFolderRequestContext) => HandlerResponse) => {
-    return http.get(`${DRIVE_API_BASE}/files`, ({ request }) => {
-      const url = new URL(request.url);
-      const query = url.searchParams.get('q');
-
-      return resolver({
-        authorization: request.headers.get('authorization'),
-        extension: parseExtension(query),
-        folderId: parseFolderId(query),
-        request,
-      });
-    });
-  },
-  ok: ({ files = [] }: { files?: ListFolderFile[] } = {}) => {
-    return listFolder.mock(() => HttpResponse.json({ files }));
-  },
-  error: ({ status = 500, statusText = 'Internal Server Error' }: { status?: number; statusText?: string } = {}) => {
-    return listFolder.mock(() => new HttpResponse(null, { status, statusText }));
-  },
-};
 
 const getFile = {
   mock: (resolver: (context: GetFileRequestContext) => HandlerResponse) => {
@@ -129,6 +84,5 @@ const updateFile = {
 
 export const googleDriveApi = {
   getFile,
-  listFolder,
   updateFile,
 };

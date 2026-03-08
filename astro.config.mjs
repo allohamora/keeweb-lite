@@ -8,6 +8,7 @@ export default defineConfig({
   env: {
     schema: {
       PUBLIC_GOOGLE_CLIENT_ID: envField.string({ context: 'client', access: 'public' }),
+      PUBLIC_GOOGLE_APP_ID: envField.string({ context: 'client', access: 'public' }),
     },
   },
   vite: {

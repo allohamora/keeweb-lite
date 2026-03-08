@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -29,7 +30,9 @@ const driveFileSchema = z.object({
 });
 
 const createGoogleDriveModalSchema = z.object({
-  driveFile: driveFileSchema,
+  driveFile: driveFileSchema.refine((file) => file.name.toLowerCase().endsWith('.kdbx'), {
+    message: 'Only .kdbx files are supported.',
+  }),
   keyFile: z.instanceof(FileList, { message: 'Select a key file.' }).optional(),
 });
 
@@ -61,7 +64,16 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg">
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
+        onInteractOutside={(event) => {
+          // Prevent the modal from closing when interacting with the Google Picker
+          // (backdrop or dialog), since it is injected into <body> outside the modal.
+          if ((event.target as Element).closest('.picker')) {
+            event.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Create Google Drive Record</DialogTitle>
           <DialogDescription>
