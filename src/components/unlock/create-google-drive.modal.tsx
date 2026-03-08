@@ -70,9 +70,10 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
           if (event.currentTarget.dataset.state === 'closed') reset();
         }}
         onInteractOutside={(event) => {
-          // Prevent the modal from closing when interacting with the Google Picker
-          // (backdrop or dialog), since it is injected into <body> outside the modal.
-          if ((event.target as Element).closest('.picker')) {
+          // Prevent the modal from closing when interacting with the Google Picker,
+          // which is injected into <body> outside the modal. All Picker elements
+          // (backdrop, dialog, inner content) share the .picker class.
+          if (event.target instanceof Element && event.target.closest('.picker')) {
             event.preventDefault();
           }
         }}
