@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -54,7 +53,6 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
 
       onRecordCreated();
       onOpenChange(false);
-      reset();
 
       toast.success('Record created.');
     } catch (error) {
@@ -66,6 +64,11 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
+        // Reset form after the close animation finishes so the stale state
+        // isn't visible while the dialog is still animating out.
+        onAnimationEnd={(event) => {
+          if (event.currentTarget.dataset.state === 'closed') reset();
+        }}
         onInteractOutside={(event) => {
           // Prevent the modal from closing when interacting with the Google Picker
           // (backdrop or dialog), since it is injected into <body> outside the modal.

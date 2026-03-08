@@ -52,7 +52,6 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
 
       onRecordCreated();
       onOpenChange(false);
-      reset();
 
       toast.success('Record created.');
     } catch (error) {
@@ -62,7 +61,14 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg">
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
+        // Reset form after the close animation finishes so the stale state
+        // isn't visible while the dialog is still animating out.
+        onAnimationEnd={(event) => {
+          if (event.currentTarget.dataset.state === 'closed') reset();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Create File Record</DialogTitle>
           <DialogDescription>
