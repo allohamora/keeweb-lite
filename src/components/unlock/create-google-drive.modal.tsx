@@ -29,7 +29,9 @@ const driveFileSchema = z.object({
 });
 
 const createGoogleDriveModalSchema = z.object({
-  driveFile: driveFileSchema,
+  driveFile: driveFileSchema.refine((file) => file.name.toLowerCase().endsWith('.kdbx'), {
+    message: 'Only .kdbx files are supported.',
+  }),
   keyFile: z.instanceof(FileList, { message: 'Select a key file.' }).optional(),
 });
 
@@ -51,7 +53,6 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
 
       onRecordCreated();
       onOpenChange(false);
-      reset();
 
       toast.success('Record created.');
     } catch (error) {
@@ -61,7 +62,22 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg">
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
+        // Reset form after the close animation finishes so the stale state
+        // isn't visible while the dialog is still animating out.
+        onAnimationEnd={(event) => {
+          if (event.currentTarget.dataset.state === 'closed') reset();
+        }}
+        onInteractOutside={(event) => {
+          // Prevent the modal from closing when interacting with the Google Picker,
+          // which is injected into <body> outside the modal. All Picker elements
+          // (backdrop, dialog, inner content) share the .picker class.
+          if (event.target instanceof Element && event.target.closest('.picker')) {
+            event.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Create Google Drive Record</DialogTitle>
           <DialogDescription>

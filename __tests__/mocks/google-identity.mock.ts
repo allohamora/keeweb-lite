@@ -36,7 +36,7 @@ const setGoogleIdentityMock = (callback: (config: google.accounts.oauth2.TokenCl
         initTokenClient,
       } as unknown as typeof google.accounts.oauth2,
     } as unknown as typeof google.accounts,
-  };
+  } as unknown as typeof google;
 
   return { initTokenClient, requestAccessToken };
 };

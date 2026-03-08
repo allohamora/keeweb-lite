@@ -55,12 +55,15 @@ npm run format:fix   # Prettier write
 
 The Docker image builds the Astro app inside the container, then serves the static `dist/` output with Nginx.
 
-`PUBLIC_GOOGLE_CLIENT_ID` is compiled into the client bundle at build time, so changing it requires rebuilding the image.
+`PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` are compiled into the client bundle at build time, so changing them requires rebuilding the image.
 
 Build image:
 
 ```bash
-docker build --build-arg PUBLIC_GOOGLE_CLIENT_ID=your-client-id -t keeweb-lite .
+docker build \
+  --build-arg PUBLIC_GOOGLE_CLIENT_ID=your-client-id \
+  --build-arg PUBLIC_GOOGLE_APP_ID=your-project-number \
+  -t keeweb-lite .
 ```
 
 Run container:
@@ -72,7 +75,7 @@ docker run --rm -p 4321:80 keeweb-lite
 Use Docker Compose:
 
 ```bash
-# Set `PUBLIC_GOOGLE_CLIENT_ID` in `.env`, then run:
+# Set `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` in `.env`, then run:
 docker compose up -d --build # App is available at `http://localhost:4321`.
 ```
 
@@ -84,6 +87,7 @@ To enable Google Drive integration, you need a Google Cloud project with OAuth 2
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com) and create a project.
 2. In **APIs & Services -> Library**, enable **Google Drive API**.
+3. In **APIs & Services -> Library**, enable **Google Picker API**.
 
 ### 2. Configure OAuth Consent Screen
 
@@ -104,6 +108,18 @@ To enable Google Drive integration, you need a Google Cloud project with OAuth 2
 
 ```env
 PUBLIC_GOOGLE_CLIENT_ID=your-client-id
+```
+
+### 4. Get the Project Number
+
+The Google Drive Picker requires your Cloud project number (not the project ID string).
+
+1. Go to **IAM & Admin -> Settings** (or the home dashboard).
+2. Copy the **Project number** (numeric value).
+3. Add it to `.env`:
+
+```env
+PUBLIC_GOOGLE_APP_ID=your-project-number
 ```
 
 ## License

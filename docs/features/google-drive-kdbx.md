@@ -16,16 +16,14 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Open flow:
   1. user starts Drive open
   2. app performs GIS implicit token flow (`google.accounts.oauth2.initTokenClient` + `requestAccessToken`, `prompt: 'select_account'`)
-  3. app calls Drive `files.list` to populate a custom in-app folder browser (no Google Drive Picker API)
-  4. user browses My Drive root and subfolders via folder browser
-  5. user selects `.kdbx` file from the folder browser
-  6. user optionally selects key file from local file input (loaded into memory)
-  7. user enters password
-  8. app downloads bytes and unlocks DB
+  3. app opens official Google Drive Picker pre-authorized with the OAuth token
+  4. user selects `.kdbx` file from the Picker
+  5. user optionally selects key file from local file input (loaded into memory)
+  6. user enters password
+  7. app downloads bytes and unlocks DB
 - Drive file selection implementation:
-  - must use Drive REST `files.list` for folder/file discovery
-  - must not use Google Drive Picker API because its UX is not acceptable for this app
-  - with `drive.file` scope, browser only shows app-visible files (for example files created by app or explicitly granted to app context)
+  - uses the official Google Drive Picker API (`gapi` + `google.picker.PickerBuilder`)
+  - with `drive.file` scope, picker only shows app-visible files (for example files created by app or explicitly granted to app context)
 - Save/sync flow:
   - save pipeline writes to IndexedDB only (fast, no Drive calls during save)
   - sync runs as a background job after unlock and after each save
@@ -34,12 +32,9 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - Clicking the "Sync error" status element retries sync immediately.
 - `Download` action exports current encrypted `.kdbx` bytes without changing remote sync state.
 - Repository functions:
-  - `getFolderItems(folderId, extension)` — list folders and matching files in a Drive folder
   - `getFile(fileId)` — download file bytes
   - `updateFile(fileId, data)` — upload updated file bytes
   - `auth.clearAccessToken()` — clear the cached access token
-- Listing supports:
-  - My Drive root (`id: 'root'`) with recursive subfolder navigation
 
 ## UI Requirements
 
@@ -71,8 +66,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 ## Security and Privacy
 
 - Use scope `https://www.googleapis.com/auth/drive.file`.
-- `drive.file` limits listing/open/update to app-visible files; arbitrary pre-existing KDBX files across all folders are not guaranteed to be visible.
-- Do not use Google Drive Picker API; provide file/folder selection with custom UI backed by Drive `files.list`.
+- `drive.file` limits picker/open/update to app-visible files; arbitrary pre-existing KDBX files across all folders are not guaranteed to be visible.
 - Do not log OAuth tokens or plaintext secrets.
 - Persist only minimum metadata required for reopen/sync.
 - `auth.clearAccessToken()` clears the in-memory token cache; token revocation is best effort.

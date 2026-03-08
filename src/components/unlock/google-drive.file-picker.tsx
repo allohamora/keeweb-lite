@@ -1,24 +1,14 @@
-import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useAsyncFn } from 'react-use';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { File01Icon, Folder01Icon } from '@hugeicons/core-free-icons';
+import { PUBLIC_GOOGLE_APP_ID } from 'astro:env/client';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
-import { getFolderItems, type DriveItem } from '@/repositories/google-drive.repository';
+import { auth } from '@/repositories/google-drive.repository';
 import { getErrorMessage } from '@/utils/error.utils';
 
 export type DriveFile = {
   id: string;
   name: string;
 };
-
-type FolderEntry = {
-  id: string;
-  name: string;
-};
-
-const ROOT: FolderEntry = { id: 'root', name: 'My Drive' };
 
 export type GoogleDriveFilePickerProps = {
   value?: DriveFile | null;
@@ -33,117 +23,55 @@ export const GoogleDriveFilePicker = ({
   id,
   'aria-invalid': ariaInvalid,
 }: GoogleDriveFilePickerProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [folderStack, setFolderStack] = useState<FolderEntry[]>([ROOT]);
+  const [{ loading: isLoading }, openPicker] = useAsyncFn(async () => {
+    try {
+      const token = await auth.getAccessToken();
 
-  const currentFolder = folderStack.at(-1) ?? ROOT;
+      await new Promise<void>((resolve) => gapi.load('picker', resolve));
 
-  const [state, fetchFolderItems] = useAsyncFn(async (folderId: string) => getFolderItems(folderId, 'kdbx'), []);
+      const view = new google.picker.DocsView();
+      view.setQuery('.kdbx');
+      view.setMimeTypes('application/octet-stream');
+      view.setMode(google.picker.DocsViewMode.LIST);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    void fetchFolderItems(currentFolder.id);
-  }, [isOpen, currentFolder.id, fetchFolderItems]);
+      const picker = new google.picker.PickerBuilder()
+        .setOAuthToken(token)
+        .setAppId(PUBLIC_GOOGLE_APP_ID)
+        .addView(view)
+        .hideTitleBar()
+        .setSelectableMimeTypes('application/octet-stream')
+        .setCallback((data) => {
+          switch (data.action) {
+            case google.picker.Action.PICKED: {
+              const [doc] = data.docs ?? [];
+              if (doc && doc.id && doc.name) {
+                onChange({ id: doc.id, name: doc.name });
+              }
+              break;
+            }
+          }
+        })
+        .build();
 
-  const handleFolderClick = (item: DriveItem) => {
-    setFolderStack((prev) => [...prev, { id: item.id, name: item.name }]);
-  };
-
-  const handleFileClick = (item: DriveItem) => {
-    onChange({ id: item.id, name: item.name });
-    setIsOpen(false);
-  };
-
-  const handleBreadcrumbClick = (index: number) => {
-    setFolderStack((prev) => prev.slice(0, index + 1));
-  };
-
-  const items = state.value ?? [];
-  const folders = items.filter((item) => item.isFolder);
-  const files = items.filter((item) => !item.isFolder);
-  const hasLoadedItems = state.value !== undefined;
-  const error = state.error ? getErrorMessage({ error: state.error, fallback: 'Failed to load Drive files.' }) : null;
+      picker.setVisible(true);
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'File picker open failed.' }));
+    }
+  });
 
   return (
-    <>
-      <Button
-        id={id}
-        type="button"
-        variant="outline"
-        aria-invalid={ariaInvalid}
-        className="h-9 w-full justify-start px-2.5 py-1 text-xs font-normal sm:h-8"
-        onClick={() => setIsOpen(true)}
-      >
-        {`Choose file ${value?.name ?? 'No file chosen'}`}
-      </Button>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Select a file</DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-wrap items-center gap-1 text-muted-foreground">
-            {folderStack.map((folder, index) => (
-              <span key={folder.id} className="flex items-center gap-1">
-                {index > 0 && <span>/</span>}
-                <button
-                  type="button"
-                  className={cn(
-                    'hover:text-foreground',
-                    index === folderStack.length - 1 && 'pointer-events-none font-medium text-foreground',
-                  )}
-                  onClick={() => handleBreadcrumbClick(index)}
-                >
-                  {folder.name}
-                </button>
-              </span>
-            ))}
-          </div>
-
-          <div className="max-h-[calc(100dvh-12rem)] space-y-0.5 overflow-y-auto sm:max-h-72">
-            {state.loading && <p className="py-4 text-center text-muted-foreground">Loading...</p>}
-            {!state.loading && error && <p className="py-4 text-center text-destructive">{error}</p>}
-            {!state.loading && hasLoadedItems && !error && items.length === 0 && (
-              <p className="py-4 text-center text-muted-foreground">No files found.</p>
-            )}
-            {!state.loading && !error && (
-              <>
-                {folders.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-muted"
-                    onClick={() => handleFolderClick(item)}
-                  >
-                    <HugeiconsIcon
-                      icon={Folder01Icon}
-                      strokeWidth={2}
-                      className="size-3.5 shrink-0 text-muted-foreground"
-                    />
-                    {item.name}
-                  </button>
-                ))}
-                {files.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-muted"
-                    onClick={() => handleFileClick(item)}
-                  >
-                    <HugeiconsIcon
-                      icon={File01Icon}
-                      strokeWidth={2}
-                      className="size-3.5 shrink-0 text-muted-foreground"
-                    />
-                    {item.name}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    <Button
+      id={id}
+      type="button"
+      variant="outline"
+      aria-invalid={ariaInvalid}
+      className="h-9 w-full justify-start px-2.5 py-1 text-xs font-normal sm:h-8"
+      disabled={isLoading}
+      onClick={() => {
+        void openPicker();
+      }}
+    >
+      {`Choose file ${value?.name ?? 'No file chosen'}`}
+    </Button>
   );
 };

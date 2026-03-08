@@ -128,4 +128,11 @@
   html {
     @apply font-sans;
   }
+
+  /* Radix react-remove-scroll sets pointer-events: none on DOM siblings outside the modal,
+     which blocks interaction with the Google Picker injected into <body>.
+     All Picker elements (backdrop, dialog, inner content) share the .picker class. */
+  .picker {
+    pointer-events: auto !important;
+  }
 }

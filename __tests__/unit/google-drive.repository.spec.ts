@@ -2,13 +2,12 @@ import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   type GetFileRequestContext,
-  type ListFolderRequestContext,
   type UpdateFileRequestContext,
   googleDriveApi,
 } from '../mocks/google-drive.repository.mock';
 import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '../mocks/google-identity.mock';
 import { mockServer } from '../mocks/msw.mock';
-import { auth, getFolderItems, getFile, updateFile } from '@/repositories/google-drive.repository';
+import { auth, getFile, updateFile } from '@/repositories/google-drive.repository';
 
 describe('google-drive.repository', () => {
   afterEach(async () => {
@@ -74,50 +73,6 @@ describe('google-drive.repository', () => {
         const token2 = await auth.getAccessToken();
         expect(token2).toBe('fresh-token');
       });
-    });
-  });
-
-  describe('getFolderItems', () => {
-    it('returns mapped DriveItems with isFolder correctly set', async () => {
-      const files = [
-        { id: 'folder-1', mimeType: 'application/vnd.google-apps.folder', name: 'Vaults' },
-        { id: 'file-1', mimeType: 'application/octet-stream', name: 'vault.kdbx' },
-      ];
-      mockServer.addHandlers(googleDriveApi.listFolder.ok({ files }));
-
-      const items = await getFolderItems('root-id', 'kdbx');
-
-      expect(items).toEqual([
-        { id: 'folder-1', name: 'Vaults', isFolder: true },
-        { id: 'file-1', name: 'vault.kdbx', isFolder: false },
-      ]);
-    });
-
-    it('sends the correct folderId and extension in the query', async () => {
-      const resolver = vi.fn((_: ListFolderRequestContext) => HttpResponse.json({ files: [] }));
-      mockServer.addHandlers(googleDriveApi.listFolder.mock(resolver));
-
-      await getFolderItems('folder-abc', 'kdbx');
-
-      const context = resolver.mock.calls[0]?.[0];
-      expect(context?.folderId).toBe('folder-abc');
-      expect(context?.extension).toBe('kdbx');
-    });
-
-    it('sends the Authorization header with the access token', async () => {
-      const resolver = vi.fn((_: ListFolderRequestContext) => HttpResponse.json({ files: [] }));
-      mockServer.addHandlers(googleDriveApi.listFolder.mock(resolver));
-
-      await getFolderItems('folder-abc', 'kdbx');
-
-      const context = resolver.mock.calls[0]?.[0];
-      expect(context?.authorization).toBe('Bearer test');
-    });
-
-    it('throws when the API returns an error response', async () => {
-      mockServer.addHandlers(googleDriveApi.listFolder.error({ status: 403, statusText: 'Forbidden' }));
-
-      await expect(getFolderItems('folder-abc', 'kdbx')).rejects.toThrow('Failed to list folder: 403 Forbidden');
     });
   });
 
