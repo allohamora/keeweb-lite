@@ -45,7 +45,8 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 - Unlock layout is top-anchored and scrollable on mobile instead of vertically centered.
 - Header actions and form action rows wrap/stack to keep controls reachable with on-screen keyboard.
 - Unlock and remove actions remain full-width touch targets in mobile layout.
-- Create-record dialogs and Drive file picker use viewport-aware max-height with internal scrolling to prevent clipped controls.
+- Create-record dialogs use viewport-aware max-height with internal scrolling to prevent clipped controls.
+- Google Picker remains actionable when opened above the Google Drive create dialog.
 
 ## State Model
 
@@ -215,7 +216,7 @@ Unlock-success runtime state contract:
 12. Optional key-file path is supported for both record types.
 13. Accessibility requirements pass for keyboard flow, focus order, and `aria-live` status updates.
 14. At viewport width `<=768px`, unlock controls remain visible and usable while virtual keyboard is open.
-15. At viewport width `<=768px`, create local/drive dialogs and Drive file picker remain scrollable and actionable without clipped footers.
+15. At viewport width `<=768px`, create local/drive dialogs remain scrollable without clipped footers, and the Google Picker remains actionable when opened from the Drive dialog.
 
 ## Out of Scope
 

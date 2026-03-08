@@ -87,6 +87,7 @@ To enable Google Drive integration, you need a Google Cloud project with OAuth 2
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com) and create a project.
 2. In **APIs & Services -> Library**, enable **Google Drive API**.
+3. In **APIs & Services -> Library**, enable **Google Picker API**.
 
 ### 2. Configure OAuth Consent Screen
 
