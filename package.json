@@ -94,6 +94,14 @@
     "*.{js,cjs,mjs,json,yml,md}": "prettier --write",
     "*.{css,ts,tsx,astro}": "stylelint --fix"
   },
+  "overrides": {
+    "path-to-regexp": ">=8.4.0",
+    "@xmldom/xmldom": "^0.8.12",
+    "yaml": ">=2.8.3",
+    "babel-plugin-macros": {
+      "cosmiconfig": "^8.3.6"
+    }
+  },
   "engines": {
     "node": ">=v24.13.0",
     "npm": ">=11.9.0"
