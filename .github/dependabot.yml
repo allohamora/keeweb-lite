@@ -7,7 +7,7 @@ updates:
       day: "monday"
     open-pull-requests-limit: 10
     cooldown:
-      min-release-age: "3 days"
+      default-days: 3
 
   - package-ecosystem: npm
     directory: "/"
