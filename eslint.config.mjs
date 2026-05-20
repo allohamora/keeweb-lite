@@ -34,6 +34,7 @@ export default defineConfig(
       },
       tailwindcss: {
         config: join(import.meta.dirname, 'src', 'styles', 'global.css'),
+        whitelist: ['toaster', 'cn-toast'],
       },
     },
     rules: {
@@ -46,7 +47,7 @@ export default defineConfig(
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-misused-promises': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-deprecated': 'error',
       'react/no-unknown-property': ['error', { ignore: ['class', 'set:html', 'is:inline', 'define:vars'] }],
       'react-hooks/set-state-in-effect': 'warn',
