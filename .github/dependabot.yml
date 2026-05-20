@@ -15,5 +15,3 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 0
-    cooldown:
-      min-release-age: "3 days"
