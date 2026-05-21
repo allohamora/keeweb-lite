@@ -45,8 +45,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.6",
-    "@astrojs/react": "^4.4.2",
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/react": "^5.0.5",
     "@commitlint/cli": "^20.4.1",
     "@commitlint/config-conventional": "^20.4.1",
     "@eslint/js": "^9.39.2",
@@ -60,10 +60,10 @@
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "argon2": "^0.44.0",
-    "astro": "^5.18.1",
+    "astro": "^6.3.3",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-astro": "^1.5.0",
+    "eslint-plugin-astro": "^1.7.0",
     "eslint-plugin-beautiful-sort": "^3.0.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-prettier": "^5.5.5",
