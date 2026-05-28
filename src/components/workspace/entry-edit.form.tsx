@@ -5,7 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Copy01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
+import { Copy01Icon, LinkSquare02Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
@@ -81,6 +81,29 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
       .writeText(value)
       .then(() => toast.success(`${name} copied.`))
       .catch((error) => toast.error(getErrorMessage({ error, fallback: `${name} copy failed.` })));
+  };
+
+  const openUrl = (value: string) => () => {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      toast.error('URL open failed. Please enter URL and try again.');
+      return;
+    }
+
+    try {
+      const hasProtocol = /^[a-z][a-z\d+\-.]*:\/\//i.test(trimmedValue);
+      const url = new URL(hasProtocol ? trimmedValue : `https://${trimmedValue}`);
+
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        toast.error('URL open failed. Only HTTP and HTTPS URLs are supported.');
+        return;
+      }
+
+      window.open(url.toString(), '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'URL open failed.' }));
+    }
   };
 
   const tagOptions = getAllTags(database);
@@ -220,12 +243,20 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
                     <Input
                       {...field}
                       aria-invalid={fieldState.invalid}
-                      className="h-8 pr-8 text-xs"
+                      className="h-8 pr-16 text-xs"
                       id="entry-url"
                       placeholder="https://"
                       type="text"
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center">
+                      <button
+                        type="button"
+                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
+                        onClick={openUrl(field.value)}
+                        aria-label="Open URL"
+                      >
+                        <HugeiconsIcon icon={LinkSquare02Icon} size={14} />
+                      </button>
                       <button
                         type="button"
                         className="flex items-center px-2 text-muted-foreground hover:text-foreground"
