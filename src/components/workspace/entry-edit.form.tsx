@@ -92,7 +92,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
     }
 
     try {
-      const hasProtocol = trimmedValue.includes('://');
+      const hasProtocol = /^[a-z][a-z\d+\-.]*:/i.test(trimmedValue);
       const url = new URL(hasProtocol ? trimmedValue : `https://${trimmedValue}`);
 
       if (url.protocol !== 'http:' && url.protocol !== 'https:') {
