@@ -100,6 +100,7 @@ View-state transitions:
    - Clearing the search restores the full list for the current navigation context.
 4. Edit and save feedback
    - User edits selected entry fields (title, username, password, URL, tags, notes).
+   - The username field offers autocomplete suggestions drawn from other entries' usernames in the same database; free text is always allowed.
    - User clicks the Save button to persist changes.
    - On success, a confirmation notification is shown.
    - On failure, an error notification is shown with the failure reason.

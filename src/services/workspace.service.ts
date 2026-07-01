@@ -304,3 +304,11 @@ export const getAllTags = (database: RecycleAwareDatabase): string[] => {
 
   return [...new Set(normalizedTags.filter((tag) => tag.length > 0))];
 };
+
+export const getAllUsernames = (database: RecycleAwareDatabase): string[] => {
+  const { groups } = filterGroups(database);
+  const entries = groups.flatMap((group) => group.entries);
+  const usernames = entries.map((entry) => getFieldText(entry.fields.get('UserName')).trim());
+
+  return [...new Set(usernames.filter((username) => username.length > 0))];
+};

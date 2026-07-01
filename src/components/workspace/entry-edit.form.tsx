@@ -10,10 +10,24 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { InputGroupAddon, InputGroupButton } from '@/components/ui/input-group';
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompleteList,
+} from '@/components/ui/autocomplete';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getAllTags, getEntryValues, isEntryInRecycleBin, saveEntry } from '@/services/workspace.service';
+import {
+  getAllTags,
+  getAllUsernames,
+  getEntryValues,
+  isEntryInRecycleBin,
+  saveEntry,
+} from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
@@ -107,6 +121,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
   };
 
   const tagOptions = getAllTags(database);
+  const usernameOptions = getAllUsernames(database);
   const isInTrash = isEntryInRecycleBin(database, entry);
 
   return (
@@ -158,26 +173,40 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-username">Username</FieldLabel>
                 <FieldContent>
-                  <div className="relative">
-                    <Input
-                      {...field}
+                  <Autocomplete
+                    items={usernameOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    openOnInputClick
+                  >
+                    <AutocompleteInput
                       aria-invalid={fieldState.invalid}
-                      className="h-8 pr-8 text-xs"
+                      className="h-8 text-xs"
                       id="entry-username"
                       placeholder="Username"
-                      type="text"
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center">
-                      <button
-                        type="button"
-                        className="flex items-center px-2 text-muted-foreground hover:text-foreground"
-                        onClick={copy(field.value, 'Username')}
-                        aria-label="Copy username"
-                      >
-                        <HugeiconsIcon icon={Copy01Icon} size={14} />
-                      </button>
-                    </div>
-                  </div>
+                      onBlur={field.onBlur}
+                    >
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupButton
+                          size="icon-xs"
+                          variant="ghost"
+                          aria-label="Copy username"
+                          onClick={copy(field.value, 'Username')}
+                        >
+                          <HugeiconsIcon icon={Copy01Icon} size={14} />
+                        </InputGroupButton>
+                      </InputGroupAddon>
+                    </AutocompleteInput>
+                    <AutocompleteContent>
+                      <AutocompleteList>
+                        {(item: string) => (
+                          <AutocompleteItem key={item} value={item}>
+                            {item}
+                          </AutocompleteItem>
+                        )}
+                      </AutocompleteList>
+                    </AutocompleteContent>
+                  </Autocomplete>
                   <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
