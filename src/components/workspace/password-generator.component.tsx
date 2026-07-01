@@ -29,13 +29,14 @@ const passwordGeneratorSchema = z.object({
   symbols: z.boolean(),
 });
 
-type PasswordGeneratorFormValues = z.infer<typeof passwordGeneratorSchema>;
+type PasswordGeneratorFormValues = z.input<typeof passwordGeneratorSchema>;
+type PasswordGeneratorOutputValues = z.output<typeof passwordGeneratorSchema>;
 
 export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGeneratorProps) => {
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(currentPassword);
-  const { control, handleSubmit } = useForm<PasswordGeneratorFormValues>({
+  const { control, handleSubmit } = useForm<PasswordGeneratorFormValues, unknown, PasswordGeneratorOutputValues>({
     defaultValues: derivePasswordOptions(currentPassword),
     resolver: zodResolver(passwordGeneratorSchema),
     mode: 'onChange',
@@ -101,6 +102,7 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
                     id="gen-length"
                     type="text"
                     {...field}
+                    value={String(field.value ?? '')}
                     className="h-8 w-full text-xs"
                     aria-invalid={fieldState.invalid}
                   />
