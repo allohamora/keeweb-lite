@@ -97,6 +97,9 @@
   "overrides": {
     "kdbxweb": {
       "@xmldom/xmldom": "^0.8.12"
+    },
+    "@astrojs/check": {
+      "yaml": "^2.8.3"
     }
   },
   "engines": {
