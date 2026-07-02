@@ -183,6 +183,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
                       aria-invalid={fieldState.invalid}
                       className="h-8 text-xs"
                       id="entry-username"
+                      name={field.name}
                       placeholder="Username"
                       onBlur={field.onBlur}
                     >
