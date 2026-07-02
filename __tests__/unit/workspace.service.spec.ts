@@ -12,6 +12,7 @@ import {
   getAllGroups,
   isGroupSelect,
   getAllTags,
+  getAllUsernames,
   getEntriesForList,
   getEntryValues,
   getFieldText,
@@ -321,6 +322,36 @@ describe('workspace.service', () => {
       });
 
       expect(result).toEqual(['work', 'shared', 'personal']);
+    });
+  });
+
+  describe('getAllUsernames', () => {
+    it('returns unique trimmed usernames from all groups, preserving case, and excludes blank usernames', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const nested = database.createGroup(first, 'Nested');
+      const second = database.createGroup(root, 'Second');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const firstEntry = database.createEntry(first);
+      const nestedEntry = database.createEntry(nested);
+      const secondEntry = database.createEntry(second);
+      const duplicateEntry = database.createEntry(second);
+      const blankEntry = database.createEntry(second);
+      const recycleBinEntry = database.createEntry(recycleBin);
+      firstEntry.fields.set('UserName', '  Alice  ');
+      nestedEntry.fields.set('UserName', 'alice');
+      secondEntry.fields.set('UserName', 'Bob');
+      duplicateEntry.fields.set('UserName', 'Alice');
+      blankEntry.fields.set('UserName', '   ');
+      recycleBinEntry.fields.set('UserName', 'Deleted');
+
+      const result = getAllUsernames({
+        groups: [first, second, recycleBin],
+        meta: { recycleBinUuid: recycleBin.uuid },
+      });
+
+      expect(result).toEqual(['Alice', 'alice', 'Bob']);
     });
   });
 
