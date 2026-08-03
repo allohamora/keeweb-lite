@@ -60,10 +60,10 @@ export const TagSelect = ({
         menuList: () => '!flex !flex-row !flex-wrap gap-x-3 gap-y-1 px-3 py-2',
         option: ({ isSelected }) =>
           cn(
-            '!w-auto !inline-flex items-center !h-5 !rounded-sm !px-1.5 !text-[11px] !leading-none cursor-pointer',
+            'inline-flex! h-5! w-auto! cursor-pointer items-center rounded-sm! px-1.5! text-[11px]! leading-none!',
             isSelected
-              ? '!bg-primary !text-primary-foreground'
-              : '!bg-secondary !text-secondary-foreground hover:!bg-accent hover:!text-accent-foreground',
+              ? 'bg-primary! text-primary-foreground!'
+              : 'bg-secondary! text-secondary-foreground! hover:bg-accent! hover:text-accent-foreground!',
           ),
         multiValue: () =>
           'inline-flex items-center h-5 rounded-sm bg-secondary text-secondary-foreground pl-1.5 pr-0.5 gap-0.5',
