@@ -1,6 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -50,9 +50,18 @@ type EntryEditFormProps = {
   entry: kdbx.KdbxEntry;
   record: FileRecord;
   onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
+  onDirtyChange?: (isDirty: boolean) => void;
+  guardNavigation: (action: () => void) => void;
 };
 
-export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
+export const EntryEditForm = ({
+  database,
+  entry,
+  record,
+  onSave,
+  onDirtyChange,
+  guardNavigation,
+}: EntryEditFormProps) => {
   const {
     control,
     handleSubmit,
@@ -66,6 +75,10 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
       const entryUuid = entry.uuid.toString();
@@ -78,6 +91,22 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
       toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
     }
   });
+
+  const handleSave = (payload: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextRecord: FileRecord;
+  }) => {
+    reset(); // Reset the form state after remove/restore (isDirty, touched state, etc)
+    onSave?.(payload);
+  };
+
+  const handleGuardNavigation = (action: () => void) => {
+    guardNavigation(() => {
+      reset(); // Discard the current edits before running the guarded action
+      action();
+    });
+  };
 
   const handleApplyHistory = (values: EntryEditValues) => {
     for (const [field, value] of Object.entries(values)) {
@@ -350,8 +379,22 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onRemove={onSave} />
-            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={onSave} />}
+            <EntryRemove
+              database={database}
+              entry={entry}
+              record={record}
+              guardNavigation={handleGuardNavigation}
+              onRemove={handleSave}
+            />
+            {isInTrash && (
+              <EntryRestore
+                database={database}
+                entry={entry}
+                record={record}
+                guardNavigation={handleGuardNavigation}
+                onRestore={handleSave}
+              />
+            )}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}

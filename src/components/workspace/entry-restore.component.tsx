@@ -21,11 +21,13 @@ type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   record: FileRecord;
+  guardNavigation: (action: () => void) => void;
   onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, guardNavigation, onRestore }: EntryRestoreProps) => {
   const [isRestoring, setIsRestoring] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const handleRestore = async () => {
     setIsRestoring(true);
@@ -42,8 +44,17 @@ export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestor
     }
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      guardNavigation(() => setOpen(true));
+      return;
+    }
+
+    setOpen(false);
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" className="h-8 px-4 text-xs" disabled={isRestoring}>
           Restore

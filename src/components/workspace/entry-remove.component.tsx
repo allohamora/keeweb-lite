@@ -21,6 +21,7 @@ type EntryRemoveProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   record: FileRecord;
+  guardNavigation: (action: () => void) => void;
   onRemove: (payload: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
@@ -28,8 +29,9 @@ type EntryRemoveProps = {
   }) => void;
 };
 
-export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, guardNavigation, onRemove }: EntryRemoveProps) => {
   const [isRemoving, setIsRemoving] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const handleRemove = async () => {
     setIsRemoving(true);
@@ -46,8 +48,17 @@ export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemovePr
     }
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      guardNavigation(() => setOpen(true));
+      return;
+    }
+
+    setOpen(false);
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving}>
           Remove
