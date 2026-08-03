@@ -21,8 +21,8 @@ keeweb-lite is a lightweight, web-only password manager inspired by [KeeWeb](htt
 
 ## Requirements
 
-- Node.js `>= v24.13.0`
-- npm `>= 11.9.0`
+- Node.js `>= v24.14.1`
+- npm `>= 11.11.0`
 
 ## Scripts
 
