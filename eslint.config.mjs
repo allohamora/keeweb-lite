@@ -2,13 +2,11 @@
 import globals from 'globals';
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import pluginReact from 'eslint-plugin-react';
-import pluginJsxA11y from 'eslint-plugin-jsx-a11y';
 import beautifulSort from 'eslint-plugin-beautiful-sort';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import eslintPluginAstro from 'eslint-plugin-astro';
-import pluginTailwind from 'eslint-plugin-tailwindcss';
 import reactHooks from 'eslint-plugin-react-hooks';
+import eslintPluginBetterTailwindcss from 'eslint-plugin-better-tailwindcss';
 import { defineConfig } from 'eslint/config';
 import { join } from 'node:path';
 
@@ -16,12 +14,9 @@ export default defineConfig(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   ...eslintPluginAstro.configs.recommended,
-  ...pluginTailwind.configs['flat/recommended'],
-  // @ts-ignore react-plugin type issues
-  pluginReact.configs.flat.recommended,
-  pluginReact.configs.flat['jsx-runtime'],
+  // TODO: re-add eslint-plugin-react and eslint-plugin-jsx-a11y once (if) they support eslint 10
   reactHooks.configs.flat.recommended,
-  pluginJsxA11y.flatConfigs.recommended,
+  eslintPluginBetterTailwindcss.configs.recommended,
   eslintPluginPrettierRecommended,
   { ignores: ['node_modules', 'dist', '.astro'] },
   {
@@ -29,12 +24,8 @@ export default defineConfig(
     languageOptions: { globals: { ...globals.browser }, parserOptions: { project: true } },
     plugins: { 'beautiful-sort': beautifulSort },
     settings: {
-      react: {
-        version: 'detect',
-      },
-      tailwindcss: {
-        config: join(import.meta.dirname, 'src', 'styles', 'global.css'),
-        whitelist: ['toaster', 'cn-toast'],
+      'better-tailwindcss': {
+        entryPoint: join(import.meta.dirname, 'src', 'styles', 'global.css'),
       },
     },
     rules: {
@@ -49,10 +40,11 @@ export default defineConfig(
       '@typescript-eslint/no-misused-promises': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-deprecated': 'error',
-      'react/no-unknown-property': ['error', { ignore: ['class', 'set:html', 'is:inline', 'define:vars'] }],
       'react-hooks/set-state-in-effect': 'warn',
-      'jsx-a11y/click-events-have-key-events': 'warn',
-      'jsx-a11y/no-noninteractive-element-interactions': 'warn',
+
+      'better-tailwindcss/no-unknown-classes': ['error', { ignore: ['^toaster$', '^cn-toast$', '^dark$'] }],
+      'better-tailwindcss/enforce-consistent-line-wrapping': 'off',
+
       'beautiful-sort/import': [
         'error',
         { special: [], order: ['special', 'namespace', 'default', 'defaultObj', 'obj', 'none'] },

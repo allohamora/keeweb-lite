@@ -20,7 +20,7 @@ export const unlockKdbx = async ({
     return await kdbx.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
   } catch (error) {
     if (error instanceof kdbx.KdbxError && error.code === kdbx.Consts.ErrorCodes.InvalidKey) {
-      throw new Error('Invalid password or key file.');
+      throw new Error('Invalid password or key file.', { cause: error });
     }
 
     throw error;

@@ -13,7 +13,7 @@ type MenuPaneProps = {
 
 const navItemClass = (isSelected: boolean) => {
   return cn(
-    'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none',
     isSelected ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
   );
 };

@@ -65,7 +65,7 @@ export const EntryList = ({
         {showMenuButton && (
           <Button
             aria-label="Open menu"
-            className="h-7 w-7 shrink-0 rounded-sm"
+            className="size-7 shrink-0 rounded-sm"
             onClick={onMenuOpen}
             size="icon"
             type="button"
@@ -91,7 +91,7 @@ export const EntryList = ({
           <DropdownMenuTrigger asChild>
             <Button
               aria-label="Sort entries"
-              className="h-7 w-7 shrink-0 rounded-sm"
+              className="size-7 shrink-0 rounded-sm"
               size="icon"
               type="button"
               variant="outline"
@@ -111,7 +111,7 @@ export const EntryList = ({
         </DropdownMenu>
         <Button
           aria-label="Create entry"
-          className="h-7 w-7 shrink-0 rounded-sm"
+          className="size-7 shrink-0 rounded-sm"
           onClick={onCreateEntry}
           size="icon"
           type="button"
@@ -136,7 +136,7 @@ export const EntryList = ({
             return (
               <button
                 className={cn(
-                  'flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                  'flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-left transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none',
                   isSelected
                     ? 'bg-accent text-accent-foreground'
                     : 'text-foreground hover:bg-muted hover:text-foreground',
