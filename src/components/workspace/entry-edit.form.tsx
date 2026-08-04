@@ -1,6 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -33,6 +33,8 @@ import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
 import { PasswordGenerator } from '@/components/workspace/password-generator.component';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -53,6 +55,8 @@ type EntryEditFormProps = {
 };
 
 export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
+  const { setDirty, registerDiscard } = useSafeNet();
+  const { isMutating, setMutating } = useEntryMutation();
   const {
     control,
     handleSubmit,
@@ -66,7 +70,22 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    setDirty(isDirty);
+  }, [isDirty, setDirty]);
+
+  useEffect(() => {
+    return () => setDirty(false);
+  }, [setDirty]);
+
+  useEffect(() => {
+    registerDiscard(reset);
+
+    return () => registerDiscard(null);
+  }, [registerDiscard, reset]);
+
   const handleSaveSubmit = handleSubmit(async (values) => {
+    setMutating(true);
     try {
       const entryUuid = entry.uuid.toString();
       const result = await saveEntry({ database, record, entryUuid, values });
@@ -76,8 +95,19 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
       toast.success('Entry saved.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
+    } finally {
+      setMutating(false);
     }
   });
+
+  const handleSave = (payload: {
+    nextDatabase: kdbx.Kdbx;
+    nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextRecord: FileRecord;
+  }) => {
+    reset(); // Reset the form state after remove/restore (isDirty, touched state, etc)
+    onSave?.(payload);
+  };
 
   const handleApplyHistory = (values: EntryEditValues) => {
     for (const [field, value] of Object.entries(values)) {
@@ -350,10 +380,10 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onRemove={onSave} />
-            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={onSave} />}
+            <EntryRemove database={database} entry={entry} record={record} onRemove={handleSave} />
+            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={handleSave} />}
           </div>
-          <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
+          <Button className="h-8 px-4 text-xs" disabled={!isDirty || isMutating} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
         </div>

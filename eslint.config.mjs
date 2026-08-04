@@ -47,7 +47,7 @@ export default defineConfig(
 
       'beautiful-sort/import': [
         'error',
-        { special: [], order: ['special', 'namespace', 'default', 'defaultObj', 'obj', 'none'] },
+        { special: ['./mocks'], order: ['special', 'namespace', 'default', 'defaultObj', 'obj', 'none'] },
       ],
     },
   },

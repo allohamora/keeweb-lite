@@ -16,6 +16,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type EntryRemoveProps = {
   database: kdbx.Kdbx;
@@ -29,10 +31,12 @@ type EntryRemoveProps = {
 };
 
 export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {
-  const [isRemoving, setIsRemoving] = useState(false);
+  const { guardNavigation } = useSafeNet();
+  const { isMutating, setMutating } = useEntryMutation();
+  const [open, setOpen] = useState(false);
 
   const handleRemove = async () => {
-    setIsRemoving(true);
+    setMutating(true);
     try {
       const entryUuid = entry.uuid.toString();
 
@@ -42,14 +46,25 @@ export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemovePr
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry removal failed.' }));
     } finally {
-      setIsRemoving(false);
+      setMutating(false);
     }
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      if (isMutating) return;
+
+      guardNavigation(() => setOpen(true));
+      return;
+    }
+
+    setOpen(false);
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving}>
+        <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isMutating}>
           Remove
         </Button>
       </DialogTrigger>
@@ -74,8 +89,8 @@ export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemovePr
             </Button>
           </DialogClose>
           <DialogClose asChild>
-            <Button type="button" variant="destructive" disabled={isRemoving} onClick={() => void handleRemove()}>
-              {isRemoving ? 'Removing...' : 'Remove'}
+            <Button type="button" variant="destructive" disabled={isMutating} onClick={() => void handleRemove()}>
+              {isMutating ? 'Removing...' : 'Remove'}
             </Button>
           </DialogClose>
         </DialogFooter>

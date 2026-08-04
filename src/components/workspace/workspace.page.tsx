@@ -13,6 +13,8 @@ import { useMedia } from 'react-use';
 import { getErrorMessage } from '@/utils/error.utils';
 import { useIdleLock } from '@/hooks/use-idle-lock.hook';
 import { useSync } from '@/hooks/use-sync.hook';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type WorkspacePageProps = {
   session: UnlockSession;
@@ -24,8 +26,8 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useMedia('(max-width: 768px)');
-
-  const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
+  const { guardNavigation } = useSafeNet();
+  const { setMutating } = useEntryMutation();
 
   const {
     loading: isSyncing,
@@ -38,15 +40,21 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     setSession,
   });
 
+  const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
+
   const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
-    setSelectedEntryUuid(uuid);
+    guardNavigation(() => setSelectedEntryUuid(uuid));
   };
 
   const handleSelectFilter = (nextSelectFilter: SelectFilter) => {
-    setSelectFilter(nextSelectFilter);
-    setSelectedEntryUuid(null);
-    setIsMobileMenuOpen(false);
+    guardNavigation(() => {
+      setSelectFilter(nextSelectFilter);
+      setSelectedEntryUuid(null);
+      setIsMobileMenuOpen(false);
+    });
   };
+
+  const handleBack = () => guardNavigation(() => setSelectedEntryUuid(null));
 
   const handleSave = ({
     nextDatabase,
@@ -73,21 +81,31 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     }
   };
 
-  const handleLock = () => {
+  const onLock = () => {
     setSession(null);
     setSelectedEntryUuid(null);
     setIsMobileMenuOpen(false);
   };
 
-  useIdleLock({ onLock: handleLock });
+  // idle lock must not be blockable by a dirty form, so it bypasses guardNavigation on purpose
+  useIdleLock({ onLock });
 
-  const handleCreateEntry = async () => {
+  const handleLock = () => guardNavigation(onLock);
+
+  const createNewEntry = async () => {
+    setMutating(true);
     try {
       handleSave(await createEntry({ database, record, selectFilter }));
       toast.success('Entry created.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
+    } finally {
+      setMutating(false);
     }
+  };
+
+  const handleCreateEntry = () => {
+    guardNavigation(() => void createNewEntry());
   };
 
   const syncStatus = isSyncing ? 'syncing' : syncError ? 'error' : 'synced';
@@ -120,7 +138,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
           <EntryList
             className={isMobile ? 'flex w-full border-r-0' : 'flex'}
             database={database}
-            onCreateEntry={() => void handleCreateEntry()}
+            onCreateEntry={handleCreateEntry}
             onSelectEntry={handleSelectEntry}
             selectFilter={selectFilter}
             selectedEntryUuid={selectedEntryUuid}
@@ -136,7 +154,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
             record={record}
             onSave={handleSave}
             showBackButton={isMobile}
-            onBack={() => setSelectedEntryUuid(null)}
+            onBack={handleBack}
           />
         )}
       </div>

@@ -3,6 +3,8 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { UnlockPage } from '@/components/unlock/unlock.page';
 import { WorkspacePage } from '@/components/workspace/workspace.page';
+import { SafeNetProvider } from '@/hooks/use-safe-net.hook';
+import { EntryMutationProvider } from '@/hooks/use-entry-mutation.hook';
 import type { UnlockSession } from '@/services/session.service';
 
 export const App = () => {
@@ -16,7 +18,15 @@ export const App = () => {
 
   return (
     <TooltipProvider>
-      {!session ? <UnlockPage setSession={setSession} /> : <WorkspacePage session={session} setSession={setSession} />}
+      {!session ? (
+        <UnlockPage setSession={setSession} />
+      ) : (
+        <SafeNetProvider>
+          <EntryMutationProvider>
+            <WorkspacePage session={session} setSession={setSession} />
+          </EntryMutationProvider>
+        </SafeNetProvider>
+      )}
       <Toaster />
     </TooltipProvider>
   );

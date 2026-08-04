@@ -16,6 +16,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type EntryRestoreProps = {
   database: kdbx.Kdbx;
@@ -25,10 +27,12 @@ type EntryRestoreProps = {
 };
 
 export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {
-  const [isRestoring, setIsRestoring] = useState(false);
+  const { guardNavigation } = useSafeNet();
+  const { isMutating, setMutating } = useEntryMutation();
+  const [open, setOpen] = useState(false);
 
   const handleRestore = async () => {
-    setIsRestoring(true);
+    setMutating(true);
     try {
       const entryUuid = entry.uuid.toString();
 
@@ -38,14 +42,25 @@ export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestor
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry restore failed.' }));
     } finally {
-      setIsRestoring(false);
+      setMutating(false);
     }
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      if (isMutating) return;
+
+      guardNavigation(() => setOpen(true));
+      return;
+    }
+
+    setOpen(false);
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" className="h-8 px-4 text-xs" disabled={isRestoring}>
+        <Button type="button" className="h-8 px-4 text-xs" disabled={isMutating}>
           Restore
         </Button>
       </DialogTrigger>
@@ -67,8 +82,8 @@ export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestor
             </Button>
           </DialogClose>
           <DialogClose asChild>
-            <Button type="button" disabled={isRestoring} onClick={() => void handleRestore()}>
-              {isRestoring ? 'Restoring...' : 'Restore'}
+            <Button type="button" disabled={isMutating} onClick={() => void handleRestore()}>
+              {isMutating ? 'Restoring...' : 'Restore'}
             </Button>
           </DialogClose>
         </DialogFooter>

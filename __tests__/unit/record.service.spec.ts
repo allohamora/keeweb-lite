@@ -1,7 +1,7 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
-import { mockServer } from '../mocks/msw.mock';
+import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord } from '@/repositories/record.repository';
 import {

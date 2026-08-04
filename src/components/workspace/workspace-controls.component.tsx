@@ -4,6 +4,7 @@ import { toEncryptedBytes } from '@/services/record.service';
 import type { UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
 import { toast } from 'sonner';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
 type SyncStatus = 'synced' | 'syncing' | 'error';
 
@@ -26,6 +27,7 @@ export const WorkspaceControls = ({
   onLock,
   onSyncRetry,
 }: WorkspaceControlsProps) => {
+  const { guardNavigation } = useSafeNet();
   const download = async () => {
     const bytes = await toEncryptedBytes(database);
 
@@ -51,7 +53,11 @@ export const WorkspaceControls = ({
     }
   };
 
-  const handleSyncClick = () => {
+  const handleDownloadClick = () => {
+    guardNavigation(() => void onDownload());
+  };
+
+  const onSync = () => {
     switch (syncStatus) {
       case 'error':
         toast.error(syncErrorMessage ?? 'Drive sync failed.');
@@ -68,6 +74,10 @@ export const WorkspaceControls = ({
         throw new Error(`Unhandled sync status: ${exhaustiveCheck}`);
       }
     }
+  };
+
+  const handleSyncClick = () => {
+    guardNavigation(() => onSync());
   };
 
   return (
@@ -107,7 +117,7 @@ export const WorkspaceControls = ({
         <Button
           aria-label="Download database"
           className="h-6 px-1.5 text-[11px]"
-          onClick={() => void onDownload()}
+          onClick={handleDownloadClick}
           size="xs"
           type="button"
           variant="outline"

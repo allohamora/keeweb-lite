@@ -6,7 +6,7 @@ import {
   googleDriveApi,
 } from '../mocks/google-drive.repository.mock';
 import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '../mocks/google-identity.mock';
-import { mockServer } from '../mocks/msw.mock';
+import { mockServer } from '../setup-unit-context';
 import { auth, getFile, updateFile } from '@/repositories/google-drive.repository';
 
 describe('google-drive.repository', () => {
