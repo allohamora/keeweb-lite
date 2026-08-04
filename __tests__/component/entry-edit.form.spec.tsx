@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type kdbx from '@/lib/kdbx.lib';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { EntryEditForm } from '@/components/workspace/entry-edit.form';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
@@ -105,6 +105,32 @@ describe('entry-edit.form', () => {
 
       expect(onGuardedAction).toHaveBeenCalledOnce();
       expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
+    });
+
+    it('blocks Remove while Save is still pending, and re-enables it once Save settles', async () => {
+      const user = userEvent.setup();
+      let resolveSave: (payload: {
+        nextDatabase: kdbx.Kdbx;
+        nextEntryUuid: kdbx.KdbxUuid;
+        nextRecord: typeof record;
+      }) => void = () => {};
+      const savePromise = new Promise<{
+        nextDatabase: kdbx.Kdbx;
+        nextEntryUuid: kdbx.KdbxUuid;
+        nextRecord: typeof record;
+      }>((resolve) => {
+        resolveSave = resolve;
+      });
+      vi.spyOn(workspaceService, 'saveEntry').mockReturnValue(savePromise);
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      await user.type(screen.getByLabelText('Title'), '!');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(screen.getByRole('button', { name: 'Remove' })).toBeDisabled();
+
+      resolveSave({ nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled());
     });
   });
 });

@@ -27,15 +27,18 @@ type EntryRemoveProps = {
     nextEntryUuid?: kdbx.KdbxUuid | null;
     nextRecord: FileRecord;
   }) => void;
+  disabled?: boolean;
+  onMutatingChange?: (isMutating: boolean) => void;
 };
 
-export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, onRemove, disabled, onMutatingChange }: EntryRemoveProps) => {
   const { guardNavigation } = useSafeNet();
   const [isRemoving, setIsRemoving] = useState(false);
   const [open, setOpen] = useState(false);
 
   const handleRemove = async () => {
     setIsRemoving(true);
+    onMutatingChange?.(true);
     try {
       const entryUuid = entry.uuid.toString();
 
@@ -46,11 +49,14 @@ export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemovePr
       toast.error(getErrorMessage({ error, fallback: 'Entry removal failed.' }));
     } finally {
       setIsRemoving(false);
+      onMutatingChange?.(false);
     }
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
+      if (disabled) return;
+
       guardNavigation(() => setOpen(true));
       return;
     }
@@ -61,7 +67,7 @@ export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemovePr
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving}>
+        <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving || disabled}>
           Remove
         </Button>
       </DialogTrigger>

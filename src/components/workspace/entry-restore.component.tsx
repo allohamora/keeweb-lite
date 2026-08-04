@@ -23,15 +23,18 @@ type EntryRestoreProps = {
   entry: kdbx.KdbxEntry;
   record: FileRecord;
   onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
+  disabled?: boolean;
+  onMutatingChange?: (isMutating: boolean) => void;
 };
 
-export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, onRestore, disabled, onMutatingChange }: EntryRestoreProps) => {
   const { guardNavigation } = useSafeNet();
   const [isRestoring, setIsRestoring] = useState(false);
   const [open, setOpen] = useState(false);
 
   const handleRestore = async () => {
     setIsRestoring(true);
+    onMutatingChange?.(true);
     try {
       const entryUuid = entry.uuid.toString();
 
@@ -42,11 +45,14 @@ export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestor
       toast.error(getErrorMessage({ error, fallback: 'Entry restore failed.' }));
     } finally {
       setIsRestoring(false);
+      onMutatingChange?.(false);
     }
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
+      if (disabled) return;
+
       guardNavigation(() => setOpen(true));
       return;
     }
@@ -57,7 +63,7 @@ export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestor
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" className="h-8 px-4 text-xs" disabled={isRestoring}>
+        <Button type="button" className="h-8 px-4 text-xs" disabled={isRestoring || disabled}>
           Restore
         </Button>
       </DialogTrigger>

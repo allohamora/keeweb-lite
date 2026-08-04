@@ -69,5 +69,40 @@ describe('entry-remove.component', () => {
       expect(removeEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
       expect(onRemove).toHaveBeenCalledWith(payload);
     });
+
+    it('disables the trigger and cannot open the dialog while disabled', async () => {
+      const user = userEvent.setup();
+
+      render(<EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} disabled />);
+      const trigger = screen.getByRole('button', { name: 'Remove' });
+
+      expect(trigger).toBeDisabled();
+
+      await user.click(trigger);
+
+      expect(screen.queryByText('Remove entry?')).not.toBeInTheDocument();
+    });
+
+    it('reports mutation start and end via onMutatingChange', async () => {
+      const user = userEvent.setup();
+      const onMutatingChange = vi.fn();
+      const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
+      vi.spyOn(workspaceService, 'removeEntry').mockResolvedValue(payload);
+
+      render(
+        <EntryRemove
+          database={database}
+          entry={entry}
+          record={record}
+          onRemove={vi.fn()}
+          onMutatingChange={onMutatingChange}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+
+      expect(onMutatingChange).toHaveBeenNthCalledWith(1, true);
+      expect(onMutatingChange).toHaveBeenNthCalledWith(2, false);
+    });
   });
 });

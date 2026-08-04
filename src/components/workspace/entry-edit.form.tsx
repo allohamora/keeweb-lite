@@ -67,6 +67,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
 
   useEffect(() => {
     setDirty(isDirty);
@@ -81,6 +82,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
   }, [registerDiscard, reset]);
 
   const handleSaveSubmit = handleSubmit(async (values) => {
+    setIsMutating(true);
     try {
       const entryUuid = entry.uuid.toString();
       const result = await saveEntry({ database, record, entryUuid, values });
@@ -90,6 +92,8 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
       toast.success('Entry saved.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
+    } finally {
+      setIsMutating(false);
     }
   });
 
@@ -373,10 +377,31 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onRemove={handleSave} />
-            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={handleSave} />}
+            <EntryRemove
+              database={database}
+              entry={entry}
+              record={record}
+              onRemove={handleSave}
+              disabled={isMutating}
+              onMutatingChange={setIsMutating}
+            />
+            {isInTrash && (
+              <EntryRestore
+                database={database}
+                entry={entry}
+                record={record}
+                onRestore={handleSave}
+                disabled={isMutating}
+                onMutatingChange={setIsMutating}
+              />
+            )}
           </div>
-          <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
+          <Button
+            className="h-8 px-4 text-xs"
+            disabled={!isDirty || isSubmitting || isMutating}
+            type="submit"
+            variant="outline"
+          >
             {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
         </div>

@@ -69,5 +69,40 @@ describe('entry-restore.component', () => {
       expect(restoreEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
       expect(onRestore).toHaveBeenCalledWith(payload);
     });
+
+    it('disables the trigger and cannot open the dialog while disabled', async () => {
+      const user = userEvent.setup();
+
+      render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} disabled />);
+      const trigger = screen.getByRole('button', { name: 'Restore' });
+
+      expect(trigger).toBeDisabled();
+
+      await user.click(trigger);
+
+      expect(screen.queryByText('Restore entry?')).not.toBeInTheDocument();
+    });
+
+    it('reports mutation start and end via onMutatingChange', async () => {
+      const user = userEvent.setup();
+      const onMutatingChange = vi.fn();
+      const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
+      vi.spyOn(workspaceService, 'restoreEntry').mockResolvedValue(payload);
+
+      render(
+        <EntryRestore
+          database={database}
+          entry={entry}
+          record={record}
+          onRestore={vi.fn()}
+          onMutatingChange={onMutatingChange}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: 'Restore' }));
+      await user.click(screen.getByRole('button', { name: 'Restore' }));
+
+      expect(onMutatingChange).toHaveBeenNthCalledWith(1, true);
+      expect(onMutatingChange).toHaveBeenNthCalledWith(2, false);
+    });
   });
 });
