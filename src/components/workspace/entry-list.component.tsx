@@ -22,6 +22,7 @@ import {
   type SelectFilter,
   type SortOrder,
 } from '@/services/workspace.service';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type EntryListProps = {
   className?: string;
@@ -44,6 +45,7 @@ export const EntryList = ({
   showMenuButton = false,
   onMenuOpen,
 }: EntryListProps) => {
+  const { isMutating } = useEntryMutation();
   const entries = getEntriesForList({ database, selectFilter });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,6 +114,7 @@ export const EntryList = ({
         <Button
           aria-label="Create entry"
           className="size-7 shrink-0 rounded-sm"
+          disabled={isMutating}
           onClick={onCreateEntry}
           size="icon"
           type="button"

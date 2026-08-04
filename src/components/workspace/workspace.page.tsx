@@ -14,6 +14,7 @@ import { getErrorMessage } from '@/utils/error.utils';
 import { useIdleLock } from '@/hooks/use-idle-lock.hook';
 import { useSync } from '@/hooks/use-sync.hook';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type WorkspacePageProps = {
   session: UnlockSession;
@@ -26,6 +27,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useMedia('(max-width: 768px)');
   const { guardNavigation } = useSafeNet();
+  const { setMutating } = useEntryMutation();
 
   const {
     loading: isSyncing,
@@ -91,11 +93,14 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const handleLock = () => guardNavigation(onLock);
 
   const createNewEntry = async () => {
+    setMutating(true);
     try {
       handleSave(await createEntry({ database, record, selectFilter }));
       toast.success('Entry created.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
+    } finally {
+      setMutating(false);
     }
   };
 

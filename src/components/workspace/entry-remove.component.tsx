@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type EntryRemoveProps = {
   database: kdbx.Kdbx;
@@ -27,18 +28,15 @@ type EntryRemoveProps = {
     nextEntryUuid?: kdbx.KdbxUuid | null;
     nextRecord: FileRecord;
   }) => void;
-  disabled?: boolean;
-  onMutatingChange?: (isMutating: boolean) => void;
 };
 
-export const EntryRemove = ({ database, entry, record, onRemove, disabled, onMutatingChange }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {
   const { guardNavigation } = useSafeNet();
-  const [isRemoving, setIsRemoving] = useState(false);
+  const { isMutating, setMutating } = useEntryMutation();
   const [open, setOpen] = useState(false);
 
   const handleRemove = async () => {
-    setIsRemoving(true);
-    onMutatingChange?.(true);
+    setMutating(true);
     try {
       const entryUuid = entry.uuid.toString();
 
@@ -48,14 +46,13 @@ export const EntryRemove = ({ database, entry, record, onRemove, disabled, onMut
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry removal failed.' }));
     } finally {
-      setIsRemoving(false);
-      onMutatingChange?.(false);
+      setMutating(false);
     }
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      if (disabled) return;
+      if (isMutating) return;
 
       guardNavigation(() => setOpen(true));
       return;
@@ -67,7 +64,7 @@ export const EntryRemove = ({ database, entry, record, onRemove, disabled, onMut
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving || disabled}>
+        <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isMutating}>
           Remove
         </Button>
       </DialogTrigger>
@@ -92,8 +89,8 @@ export const EntryRemove = ({ database, entry, record, onRemove, disabled, onMut
             </Button>
           </DialogClose>
           <DialogClose asChild>
-            <Button type="button" variant="destructive" disabled={isRemoving} onClick={() => void handleRemove()}>
-              {isRemoving ? 'Removing...' : 'Remove'}
+            <Button type="button" variant="destructive" disabled={isMutating} onClick={() => void handleRemove()}>
+              {isMutating ? 'Removing...' : 'Remove'}
             </Button>
           </DialogClose>
         </DialogFooter>

@@ -2,10 +2,11 @@ import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import type kdbx from '@/lib/kdbx.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import type { SelectFilter } from '@/services/workspace.service';
 import { WorkspacePage } from '@/components/workspace/workspace.page';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 
@@ -24,13 +25,19 @@ vi.mock('@/components/workspace/entry-list.component', () => ({
     onSelectEntry: (uuid: kdbx.KdbxUuid) => void;
     onCreateEntry: () => void;
     selectedEntryUuid: kdbx.KdbxUuid | null;
-  }) => (
-    <div>
-      <span data-testid="selected-entry-uuid">{selectedEntryUuid?.toString() ?? 'none'}</span>
-      <button onClick={() => onSelectEntry({ toString: () => 'entry-1' } as kdbx.KdbxUuid)}>Stub select entry</button>
-      <button onClick={onCreateEntry}>Stub create entry</button>
-    </div>
-  ),
+  }) => {
+    const { isMutating } = useEntryMutation();
+
+    return (
+      <div>
+        <span data-testid="selected-entry-uuid">{selectedEntryUuid?.toString() ?? 'none'}</span>
+        <button onClick={() => onSelectEntry({ toString: () => 'entry-1' } as kdbx.KdbxUuid)}>Stub select entry</button>
+        <button disabled={isMutating} onClick={onCreateEntry}>
+          Stub create entry
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@/components/workspace/entry-details.component', () => ({
@@ -152,6 +159,35 @@ describe('workspace.page', () => {
       window.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('disables create entry while a create is pending, and re-enables it once it settles', async () => {
+      const user = userEvent.setup();
+      let resolveCreate: (payload: {
+        nextDatabase: kdbx.Kdbx;
+        nextEntryUuid: kdbx.KdbxUuid;
+        nextRecord: typeof record;
+      }) => void = () => {};
+      const createPromise = new Promise<{
+        nextDatabase: kdbx.Kdbx;
+        nextEntryUuid: kdbx.KdbxUuid;
+        nextRecord: typeof record;
+      }>((resolve) => {
+        resolveCreate = resolve;
+      });
+      vi.spyOn(workspaceService, 'createEntry').mockReturnValue(createPromise);
+
+      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Stub create entry' }));
+
+      expect(screen.getByRole('button', { name: 'Stub create entry' })).toBeDisabled();
+
+      resolveCreate({
+        nextDatabase: database,
+        nextEntryUuid: { toString: () => 'entry-1' } as kdbx.KdbxUuid,
+        nextRecord: record,
+      });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Stub create entry' })).toBeEnabled());
     });
   });
 });

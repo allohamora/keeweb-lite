@@ -2,11 +2,12 @@ import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import type kdbx from '@/lib/kdbx.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 import { DirtySafeNet } from '../utils/safe-net.harness';
+import { MutatingEntryMutation } from '../utils/entry-mutation.harness';
 
 describe('entry-remove.component', () => {
   let database: kdbx.Kdbx;
@@ -70,10 +71,14 @@ describe('entry-remove.component', () => {
       expect(onRemove).toHaveBeenCalledWith(payload);
     });
 
-    it('disables the trigger and cannot open the dialog while disabled', async () => {
+    it('disables the trigger and cannot open the dialog while another entry mutation is in progress', async () => {
       const user = userEvent.setup();
 
-      render(<EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} disabled />);
+      render(
+        <MutatingEntryMutation>
+          <EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />
+        </MutatingEntryMutation>,
+      );
       const trigger = screen.getByRole('button', { name: 'Remove' });
 
       expect(trigger).toBeDisabled();
@@ -83,26 +88,28 @@ describe('entry-remove.component', () => {
       expect(screen.queryByText('Remove entry?')).not.toBeInTheDocument();
     });
 
-    it('reports mutation start and end via onMutatingChange', async () => {
+    it('disables its own trigger while the removal is in flight, then re-enables it', async () => {
       const user = userEvent.setup();
-      const onMutatingChange = vi.fn();
-      const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
-      vi.spyOn(workspaceService, 'removeEntry').mockResolvedValue(payload);
-
-      render(
-        <EntryRemove
-          database={database}
-          entry={entry}
-          record={record}
-          onRemove={vi.fn()}
-          onMutatingChange={onMutatingChange}
-        />,
+      let resolveRemove: (payload: {
+        nextDatabase: kdbx.Kdbx;
+        nextEntryUuid: null;
+        nextRecord: typeof record;
+      }) => void = () => {};
+      const removePromise = new Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: typeof record }>(
+        (resolve) => {
+          resolveRemove = resolve;
+        },
       );
+      vi.spyOn(workspaceService, 'removeEntry').mockReturnValue(removePromise);
+
+      render(<EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
-      expect(onMutatingChange).toHaveBeenNthCalledWith(1, true);
-      expect(onMutatingChange).toHaveBeenNthCalledWith(2, false);
+      expect(screen.getByRole('button', { name: 'Remove' })).toBeDisabled();
+
+      resolveRemove({ nextDatabase: database, nextEntryUuid: null, nextRecord: record });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled());
     });
   });
 });

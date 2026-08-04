@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { UnlockPage } from '@/components/unlock/unlock.page';
 import { WorkspacePage } from '@/components/workspace/workspace.page';
 import { SafeNetProvider } from '@/hooks/use-safe-net.hook';
+import { EntryMutationProvider } from '@/hooks/use-entry-mutation.hook';
 import type { UnlockSession } from '@/services/session.service';
 
 export const App = () => {
@@ -21,7 +22,9 @@ export const App = () => {
         <UnlockPage setSession={setSession} />
       ) : (
         <SafeNetProvider>
-          <WorkspacePage session={session} setSession={setSession} />
+          <EntryMutationProvider>
+            <WorkspacePage session={session} setSession={setSession} />
+          </EntryMutationProvider>
         </SafeNetProvider>
       )}
       <Toaster />
