@@ -52,10 +52,10 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   };
 
   const handleConfirmDiscard = () => {
-    pendingNavigation?.();
-
     setIsUnsavedChanges(false);
     setPendingNavigation(null);
+
+    pendingNavigation?.();
   };
 
   const {
