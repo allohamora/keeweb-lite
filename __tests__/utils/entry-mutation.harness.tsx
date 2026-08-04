@@ -8,7 +8,10 @@ type MutatingEntryMutationProps = {
 export const MutatingEntryMutation = ({ children }: MutatingEntryMutationProps) => {
   const { setMutating } = useEntryMutation();
 
-  useEffect(() => setMutating(true), [setMutating]);
+  useEffect(() => {
+    setMutating(true);
+    return () => setMutating(false);
+  }, [setMutating]);
 
   return children;
 };
