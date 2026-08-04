@@ -1,5 +1,8 @@
+import './mocks';
 import { afterAll, afterEach, beforeAll, expect } from 'vitest';
-import { createMockServer } from '../utils/mock-server.utils';
+import { cleanup } from '@testing-library/react';
+import { createMockServer } from './utils/mock-server.utils';
+import '@testing-library/jest-dom/vitest';
 
 export const mockServer = createMockServer();
 
@@ -8,6 +11,8 @@ beforeAll(() => {
 });
 
 afterEach(() => {
+  cleanup();
+
   // here is the solution used https://github.com/mswjs/msw/issues/946#issuecomment-1572768939
   expect(mockServer.onUnhandledRequest).not.toHaveBeenCalled();
   mockServer.onUnhandledRequest.mockClear();

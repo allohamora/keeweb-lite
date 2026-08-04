@@ -2,7 +2,7 @@ import kdbx from '@/lib/kdbx.lib';
 import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
-import { mockServer } from '../mocks/msw.mock';
+import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
 import { syncForSession, unlockForSession } from '@/services/session.service';
