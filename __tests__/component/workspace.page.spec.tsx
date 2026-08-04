@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import type { SelectFilter } from '@/services/workspace.service';
 import { WorkspacePage } from '@/components/workspace/workspace.page';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 
@@ -33,13 +34,17 @@ vi.mock('@/components/workspace/entry-list.component', () => ({
 }));
 
 vi.mock('@/components/workspace/entry-details.component', () => ({
-  EntryDetails: ({ onDirtyChange, onBack }: { onDirtyChange?: (isDirty: boolean) => void; onBack: () => void }) => (
-    <div>
-      <button onClick={() => onDirtyChange?.(true)}>Stub make dirty</button>
-      <button onClick={() => onDirtyChange?.(false)}>Stub make clean</button>
-      <button onClick={onBack}>Stub back</button>
-    </div>
-  ),
+  EntryDetails: ({ onBack }: { onBack: () => void }) => {
+    const { setDirty } = useSafeNet();
+
+    return (
+      <div>
+        <button onClick={() => setDirty(true)}>Stub make dirty</button>
+        <button onClick={() => setDirty(false)}>Stub make clean</button>
+        <button onClick={onBack}>Stub back</button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@/components/workspace/workspace-controls.component', () => ({
@@ -124,6 +129,8 @@ describe('workspace.page', () => {
       expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
 
       expect(createEntry).not.toHaveBeenCalled();
+
+      createEntry.mockRestore();
     });
 
     it('prevents beforeunload while there are unsaved changes', async () => {

@@ -33,6 +33,7 @@ import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
 import { PasswordGenerator } from '@/components/workspace/password-generator.component';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
 const entryEditSchema = z.object({
   title: z.string(),
@@ -50,18 +51,10 @@ type EntryEditFormProps = {
   entry: kdbx.KdbxEntry;
   record: FileRecord;
   onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
-  onDirtyChange?: (isDirty: boolean) => void;
-  guardNavigation: (action: () => void) => void;
 };
 
-export const EntryEditForm = ({
-  database,
-  entry,
-  record,
-  onSave,
-  onDirtyChange,
-  guardNavigation,
-}: EntryEditFormProps) => {
+export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
+  const { setDirty, registerDiscard } = useSafeNet();
   const {
     control,
     handleSubmit,
@@ -76,8 +69,14 @@ export const EntryEditForm = ({
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    onDirtyChange?.(isDirty);
-  }, [isDirty, onDirtyChange]);
+    setDirty(isDirty);
+  }, [isDirty, setDirty]);
+
+  useEffect(() => {
+    registerDiscard(reset);
+
+    return () => registerDiscard(null);
+  }, [registerDiscard, reset]);
 
   const handleSaveSubmit = handleSubmit(async (values) => {
     try {
@@ -99,13 +98,6 @@ export const EntryEditForm = ({
   }) => {
     reset(); // Reset the form state after remove/restore (isDirty, touched state, etc)
     onSave?.(payload);
-  };
-
-  const handleGuardNavigation = (action: () => void) => {
-    guardNavigation(() => {
-      reset(); // Discard the current edits before running the guarded action
-      action();
-    });
   };
 
   const handleApplyHistory = (values: EntryEditValues) => {
@@ -379,22 +371,8 @@ export const EntryEditForm = ({
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove
-              database={database}
-              entry={entry}
-              record={record}
-              guardNavigation={handleGuardNavigation}
-              onRemove={handleSave}
-            />
-            {isInTrash && (
-              <EntryRestore
-                database={database}
-                entry={entry}
-                record={record}
-                guardNavigation={handleGuardNavigation}
-                onRestore={handleSave}
-              />
-            )}
+            <EntryRemove database={database} entry={entry} record={record} onRemove={handleSave} />
+            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={handleSave} />}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isSubmitting} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}

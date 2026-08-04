@@ -1,5 +1,5 @@
 import type kdbx from '@/lib/kdbx.lib';
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { type UnlockSession } from '@/services/session.service';
 import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
@@ -8,12 +8,12 @@ import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
 import { WorkspaceMobileMenu } from '@/components/workspace/workspace-mobile-menu.component';
-import { UnsavedChangesDialog } from '@/components/workspace/unsaved-changes-dialog.component';
 import { toast } from 'sonner';
 import { useMedia } from 'react-use';
 import { getErrorMessage } from '@/utils/error.utils';
 import { useIdleLock } from '@/hooks/use-idle-lock.hook';
 import { useSync } from '@/hooks/use-sync.hook';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
 type WorkspacePageProps = {
   session: UnlockSession;
@@ -24,39 +24,8 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isUnsavedChanges, setIsUnsavedChanges] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
   const isMobile = useMedia('(max-width: 768px)');
-
-  const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
-
-  useEffect(() => {
-    if (!isUnsavedChanges) return;
-
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isUnsavedChanges]);
-
-  const guardNavigation = (action: () => void) => {
-    if (isUnsavedChanges) {
-      setPendingNavigation(() => action);
-      return;
-    }
-
-    action();
-  };
-
-  const handleConfirmDiscard = () => {
-    setIsUnsavedChanges(false);
-    setPendingNavigation(null);
-
-    pendingNavigation?.();
-  };
+  const { guardNavigation } = useSafeNet();
 
   const {
     loading: isSyncing,
@@ -68,6 +37,8 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     version,
     setSession,
   });
+
+  const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
   const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
     guardNavigation(() => setSelectedEntryUuid(uuid));
@@ -146,7 +117,6 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
         recordType={record.type}
         syncStatus={syncStatus}
         syncErrorMessage={syncErrorMessage}
-        guardNavigation={guardNavigation}
         onLock={handleLock}
         onSyncRetry={retrySync}
       />
@@ -178,8 +148,6 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
             database={database}
             record={record}
             onSave={handleSave}
-            onDirtyChange={setIsUnsavedChanges}
-            guardNavigation={guardNavigation}
             showBackButton={isMobile}
             onBack={handleBack}
           />
@@ -194,13 +162,6 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
           selectFilter={selectFilter}
         />
       )}
-      <UnsavedChangesDialog
-        open={pendingNavigation !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingNavigation(null);
-        }}
-        onConfirm={handleConfirmDiscard}
-      />
     </div>
   );
 };

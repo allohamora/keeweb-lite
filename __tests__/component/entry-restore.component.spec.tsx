@@ -6,6 +6,7 @@ import { screen } from '@testing-library/react';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
+import { DirtySafeNet } from '../utils/safe-net.harness';
 
 describe('entry-restore.component', () => {
   let database: kdbx.Kdbx;
@@ -18,59 +19,50 @@ describe('entry-restore.component', () => {
   });
 
   describe('EntryRestore', () => {
-    it('routes opening the confirm dialog through guardNavigation', async () => {
+    it('opens the confirm dialog directly when there are no unsaved changes', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn();
 
-      render(
-        <EntryRestore
-          database={database}
-          entry={entry}
-          record={record}
-          guardNavigation={guardNavigation}
-          onRestore={vi.fn()}
-        />,
-      );
+      render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 
-      expect(guardNavigation).toHaveBeenCalledOnce();
-      expect(screen.queryByText('Restore entry?')).not.toBeInTheDocument();
+      expect(screen.getByText('Restore entry?')).toBeInTheDocument();
     });
 
-    it('opens the confirm dialog once guardNavigation lets the action through', async () => {
+    it('defers opening the confirm dialog behind the discard prompt when there are unsaved changes', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn((action: () => void) => action());
 
       render(
-        <EntryRestore
-          database={database}
-          entry={entry}
-          record={record}
-          guardNavigation={guardNavigation}
-          onRestore={vi.fn()}
-        />,
+        <DirtySafeNet>
+          <EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />
+        </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
+
+      expect(screen.queryByText('Restore entry?')).not.toBeInTheDocument();
+      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
+    });
+
+    it('opens the confirm dialog once the discard prompt is confirmed', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <DirtySafeNet>
+          <EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />
+        </DirtySafeNet>,
+      );
+      await user.click(screen.getByRole('button', { name: 'Restore' }));
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
 
       expect(screen.getByText('Restore entry?')).toBeInTheDocument();
     });
 
     it('restores the entry and calls onRestore on confirm', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn((action: () => void) => action());
       const onRestore = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
       const restoreEntry = vi.spyOn(workspaceService, 'restoreEntry').mockResolvedValue(payload);
 
-      render(
-        <EntryRestore
-          database={database}
-          entry={entry}
-          record={record}
-          guardNavigation={guardNavigation}
-          onRestore={onRestore}
-        />,
-      );
+      render(<EntryRestore database={database} entry={entry} record={record} onRestore={onRestore} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 

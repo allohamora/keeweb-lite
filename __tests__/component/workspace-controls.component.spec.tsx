@@ -6,6 +6,7 @@ import { screen } from '@testing-library/react';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
+import { DirtySafeNet } from '../utils/safe-net.harness';
 
 const record = createTestRecord();
 
@@ -17,36 +18,12 @@ describe('workspace-controls.component', () => {
   });
 
   describe('WorkspaceControls', () => {
-    it('routes download through guardNavigation instead of downloading directly', async () => {
+    it('downloads the database directly when there are no unsaved changes', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn();
-      const toEncryptedBytes = vi.spyOn(recordService, 'toEncryptedBytes');
-
-      render(
-        <WorkspaceControls
-          database={database}
-          recordName={record.kdbx.name}
-          recordType={record.type}
-          syncStatus="synced"
-          syncErrorMessage={null}
-          guardNavigation={guardNavigation}
-          onLock={vi.fn()}
-          onSyncRetry={vi.fn()}
-        />,
-      );
-      await user.click(screen.getByRole('button', { name: 'Download database' }));
-
-      expect(guardNavigation).toHaveBeenCalledOnce();
-      expect(toEncryptedBytes).not.toHaveBeenCalled();
-    });
-
-    it('downloads the database once guardNavigation lets the action through', async () => {
-      const user = userEvent.setup();
-      const guardNavigation = vi.fn((action: () => void) => action());
       const toEncryptedBytes = vi.spyOn(recordService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
-      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+      const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+      const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
       render(
         <WorkspaceControls
@@ -55,7 +32,6 @@ describe('workspace-controls.component', () => {
           recordType={record.type}
           syncStatus="synced"
           syncErrorMessage={null}
-          guardNavigation={guardNavigation}
           onLock={vi.fn()}
           onSyncRetry={vi.fn()}
         />,
@@ -63,34 +39,40 @@ describe('workspace-controls.component', () => {
       await user.click(screen.getByRole('button', { name: 'Download database' }));
 
       expect(toEncryptedBytes).toHaveBeenCalledWith(database);
+
+      toEncryptedBytes.mockRestore();
+      createObjectURL.mockRestore();
+      revokeObjectURL.mockRestore();
+      anchorClick.mockRestore();
     });
 
-    it('routes the sync retry click through guardNavigation instead of retrying directly', async () => {
+    it('defers download behind the discard prompt when there are unsaved changes', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn();
-      const onSyncRetry = vi.fn();
+      const toEncryptedBytes = vi.spyOn(recordService, 'toEncryptedBytes');
 
       render(
-        <WorkspaceControls
-          database={database}
-          recordName={record.kdbx.name}
-          recordType="google-drive"
-          syncStatus="error"
-          syncErrorMessage="Drive sync failed."
-          guardNavigation={guardNavigation}
-          onLock={vi.fn()}
-          onSyncRetry={onSyncRetry}
-        />,
+        <DirtySafeNet>
+          <WorkspaceControls
+            database={database}
+            recordName={record.kdbx.name}
+            recordType={record.type}
+            syncStatus="synced"
+            syncErrorMessage={null}
+            onLock={vi.fn()}
+            onSyncRetry={vi.fn()}
+          />
+        </DirtySafeNet>,
       );
-      await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
+      await user.click(screen.getByRole('button', { name: 'Download database' }));
 
-      expect(guardNavigation).toHaveBeenCalledOnce();
-      expect(onSyncRetry).not.toHaveBeenCalled();
+      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
+      expect(toEncryptedBytes).not.toHaveBeenCalled();
+
+      toEncryptedBytes.mockRestore();
     });
 
-    it('retries sync once guardNavigation lets the action through', async () => {
+    it('retries sync directly when there are no unsaved changes', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn((action: () => void) => action());
       const onSyncRetry = vi.fn();
 
       render(
@@ -100,7 +82,6 @@ describe('workspace-controls.component', () => {
           recordType="google-drive"
           syncStatus="error"
           syncErrorMessage="Drive sync failed."
-          guardNavigation={guardNavigation}
           onLock={vi.fn()}
           onSyncRetry={onSyncRetry}
         />,
@@ -108,6 +89,29 @@ describe('workspace-controls.component', () => {
       await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
 
       expect(onSyncRetry).toHaveBeenCalledOnce();
+    });
+
+    it('defers sync retry behind the discard prompt when there are unsaved changes', async () => {
+      const user = userEvent.setup();
+      const onSyncRetry = vi.fn();
+
+      render(
+        <DirtySafeNet>
+          <WorkspaceControls
+            database={database}
+            recordName={record.kdbx.name}
+            recordType="google-drive"
+            syncStatus="error"
+            syncErrorMessage="Drive sync failed."
+            onLock={vi.fn()}
+            onSyncRetry={onSyncRetry}
+          />
+        </DirtySafeNet>,
+      );
+      await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
+
+      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
+      expect(onSyncRetry).not.toHaveBeenCalled();
     });
   });
 });

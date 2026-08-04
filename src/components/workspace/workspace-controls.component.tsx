@@ -4,6 +4,7 @@ import { toEncryptedBytes } from '@/services/record.service';
 import type { UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
 import { toast } from 'sonner';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
 type SyncStatus = 'synced' | 'syncing' | 'error';
 
@@ -13,7 +14,6 @@ type WorkspaceControlsProps = {
   recordType: string;
   syncStatus: SyncStatus;
   syncErrorMessage: string | null;
-  guardNavigation: (action: () => void) => void;
   onLock: () => void;
   onSyncRetry: () => void;
 };
@@ -24,10 +24,10 @@ export const WorkspaceControls = ({
   recordType,
   syncStatus,
   syncErrorMessage,
-  guardNavigation,
   onLock,
   onSyncRetry,
 }: WorkspaceControlsProps) => {
+  const { guardNavigation } = useSafeNet();
   const download = async () => {
     const bytes = await toEncryptedBytes(database);
 

@@ -6,6 +6,7 @@ import { screen } from '@testing-library/react';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
+import { DirtySafeNet } from '../utils/safe-net.harness';
 
 describe('entry-remove.component', () => {
   let database: kdbx.Kdbx;
@@ -18,59 +19,50 @@ describe('entry-remove.component', () => {
   });
 
   describe('EntryRemove', () => {
-    it('routes opening the confirm dialog through guardNavigation', async () => {
+    it('opens the confirm dialog directly when there are no unsaved changes', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn();
 
-      render(
-        <EntryRemove
-          database={database}
-          entry={entry}
-          record={record}
-          guardNavigation={guardNavigation}
-          onRemove={vi.fn()}
-        />,
-      );
+      render(<EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
-      expect(guardNavigation).toHaveBeenCalledOnce();
-      expect(screen.queryByText('Remove entry?')).not.toBeInTheDocument();
+      expect(screen.getByText('Remove entry?')).toBeInTheDocument();
     });
 
-    it('opens the confirm dialog once guardNavigation lets the action through', async () => {
+    it('defers opening the confirm dialog behind the discard prompt when there are unsaved changes', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn((action: () => void) => action());
 
       render(
-        <EntryRemove
-          database={database}
-          entry={entry}
-          record={record}
-          guardNavigation={guardNavigation}
-          onRemove={vi.fn()}
-        />,
+        <DirtySafeNet>
+          <EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />
+        </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
+
+      expect(screen.queryByText('Remove entry?')).not.toBeInTheDocument();
+      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
+    });
+
+    it('opens the confirm dialog once the discard prompt is confirmed', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <DirtySafeNet>
+          <EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />
+        </DirtySafeNet>,
+      );
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
 
       expect(screen.getByText('Remove entry?')).toBeInTheDocument();
     });
 
     it('removes the entry and calls onRemove on confirm', async () => {
       const user = userEvent.setup();
-      const guardNavigation = vi.fn((action: () => void) => action());
       const onRemove = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
       const removeEntry = vi.spyOn(workspaceService, 'removeEntry').mockResolvedValue(payload);
 
-      render(
-        <EntryRemove
-          database={database}
-          entry={entry}
-          record={record}
-          guardNavigation={guardNavigation}
-          onRemove={onRemove}
-        />,
-      );
+      render(<EntryRemove database={database} entry={entry} record={record} onRemove={onRemove} />);
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 

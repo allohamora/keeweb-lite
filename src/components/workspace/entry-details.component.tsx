@@ -12,8 +12,6 @@ type EntryDetailsProps = {
   database: kdbx.Kdbx;
   record: FileRecord;
   onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
-  onDirtyChange?: (isDirty: boolean) => void;
-  guardNavigation: (action: () => void) => void;
   showBackButton: boolean;
   onBack: () => void;
 };
@@ -43,8 +41,6 @@ export const EntryDetails = ({
   database,
   record,
   onSave,
-  onDirtyChange,
-  guardNavigation,
   showBackButton,
   onBack,
 }: EntryDetailsProps) => {
@@ -74,8 +70,6 @@ export const EntryDetails = ({
         entry={selectedEntry}
         record={record}
         onSave={onSave}
-        onDirtyChange={onDirtyChange}
-        guardNavigation={guardNavigation}
       />
     </aside>
   );

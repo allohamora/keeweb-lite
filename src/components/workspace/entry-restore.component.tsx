@@ -16,16 +16,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
 type EntryRestoreProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   record: FileRecord;
-  guardNavigation: (action: () => void) => void;
   onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
 };
 
-export const EntryRestore = ({ database, entry, record, guardNavigation, onRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {
+  const { guardNavigation } = useSafeNet();
   const [isRestoring, setIsRestoring] = useState(false);
   const [open, setOpen] = useState(false);
 

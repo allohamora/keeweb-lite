@@ -16,12 +16,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
 type EntryRemoveProps = {
   database: kdbx.Kdbx;
   entry: kdbx.KdbxEntry;
   record: FileRecord;
-  guardNavigation: (action: () => void) => void;
   onRemove: (payload: {
     nextDatabase: kdbx.Kdbx;
     nextEntryUuid?: kdbx.KdbxUuid | null;
@@ -29,7 +29,8 @@ type EntryRemoveProps = {
   }) => void;
 };
 
-export const EntryRemove = ({ database, entry, record, guardNavigation, onRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {
+  const { guardNavigation } = useSafeNet();
   const [isRemoving, setIsRemoving] = useState(false);
   const [open, setOpen] = useState(false);
 
