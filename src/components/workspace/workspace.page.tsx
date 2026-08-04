@@ -146,6 +146,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
         recordType={record.type}
         syncStatus={syncStatus}
         syncErrorMessage={syncErrorMessage}
+        guardNavigation={guardNavigation}
         onLock={handleLock}
         onSyncRetry={retrySync}
       />

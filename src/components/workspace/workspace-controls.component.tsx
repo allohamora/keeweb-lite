@@ -13,6 +13,7 @@ type WorkspaceControlsProps = {
   recordType: string;
   syncStatus: SyncStatus;
   syncErrorMessage: string | null;
+  guardNavigation: (action: () => void) => void;
   onLock: () => void;
   onSyncRetry: () => void;
 };
@@ -23,6 +24,7 @@ export const WorkspaceControls = ({
   recordType,
   syncStatus,
   syncErrorMessage,
+  guardNavigation,
   onLock,
   onSyncRetry,
 }: WorkspaceControlsProps) => {
@@ -51,7 +53,11 @@ export const WorkspaceControls = ({
     }
   };
 
-  const handleSyncClick = () => {
+  const handleDownloadClick = () => {
+    guardNavigation(() => void onDownload());
+  };
+
+  const onSync = () => {
     switch (syncStatus) {
       case 'error':
         toast.error(syncErrorMessage ?? 'Drive sync failed.');
@@ -68,6 +74,10 @@ export const WorkspaceControls = ({
         throw new Error(`Unhandled sync status: ${exhaustiveCheck}`);
       }
     }
+  };
+
+  const handleSyncClick = () => {
+    guardNavigation(() => onSync());
   };
 
   return (
@@ -107,7 +117,7 @@ export const WorkspaceControls = ({
         <Button
           aria-label="Download database"
           className="h-6 px-1.5 text-[11px]"
-          onClick={() => void onDownload()}
+          onClick={handleDownloadClick}
           size="xs"
           type="button"
           variant="outline"
