@@ -70,6 +70,8 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
   useEffect(() => {
     setDirty(isDirty);
+
+    return () => setDirty(false);
   }, [isDirty, setDirty]);
 
   useEffect(() => {

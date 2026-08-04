@@ -1,13 +1,34 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import type kdbx from '@/lib/kdbx.lib';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { EntryEditForm } from '@/components/workspace/entry-edit.form';
+import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 
 const record = createTestRecord();
+
+type ToggleableEntryEditFormProps = {
+  database: kdbx.Kdbx;
+  entry: kdbx.KdbxEntry;
+  onGuardedAction: () => void;
+};
+
+const ToggleableEntryEditForm = ({ database, entry, onGuardedAction }: ToggleableEntryEditFormProps) => {
+  const [mounted, setMounted] = useState(true);
+  const { guardNavigation } = useSafeNet();
+
+  return (
+    <div>
+      {mounted && <EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />}
+      <button onClick={() => setMounted(false)}>Unmount form</button>
+      <button onClick={() => guardNavigation(onGuardedAction)}>Run guarded action</button>
+    </div>
+  );
+};
 
 describe('entry-edit.form', () => {
   let database: kdbx.Kdbx;
@@ -71,6 +92,19 @@ describe('entry-edit.form', () => {
       expect(saveEntry).toHaveBeenCalledOnce();
       expect(onSave).toHaveBeenCalledWith(payload);
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    it('clears the global dirty flag on unmount so navigation is not blocked afterward', async () => {
+      const user = userEvent.setup();
+      const onGuardedAction = vi.fn();
+
+      render(<ToggleableEntryEditForm database={database} entry={entry} onGuardedAction={onGuardedAction} />);
+      await user.type(screen.getByLabelText('Title'), '!');
+      await user.click(screen.getByRole('button', { name: 'Unmount form' }));
+      await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
+
+      expect(onGuardedAction).toHaveBeenCalledOnce();
+      expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
     });
   });
 });
