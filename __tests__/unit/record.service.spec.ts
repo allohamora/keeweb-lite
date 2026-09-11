@@ -557,6 +557,22 @@ describe('record.service', () => {
       expect(records).toHaveLength(1);
     });
 
+    it('rejects one of two concurrent imports with the same name and persists only one record', async () => {
+      const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
+      const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
+
+      const results = await Promise.allSettled([
+        importLocalRecord({ databaseFile: createFileList(dbFile1) }),
+        importLocalRecord({ databaseFile: createFileList(dbFile2) }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
     it('allows records with different kdbx names', async () => {
       const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault-a.kdbx');
       const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault-b.kdbx');
@@ -688,6 +704,35 @@ describe('record.service', () => {
       await createLocalRecord({ databaseName: 'My Vault', password: 'another-password' }).catch(() => undefined);
 
       expect(await getRecords()).toHaveLength(1);
+    });
+
+    it('rejects one of two concurrent creates with the same name and persists only one record', async () => {
+      const results = await Promise.allSettled([
+        createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
+        createLocalRecord({ databaseName: 'My Vault', password: 'another-password' }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
+    it('rejects a concurrent create and import that target the same name and persists only one record', async () => {
+      const dbFile = new File([new Uint8Array([1, 2, 3])], 'My Vault.kdbx');
+      const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
+
+      const results = await Promise.allSettled([
+        createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
+        importLocalRecord({ databaseFile: createFileList(dbFile) }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
     });
 
     it('allows the same name across a local and a google-drive record', async () => {
@@ -876,6 +921,21 @@ describe('record.service', () => {
       });
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }).catch(() => undefined);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
+    it('rejects one of two concurrent imports with the same source.id and persists only one record', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      const results = await Promise.allSettled([
+        importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }),
+        importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
 
       const records = await getRecords();
       expect(records).toHaveLength(1);
