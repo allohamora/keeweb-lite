@@ -80,9 +80,7 @@ export const ImportGoogleDriveModal = ({ open, onOpenChange, onRecordImported }:
       >
         <DialogHeader>
           <DialogTitle>Import Google Drive Record</DialogTitle>
-          <DialogDescription>
-            Select a .kdbx file from Google Drive. The new record becomes selected immediately.
-          </DialogDescription>
+          <DialogDescription>Select a .kdbx file from Google Drive.</DialogDescription>
         </DialogHeader>
 
         <form

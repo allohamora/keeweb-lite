@@ -24,7 +24,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 ## Layout Regions
 
 1. Inline status/message area
-   - Shows unlock/load/create feedback.
+   - Shows unlock/load/import feedback.
    - Supports dismissing transient messages.
 2. Quick actions area
    - Primary actions for opening existing records, importing records, and creating a new local record.
@@ -168,7 +168,7 @@ Unlock-success runtime state contract:
 - Unlock submit is blocked when:
   - no open/selected record context exists
   - password is empty
-- `importLocalRecord`/`importGoogleDriveRecord` payload validation follows repository schema:
+- Persisted record follows repository schema:
   - `local` record must not include Google Drive-only fields.
   - `google-drive` record must include valid `source` with `id`.
 - Key file is optional; when provided, it is treated as unlock credential input only.
@@ -188,7 +188,7 @@ Unlock-success runtime state contract:
   - tab navigation across quick actions, selector, recent records, and unlock controls
   - `Enter` to submit unlock
 - Focus behavior:
-  - focus moves to password input when selection changes or when a record is created and selected
+  - focus moves to password input when selection changes or when a record is imported and selected
   - focus remains within actionable controls on errors
 - Inline status/message area uses `aria-live="polite"`.
 - Selection state for recent records is programmatically exposed (for example, `aria-selected`).
@@ -223,7 +223,7 @@ Unlock-success runtime state contract:
 ## Acceptance Criteria
 
 1. Startup and re-entry both land on Unlock before workspace is available.
-2. Empty repository shows empty state and unlock is unavailable until open/create context exists.
+2. Empty repository shows empty state and unlock is unavailable until open/import context exists.
 3. Mixed `local` and `google-drive` records render and can be selected.
 4. Latest `lastOpenedAt` record is preselected on startup when available.
 5. Quick action area supports open/import flow selection without leaving Unlock.

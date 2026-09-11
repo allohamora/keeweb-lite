@@ -79,9 +79,7 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
       >
         <DialogHeader>
           <DialogTitle>Create Local Record</DialogTitle>
-          <DialogDescription>
-            Create a new empty local database. The new record becomes selected immediately.
-          </DialogDescription>
+          <DialogDescription>Create a new empty local database.</DialogDescription>
         </DialogHeader>
 
         <form

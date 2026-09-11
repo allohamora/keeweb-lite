@@ -1,0 +1,26 @@
+{
+  "id": "personal-docker-in-docker",
+  "version": "1.0.0",
+  "name": "Personal Docker-in-Docker",
+  "description": "Installs Docker-in-Docker with persistent Docker data",
+  "dependsOn": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {}
+  },
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "devcontainer-personal-docker-in-docker-data",
+      "target": "/var/lib/docker"
+    },
+    {
+      "type": "volume",
+      "source": "devcontainer-personal-docker-in-docker-containerd",
+      "target": "/var/lib/containerd"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["docker.docker", "ms-azuretools.vscode-containers", "ms-azuretools.vscode-docker"]
+    }
+  }
+}

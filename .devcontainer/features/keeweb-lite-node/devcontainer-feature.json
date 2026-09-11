@@ -1,0 +1,23 @@
+{
+  "id": "keeweb-lite-node",
+  "version": "1.0.0",
+  "name": "Keeweb Lite Node",
+  "description": "Installs Node.js and persists node_modules",
+  "dependsOn": {
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "24.14.1"
+    }
+  },
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "devcontainer-keeweb-lite-node-modules",
+      "target": "/workspaces/keeweb-lite/node_modules"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["editorconfig.editorconfig", "streetsidesoftware.code-spell-checker"]
+    }
+  }
+}
