@@ -101,9 +101,7 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
               </PopoverContent>
             </Popover>
           </DialogTitle>
-          <DialogDescription>
-            Create a new empty database on Google Drive. The new record becomes selected immediately.
-          </DialogDescription>
+          <DialogDescription>Create a new empty database on Google Drive.</DialogDescription>
         </DialogHeader>
 
         <form

@@ -940,6 +940,28 @@ describe('record.service', () => {
       expect(await getRecords()).toHaveLength(2);
     });
 
+    it('persists both records when creating two google-drive records concurrently', async () => {
+      const resolver = vi.fn((context: CreateFileRequestContext) =>
+        HttpResponse.json({
+          id: `drive-file-id-${context.metadata?.name}`,
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: context.metadata?.name,
+        }),
+      );
+      mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
+
+      const results = await Promise.allSettled([
+        createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
+        createGoogleDriveRecord({ databaseName: 'My Vault', password: 'another-password' }),
+      ]);
+
+      expect(results.every((result) => result.status === 'fulfilled')).toBe(true);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(2);
+      expect(records[0].id).not.toBe(records[1].id);
+    });
+
     it('throws and does not persist a local record when the Drive API create call fails', async () => {
       mockServer.addHandlers(googleDriveApi.createFile.error({ status: 500, statusText: 'Internal Server Error' }));
 

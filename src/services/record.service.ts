@@ -195,33 +195,35 @@ export const createGoogleDriveRecord = async ({
   password: string;
   useKeyFile?: boolean;
 }) => {
-  const name = databaseName.trim();
-  if (!name) {
-    throw new Error('Database name is required.');
-  }
-  if (!password) {
-    throw new Error('Master password is required.');
-  }
+  return createImportLock.runInLock(async () => {
+    const name = databaseName.trim();
+    if (!name) {
+      throw new Error('Database name is required.');
+    }
+    if (!password) {
+      throw new Error('Master password is required.');
+    }
 
-  const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
+    const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
 
-  const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
+    const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
 
-  const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
-  await credentials.ready;
+    const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
+    await credentials.ready;
 
-  const database = kdbx.Kdbx.create(credentials, name);
-  const encryptedBytes = await toEncryptedBytes(database);
+    const database = kdbx.Kdbx.create(credentials, name);
+    const encryptedBytes = await toEncryptedBytes(database);
 
-  const driveFile = await createFile(kdbxFileName, encryptedBytes);
+    const driveFile = await createFile(kdbxFileName, encryptedBytes);
 
-  await createRecord({
-    id: crypto.randomUUID(),
-    kdbx: { encryptedBytes, name: kdbxFileName },
-    key: generatedKey?.key,
-    source: { id: driveFile.id },
-    type: 'google-drive',
+    await createRecord({
+      id: crypto.randomUUID(),
+      kdbx: { encryptedBytes, name: kdbxFileName },
+      key: generatedKey?.key,
+      source: { id: driveFile.id },
+      type: 'google-drive',
+    });
+
+    return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
   });
-
-  return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
 };
