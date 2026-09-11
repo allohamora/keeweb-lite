@@ -1,0 +1,18 @@
+{
+  "id": "personal-codex",
+  "version": "1.0.0",
+  "name": "Personal Codex",
+  "description": "Installs Codex with the official native installer for the personal development environment",
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "devcontainer-personal-codex-config",
+      "target": "/home/vscode/.codex"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["openai.chatgpt"]
+    }
+  }
+}

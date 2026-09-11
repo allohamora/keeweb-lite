@@ -1,0 +1,18 @@
+{
+  "id": "personal-claude-code",
+  "version": "1.0.0",
+  "name": "Personal Claude Code",
+  "description": "Installs Claude Code with the official native installer for the personal development environment",
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "devcontainer-personal-claude-code-config",
+      "target": "/home/vscode/.claude"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  }
+}
