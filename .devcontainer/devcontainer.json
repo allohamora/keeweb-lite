@@ -1,0 +1,17 @@
+{
+  "name": "keeweb-lite",
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/keeweb-lite,type=bind,consistency=cached",
+  "workspaceFolder": "/workspaces/keeweb-lite",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "./features/personal-docker-in-docker": {},
+    "./features/personal-github-cli": {},
+    "./features/keeweb-lite-node": {},
+    "./features/personal-claude-code": {},
+    "./features/personal-codex": {}
+  },
+  "runArgs": ["--name", "keeweb-lite-devcontainer", "--sysctl", "net.ipv6.conf.all.disable_ipv6=1"],
+  "privileged": true
+}

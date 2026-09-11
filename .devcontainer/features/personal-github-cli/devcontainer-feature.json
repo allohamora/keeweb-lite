@@ -1,0 +1,16 @@
+{
+  "id": "personal-github-cli",
+  "version": "1.0.0",
+  "name": "Personal GitHub CLI",
+  "description": "Installs GitHub CLI with persistent configuration",
+  "dependsOn": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "devcontainer-personal-github-cli-config",
+      "target": "/home/vscode/.config/gh"
+    }
+  ]
+}
