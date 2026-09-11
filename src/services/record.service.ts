@@ -77,7 +77,7 @@ const toKey = async (keyFile?: FileList | undefined) => {
   return await readKeyFile(selectedKeyFile);
 };
 
-export const createGoogleDriveRecord = async ({
+export const importGoogleDriveRecord = async ({
   fileId,
   fileName,
   keyFile,
@@ -105,7 +105,7 @@ export const createGoogleDriveRecord = async ({
   });
 };
 
-export const createLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {
+export const importLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {
   const id = crypto.randomUUID();
 
   const database = await toKdbx(databaseFile);

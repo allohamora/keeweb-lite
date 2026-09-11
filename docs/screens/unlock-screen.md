@@ -10,7 +10,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 - Unlock is also used for re-entry after lock/logout/close-file flows.
 - Unlock supports:
   - loading and rendering recent records from `record.repository`
-  - quick unlock actions inspired by KeeWeb open flow (`Open`, `Add record`, and additional source actions)
+  - quick unlock actions inspired by KeeWeb open flow (`Open`, `Import`, and additional source actions)
   - selecting an existing recent record
   - entering password and optional key file
   - submitting unlock for the selected record context
@@ -26,11 +26,11 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
    - Shows unlock/load/create feedback.
    - Supports dismissing transient messages.
 2. Quick actions area
-   - Primary actions for opening existing records and creating records.
+   - Primary actions for opening existing records and importing records.
    - Secondary source actions for lite-supported providers.
 3. Source context selector
    - Values: `Local`, `Google Drive`.
-   - Controls create/open context.
+   - Controls import/open context.
 4. Unlock credentials area
    - Password input.
    - Optional key file control.
@@ -45,8 +45,8 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 - Unlock layout is top-anchored and scrollable on mobile instead of vertically centered.
 - Header actions and form action rows wrap/stack to keep controls reachable with on-screen keyboard.
 - Unlock and remove actions remain full-width touch targets in mobile layout.
-- Create-record dialogs use viewport-aware max-height with internal scrolling to prevent clipped controls.
-- Google Picker remains actionable when opened above the Google Drive create dialog.
+- Import-record dialogs use viewport-aware max-height with internal scrolling to prevent clipped controls.
+- Google Picker remains actionable when opened above the Google Drive import dialog.
 
 ## State Model
 
@@ -57,7 +57,7 @@ View states:
   - Calls `getRecords`.
 - `no-records`
   - Rendered when `getRecords` resolves to `[]`.
-  - Shows empty-state guidance and create/open actions.
+  - Shows empty-state guidance and import/open actions.
 - `ready`
   - Rendered when at least one record exists or a valid open context is selected.
   - Recent records, unlock controls, and quick actions are available.
@@ -66,18 +66,18 @@ View states:
 
 Transient operation flags (not top-level view states):
 
-- `isCreatingRecord`
-  - `true` while `createRecord` is in flight.
+- `isImportingRecord`
+  - `true` while `importLocalRecord`/`importGoogleDriveRecord` is in flight.
 - `isUnlocking`
   - `true` while unlock request is in flight.
 - `inlineMessage`
-  - Holds actionable load/create/unlock/drop errors while keeping current view state.
+  - Holds actionable load/import/unlock/drop errors while keeping current view state.
 
 View-state transitions:
 
 1. `loading-records` -> `no-records` when no records are found.
 2. `loading-records` -> `ready` when records are found.
-3. `no-records` -> `ready` after successful create/open context setup.
+3. `no-records` -> `ready` after successful import/open context setup.
 4. `ready` <-> `drag-over` during drag enter/leave lifecycle.
 5. `ready` -> workspace transition after successful unlock.
 6. Any state may keep current view and set `inlineMessage` on failure.
@@ -132,12 +132,12 @@ Unlock-success runtime state contract:
    - Resolves to `no-records` or `ready`.
    - In `ready`, preselects record by latest `lastOpenedAt`.
 2. Quick action selection
-   - User chooses open/create action and source context.
-   - Unlock updates active open/create context without leaving screen.
-3. Create record
+   - User chooses open/import action and source context.
+   - Unlock updates active open/import context without leaving screen.
+3. Import record
    - User picks source (`Local` or `Google Drive`).
-   - User triggers `Add record`.
-   - Unlock sets `isCreatingRecord = true`, calls `createRecord`, refreshes records, selects created record, then clears `isCreatingRecord`.
+   - User triggers `Import`.
+   - Unlock sets `isImportingRecord = true`, calls `importLocalRecord`/`importGoogleDriveRecord`, refreshes records, selects imported record, then clears `isImportingRecord`.
 4. Select record
    - User selects a record in recent list.
    - Unlock form binds to selected record context.
@@ -156,7 +156,7 @@ Unlock-success runtime state contract:
 - Unlock submit is blocked when:
   - no open/selected record context exists
   - password is empty
-- `createRecord` payload validation follows repository schema:
+- `importLocalRecord`/`importGoogleDriveRecord` payload validation follows repository schema:
   - `local` record must not include Google Drive-only fields.
   - `google-drive` record must include valid `source` with `id`.
 - Key file is optional; when provided, it is treated as unlock credential input only.
@@ -187,7 +187,7 @@ Unlock-success runtime state contract:
 - `getRecords` failure:
   - show inline load error
   - keep retry path available
-- `createRecord` failure:
+- Import failure:
   - keep existing list/selection state unchanged
   - show inline actionable message
 - Unlock failure:
@@ -206,9 +206,9 @@ Unlock-success runtime state contract:
 2. Empty repository shows empty state and unlock is unavailable until open/create context exists.
 3. Mixed `local` and `google-drive` records render and can be selected.
 4. Latest `lastOpenedAt` record is preselected on startup when available.
-5. Quick action area supports open/create flow selection without leaving Unlock.
-6. Creating a `local` record adds it and makes it selected immediately.
-7. Creating a `google-drive` record with valid `source.id` adds it and makes it selected immediately.
+5. Quick action area supports open/import flow selection without leaving Unlock.
+6. Importing a `local` record adds it and makes it selected immediately.
+7. Importing a `google-drive` record with valid `source.id` adds it and makes it selected immediately.
 8. Pressing `Enter` triggers unlock for the current selected/open context.
 9. Unlock failure keeps Unlock visible and surfaces actionable error text.
 10. Unlock success transitions to workspace and updates selected record `lastOpenedAt`.
@@ -216,7 +216,7 @@ Unlock-success runtime state contract:
 12. Optional key-file path is supported for both record types.
 13. Accessibility requirements pass for keyboard flow, focus order, and `aria-live` status updates.
 14. At viewport width `<=768px`, unlock controls remain visible and usable while virtual keyboard is open.
-15. At viewport width `<=768px`, create local/drive dialogs remain scrollable without clipped footers, and the Google Picker remains actionable when opened from the Drive dialog.
+15. At viewport width `<=768px`, import local/drive dialogs remain scrollable without clipped footers, and the Google Picker remains actionable when opened from the Drive dialog.
 
 ## Out of Scope
 

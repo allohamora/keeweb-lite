@@ -50,7 +50,7 @@ Define KeeWeb-like workspace navigation with an Unlock screen.
 - Unlock mobile behavior:
   - top-anchored unlock layout
   - stacked action row controls
-  - viewport-safe create-record modal scrolling
+  - viewport-safe import-record modal scrolling
   - Google Picker remains actionable over the Drive modal
 - Mobile install behavior:
   - app exposes PWA manifest metadata for browser-native install entry points

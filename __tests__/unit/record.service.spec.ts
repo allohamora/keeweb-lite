@@ -5,9 +5,9 @@ import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord } from '@/repositories/record.repository';
 import {
-  createGoogleDriveRecord,
-  createLocalRecord,
   getRecords,
+  importGoogleDriveRecord,
+  importLocalRecord,
   toEncryptedBytes,
   unlockKdbx,
 } from '@/services/record.service';
@@ -463,18 +463,18 @@ describe('record.service', () => {
     });
   });
 
-  describe('createLocalRecord', () => {
+  describe('importLocalRecord', () => {
     afterEach(async () => {
       await clearRecords();
     });
 
     const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
 
-    it('creates a local record with the database file name and encrypted bytes', async () => {
+    it('imports a local record with the database file name and encrypted bytes', async () => {
       const encryptedBytes = new Uint8Array([1, 2, 3, 4, 5]);
       const dbFile = new File([encryptedBytes], 'vault.kdbx');
 
-      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
       const records = await getRecords();
       expect(records).toHaveLength(1);
@@ -483,20 +483,20 @@ describe('record.service', () => {
       expect(records[0].kdbx.encryptedBytes).toEqual(encryptedBytes);
     });
 
-    it('creates a local record without a key when keyFile is not provided', async () => {
+    it('imports a local record without a key when keyFile is not provided', async () => {
       const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
 
-      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
       const records = await getRecords();
       expect(records[0].key).toBeUndefined();
     });
 
-    it('creates a local record with a key when keyFile is provided', async () => {
+    it('imports a local record with a key when keyFile is provided', async () => {
       const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
       const keyFile = new File([new Uint8Array([10, 20, 30])], 'vault.keyx');
 
-      await createLocalRecord({
+      await importLocalRecord({
         databaseFile: createFileList(dbFile),
         keyFile: createFileList(keyFile),
       });
@@ -507,10 +507,10 @@ describe('record.service', () => {
       expect(typeof records[0].key?.hash).toBe('string');
     });
 
-    it('does not set lastOpenedAt on creation', async () => {
+    it('does not set lastOpenedAt on import', async () => {
       const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
 
-      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
       const records = await getRecords();
       expect(records[0].lastOpenedAt).toBeUndefined();
@@ -520,8 +520,8 @@ describe('record.service', () => {
       const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault-1.kdbx');
       const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault-2.kdbx');
 
-      await createLocalRecord({ databaseFile: createFileList(dbFile1) });
-      await createLocalRecord({ databaseFile: createFileList(dbFile2) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile1) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile2) });
 
       const records = await getRecords();
       expect(records).toHaveLength(2);
@@ -531,26 +531,26 @@ describe('record.service', () => {
     it('throws when the database FileList is empty', async () => {
       const emptyFileList = { 0: undefined, length: 0 } as unknown as FileList;
 
-      await expect(createLocalRecord({ databaseFile: emptyFileList })).rejects.toThrow('No database file selected.');
+      await expect(importLocalRecord({ databaseFile: emptyFileList })).rejects.toThrow('No database file selected.');
     });
 
     it('throws when a record with the same kdbx name already exists', async () => {
       const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
 
-      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
       const duplicate = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
-      await expect(createLocalRecord({ databaseFile: createFileList(duplicate) })).rejects.toThrow(
+      await expect(importLocalRecord({ databaseFile: createFileList(duplicate) })).rejects.toThrow(
         'A record named "vault.kdbx" already exists.',
       );
     });
 
     it('does not store the duplicate record when the name already exists', async () => {
       const dbFile = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
-      await createLocalRecord({ databaseFile: createFileList(dbFile) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
       const duplicate = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
-      await createLocalRecord({ databaseFile: createFileList(duplicate) }).catch(() => undefined);
+      await importLocalRecord({ databaseFile: createFileList(duplicate) }).catch(() => undefined);
 
       const records = await getRecords();
       expect(records).toHaveLength(1);
@@ -560,8 +560,8 @@ describe('record.service', () => {
       const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault-a.kdbx');
       const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault-b.kdbx');
 
-      await createLocalRecord({ databaseFile: createFileList(dbFile1) });
-      await createLocalRecord({ databaseFile: createFileList(dbFile2) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile1) });
+      await importLocalRecord({ databaseFile: createFileList(dbFile2) });
 
       const records = await getRecords();
       expect(records).toHaveLength(2);
@@ -576,19 +576,19 @@ describe('record.service', () => {
       });
 
       const dbFile = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
-      await expect(createLocalRecord({ databaseFile: createFileList(dbFile) })).resolves.toBeUndefined();
+      await expect(importLocalRecord({ databaseFile: createFileList(dbFile) })).resolves.toBeUndefined();
 
       const records = await getRecords();
       expect(records).toHaveLength(2);
     });
 
-    it('unlocks after creation without a key file and entries are accessible', async () => {
+    it('unlocks after import without a key file and entries are accessible', async () => {
       const { encryptedBytes, password } = await createDatabase({
         keyFile: null,
         records: [{ name: 'Test Entry', password: 'entry-pass', username: 'test-user' }],
       });
 
-      await createLocalRecord({ databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')) });
+      await importLocalRecord({ databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')) });
 
       const [record] = await getRecords();
       const { database } = await unlockForSession({ password, record });
@@ -598,7 +598,7 @@ describe('record.service', () => {
       expect(getFieldText(entry, 'UserName')).toBe('test-user');
     });
 
-    it('unlocks after creation with a key file and entries are accessible', async () => {
+    it('unlocks after import with a key file and entries are accessible', async () => {
       const keyFileHashBase64 = await createRandomKeyFile();
       const keyFileBytes = kdbx.ByteUtils.base64ToBytes(keyFileHashBase64);
 
@@ -607,7 +607,7 @@ describe('record.service', () => {
         records: [{ name: 'Test Entry', password: 'entry-pass', username: 'test-user' }],
       });
 
-      await createLocalRecord({
+      await importLocalRecord({
         databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')),
         keyFile: createFileList(new File([new Uint8Array(keyFileBytes)], 'vault.keyx')),
       });
@@ -621,7 +621,7 @@ describe('record.service', () => {
     });
   });
 
-  describe('createGoogleDriveRecord', () => {
+  describe('importGoogleDriveRecord', () => {
     afterEach(async () => {
       await clearRecords();
       await auth.clearAccessToken();
@@ -633,10 +633,10 @@ describe('record.service', () => {
     const testFileName = 'vault.kdbx';
     const testBytes = new Uint8Array([1, 2, 3, 4, 5]);
 
-    it('creates a Google Drive record with file bytes fetched from Drive', async () => {
+    it('imports a Google Drive record with file bytes fetched from Drive', async () => {
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
 
-      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+      await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
       const records = await getRecords();
       expect(records).toHaveLength(1);
@@ -648,7 +648,7 @@ describe('record.service', () => {
     it('sets type google-drive and source.id equal to the provided fileId', async () => {
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
 
-      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+      await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
       const records = await getRecords();
       expect(records[0].type).toBe('google-drive');
@@ -661,7 +661,7 @@ describe('record.service', () => {
     it('does not add a key when keyFile is not provided', async () => {
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
 
-      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
+      await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
       const records = await getRecords();
       expect(records[0].key).toBeUndefined();
@@ -671,7 +671,7 @@ describe('record.service', () => {
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
 
       const keyFile = new File([new Uint8Array([10, 20, 30])], 'vault.keyx');
-      await createGoogleDriveRecord({
+      await importGoogleDriveRecord({
         fileId: testFileId,
         fileName: testFileName,
         keyFile: createFileList(keyFile),
@@ -691,7 +691,7 @@ describe('record.service', () => {
         source: { id: testFileId },
       });
 
-      await expect(createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName })).rejects.toThrow(
+      await expect(importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName })).rejects.toThrow(
         'A record for this file already exists.',
       );
     });
@@ -704,7 +704,7 @@ describe('record.service', () => {
         source: { id: testFileId },
       });
 
-      await createGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }).catch(() => undefined);
+      await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }).catch(() => undefined);
 
       const records = await getRecords();
       expect(records).toHaveLength(1);
