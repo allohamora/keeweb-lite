@@ -77,6 +77,15 @@ const toKey = async (keyFile?: FileList | undefined) => {
   return await readKeyFile(selectedKeyFile);
 };
 
+const generateKeyFile = async (databaseName: string) => {
+  // createRandomKeyFile defaults to the legacy version 1 XML key file; pass 2 explicitly
+  // to get the newer, hash-verified version that KeePass2 names with a .keyx extension.
+  const keyFileBytes = await kdbx.Credentials.createRandomKeyFile(2);
+  const key = { hash: kdbx.ByteUtils.bytesToBase64(keyFileBytes), name: `${databaseName}.keyx` };
+
+  return { key, keyFileBytes };
+};
+
 export const importGoogleDriveRecord = async ({
   fileId,
   fileName,
@@ -123,4 +132,46 @@ export const importLocalRecord = async ({ databaseFile, keyFile }: { databaseFil
     key,
     type: 'local',
   });
+};
+
+export const createLocalRecord = async ({
+  databaseName,
+  password,
+  useKeyFile,
+}: {
+  databaseName: string;
+  password: string;
+  useKeyFile?: boolean;
+}) => {
+  const name = databaseName.trim();
+  if (!name) {
+    throw new Error('Database name is required.');
+  }
+  if (!password) {
+    throw new Error('Master password is required.');
+  }
+
+  const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
+
+  const records = await getRepositoryRecords();
+  if (records.some((record) => record.type === 'local' && record.kdbx.name === kdbxFileName)) {
+    throw new Error(`A record named "${kdbxFileName}" already exists.`);
+  }
+
+  const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
+
+  const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
+  await credentials.ready;
+
+  const database = kdbx.Kdbx.create(credentials, name);
+  const encryptedBytes = await toEncryptedBytes(database);
+
+  await createRecord({
+    id: crypto.randomUUID(),
+    kdbx: { encryptedBytes, name: kdbxFileName },
+    key: generatedKey?.key,
+    type: 'local',
+  });
+
+  return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
 };
