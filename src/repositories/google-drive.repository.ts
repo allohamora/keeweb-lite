@@ -87,6 +87,44 @@ export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> 
   return new Uint8Array(buffer);
 };
 
+export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>): Promise<File> => {
+  const accessToken = await auth.getAccessToken();
+
+  const boundary = crypto.randomUUID();
+  // No `parents` set, so the file is created in Drive root ("My Drive"), matching
+  // Google's own "Save to Drive" button behavior: https://developers.google.com/drive/api/guides/savetodrive
+  const metadata = JSON.stringify({ name: fileName });
+
+  // multipart/related body (JSON metadata part + binary media part), per
+  // https://developers.google.com/workspace/drive/api/guides/manage-uploads#multipart
+  const body = new Blob([
+    `--${boundary}\r\n`,
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n',
+    `${metadata}\r\n`,
+    `--${boundary}\r\n`,
+    'Content-Type: application/octet-stream\r\n\r\n',
+    data,
+    `\r\n--${boundary}--`,
+  ]);
+
+  const params = new URLSearchParams({ uploadType: 'multipart', fields: 'id,name,modifiedTime' });
+
+  const response = await fetch(`${DRIVE_UPLOAD_BASE}/files?${params}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create file: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as File;
+};
+
 export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<File> => {
   const accessToken = await auth.getAccessToken();
 

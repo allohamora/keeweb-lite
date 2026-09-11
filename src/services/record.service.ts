@@ -1,5 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
-import { getFile } from '@/repositories/google-drive.repository';
+import { createFile, getFile } from '@/repositories/google-drive.repository';
 import { createRecord, getRecords as getRepositoryRecords } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
 
@@ -171,6 +171,46 @@ export const createLocalRecord = async ({
     kdbx: { encryptedBytes, name: kdbxFileName },
     key: generatedKey?.key,
     type: 'local',
+  });
+
+  return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
+};
+
+export const createGoogleDriveRecord = async ({
+  databaseName,
+  password,
+  useKeyFile,
+}: {
+  databaseName: string;
+  password: string;
+  useKeyFile?: boolean;
+}) => {
+  const name = databaseName.trim();
+  if (!name) {
+    throw new Error('Database name is required.');
+  }
+  if (!password) {
+    throw new Error('Master password is required.');
+  }
+
+  const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
+
+  const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
+
+  const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
+  await credentials.ready;
+
+  const database = kdbx.Kdbx.create(credentials, name);
+  const encryptedBytes = await toEncryptedBytes(database);
+
+  const driveFile = await createFile(kdbxFileName, encryptedBytes);
+
+  await createRecord({
+    id: crypto.randomUUID(),
+    kdbx: { encryptedBytes, name: kdbxFileName },
+    key: generatedKey?.key,
+    source: { id: driveFile.id },
+    type: 'google-drive',
   });
 
   return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
