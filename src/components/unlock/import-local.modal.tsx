@@ -71,9 +71,7 @@ export const ImportLocalModal = ({ open, onOpenChange, onRecordImported }: Impor
       >
         <DialogHeader>
           <DialogTitle>Import File Record</DialogTitle>
-          <DialogDescription>
-            Choose a local .kdbx file and optional key file. The new record becomes selected immediately.
-          </DialogDescription>
+          <DialogDescription>Choose a local .kdbx file and optional key file.</DialogDescription>
         </DialogHeader>
 
         <form
