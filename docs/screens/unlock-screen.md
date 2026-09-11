@@ -23,7 +23,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 ## Layout Regions
 
 1. Inline status/message area
-   - Shows unlock/load/create feedback.
+   - Shows unlock/load/import feedback.
    - Supports dismissing transient messages.
 2. Quick actions area
    - Primary actions for opening existing records and importing records.
