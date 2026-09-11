@@ -1,4 +1,4 @@
-name: build
+name: check
 
 on:
   push:
@@ -6,21 +6,32 @@ on:
       - "**"
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
-    env:
-      CI: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v7.0.1
+
       - name: Install node
         uses: actions/setup-node@v7
         with:
-          cache: "npm"
-          node-version-file: ".nvmrc"
+          node-version-file: .nvmrc
+          cache: npm
+
       - name: Install dependencies
-        run: npm i
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run format
+        run: npm run format
+
+      - name: Run check
+        run: npm run check
+
       - name: Set .env
         run: cp .env.example .env
+
       - name: Run build
         run: npm run build
