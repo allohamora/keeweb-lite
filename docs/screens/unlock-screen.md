@@ -171,7 +171,7 @@ Unlock-success runtime state contract:
   - tab navigation across quick actions, selector, recent records, and unlock controls
   - `Enter` to submit unlock
 - Focus behavior:
-  - focus moves to password input when selection changes or when a record is created and selected
+  - focus moves to password input when selection changes or when a record is imported and selected
   - focus remains within actionable controls on errors
 - Inline status/message area uses `aria-live="polite"`.
 - Selection state for recent records is programmatically exposed (for example, `aria-selected`).
@@ -203,7 +203,7 @@ Unlock-success runtime state contract:
 ## Acceptance Criteria
 
 1. Startup and re-entry both land on Unlock before workspace is available.
-2. Empty repository shows empty state and unlock is unavailable until open/create context exists.
+2. Empty repository shows empty state and unlock is unavailable until open/import context exists.
 3. Mixed `local` and `google-drive` records render and can be selected.
 4. Latest `lastOpenedAt` record is preselected on startup when available.
 5. Quick action area supports open/import flow selection without leaving Unlock.
