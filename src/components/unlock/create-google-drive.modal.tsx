@@ -88,6 +88,7 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
             Create Google Drive Record
             <Popover onOpenChange={setIsDestinationInfoOpen} open={isDestinationInfoOpen}>
               <PopoverTrigger
+                aria-label="Drive destination info"
                 className="cursor-default text-muted-foreground"
                 onMouseEnter={() => setIsDestinationInfoOpen(true)}
                 onMouseLeave={() => setIsDestinationInfoOpen(false)}
