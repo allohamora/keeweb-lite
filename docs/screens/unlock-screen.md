@@ -156,7 +156,7 @@ Unlock-success runtime state contract:
 - Unlock submit is blocked when:
   - no open/selected record context exists
   - password is empty
-- `importLocalRecord`/`importGoogleDriveRecord` payload validation follows repository schema:
+- Persisted record follows repository schema:
   - `local` record must not include Google Drive-only fields.
   - `google-drive` record must include valid `source` with `id`.
 - Key file is optional; when provided, it is treated as unlock credential input only.
