@@ -5,6 +5,7 @@ import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord } from '@/repositories/record.repository';
 import {
+  createLocalRecord,
   getRecords,
   importGoogleDriveRecord,
   importLocalRecord,
@@ -556,6 +557,22 @@ describe('record.service', () => {
       expect(records).toHaveLength(1);
     });
 
+    it('rejects one of two concurrent imports with the same name and persists only one record', async () => {
+      const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault.kdbx');
+      const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
+
+      const results = await Promise.allSettled([
+        importLocalRecord({ databaseFile: createFileList(dbFile1) }),
+        importLocalRecord({ databaseFile: createFileList(dbFile2) }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
     it('allows records with different kdbx names', async () => {
       const dbFile1 = new File([new Uint8Array([1, 2, 3])], 'vault-a.kdbx');
       const dbFile2 = new File([new Uint8Array([4, 5, 6])], 'vault-b.kdbx');
@@ -618,6 +635,205 @@ describe('record.service', () => {
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');
       expect(getFieldText(entry, 'UserName')).toBe('test-user');
+    });
+  });
+
+  describe('createLocalRecord', () => {
+    afterEach(async () => {
+      await clearRecords();
+    });
+
+    it('creates a local record and appends .kdbx when the name does not already end with it', async () => {
+      await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+      expect(records[0].type).toBe('local');
+      expect(records[0].kdbx.name).toBe('My Vault.kdbx');
+    });
+
+    it('keeps the name unchanged when it already ends with .kdbx', async () => {
+      await createLocalRecord({ databaseName: 'My Vault.kdbx', password: 'test-password-123' });
+
+      const records = await getRecords();
+      expect(records[0].kdbx.name).toBe('My Vault.kdbx');
+    });
+
+    it('trims surrounding whitespace from the database name', async () => {
+      await createLocalRecord({ databaseName: '  My Vault  ', password: 'test-password-123' });
+
+      const records = await getRecords();
+      expect(records[0].kdbx.name).toBe('My Vault.kdbx');
+    });
+
+    it('throws when the database name is empty', async () => {
+      await expect(createLocalRecord({ databaseName: '', password: 'test-password-123' })).rejects.toThrow(
+        'Database name is required.',
+      );
+
+      expect(await getRecords()).toEqual([]);
+    });
+
+    it('throws when the database name is whitespace-only', async () => {
+      await expect(createLocalRecord({ databaseName: '   ', password: 'test-password-123' })).rejects.toThrow(
+        'Database name is required.',
+      );
+
+      expect(await getRecords()).toEqual([]);
+    });
+
+    it('throws when the password is empty', async () => {
+      await expect(createLocalRecord({ databaseName: 'My Vault', password: '' })).rejects.toThrow(
+        'Master password is required.',
+      );
+
+      expect(await getRecords()).toEqual([]);
+    });
+
+    it('throws when a local record with the resulting name already exists', async () => {
+      await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
+
+      await expect(createLocalRecord({ databaseName: 'My Vault', password: 'another-password' })).rejects.toThrow(
+        'A record named "My Vault.kdbx" already exists.',
+      );
+    });
+
+    it('does not persist a duplicate record when the name conflict throws', async () => {
+      await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
+
+      await createLocalRecord({ databaseName: 'My Vault', password: 'another-password' }).catch(() => undefined);
+
+      expect(await getRecords()).toHaveLength(1);
+    });
+
+    it('rejects one of two concurrent creates with the same name and persists only one record', async () => {
+      const results = await Promise.allSettled([
+        createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
+        createLocalRecord({ databaseName: 'My Vault', password: 'another-password' }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
+    it('rejects a concurrent create and import that target the same name and persists only one record', async () => {
+      const dbFile = new File([new Uint8Array([1, 2, 3])], 'My Vault.kdbx');
+      const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
+
+      const results = await Promise.allSettled([
+        createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
+        importLocalRecord({ databaseFile: createFileList(dbFile) }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
+    it('allows the same name across a local and a google-drive record', async () => {
+      await createRecord({
+        id: 'google-drive-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'My Vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      await expect(
+        createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
+      ).resolves.toBeDefined();
+
+      expect(await getRecords()).toHaveLength(2);
+    });
+
+    it('generates a unique id per record and does not set lastOpenedAt', async () => {
+      await createLocalRecord({ databaseName: 'Vault One', password: 'test-password-123' });
+      await createLocalRecord({ databaseName: 'Vault Two', password: 'test-password-123' });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(2);
+      expect(records[0].id).not.toBe(records[1].id);
+      expect(records[0].lastOpenedAt).toBeUndefined();
+      expect(records[1].lastOpenedAt).toBeUndefined();
+    });
+
+    it('stores no key and returns no keyFileBytes when useKeyFile is not set', async () => {
+      const result = await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeUndefined();
+      expect(result.keyFileBytes).toBeUndefined();
+      expect(result.keyFileName).toBeUndefined();
+    });
+
+    it('stores a generated key and returns keyFileBytes when useKeyFile is true', async () => {
+      const result = await createLocalRecord({
+        databaseName: 'My Vault',
+        password: 'test-password-123',
+        useKeyFile: true,
+      });
+
+      const records = await getRecords();
+      expect(records[0].key).toBeDefined();
+      expect(records[0].key?.name).toBe('My Vault.keyx');
+      expect(typeof records[0].key?.hash).toBe('string');
+      expect(result.keyFileBytes).toBeInstanceOf(Uint8Array);
+      expect(result.keyFileName).toBe('My Vault.keyx');
+    });
+
+    it('creates a database that unlocks with the given password and starts with an empty default group', async () => {
+      await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
+
+      const [record] = await getRecords();
+      const unlockedDatabase = await unlockKdbx({
+        encryptedBytes: record.kdbx.encryptedBytes,
+        password: 'test-password-123',
+      });
+
+      expect(unlockedDatabase.meta.name).toBe('My Vault');
+      expect(unlockedDatabase.getDefaultGroup().entries).toHaveLength(0);
+    });
+
+    it('creates a database that unlocks with the given password and generated key file', async () => {
+      const { keyFileBytes } = await createLocalRecord({
+        databaseName: 'My Vault',
+        password: 'test-password-123',
+        useKeyFile: true,
+      });
+      expect(keyFileBytes).toBeDefined();
+
+      const [record] = await getRecords();
+      const unlockedDatabase = await unlockKdbx({
+        encryptedBytes: record.kdbx.encryptedBytes,
+        keyFileHashBase64: record.key?.hash,
+        password: 'test-password-123',
+      });
+
+      expect(unlockedDatabase.meta.name).toBe('My Vault');
+    });
+
+    it('rejects unlocking a created database with the wrong password', async () => {
+      await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
+
+      const [record] = await getRecords();
+
+      await expect(
+        unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password: 'wrong-password' }),
+      ).rejects.toThrow();
+    });
+
+    it('rejects unlocking a key-protected created database without the key', async () => {
+      await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123', useKeyFile: true });
+
+      const [record] = await getRecords();
+
+      await expect(
+        unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password: 'test-password-123' }),
+      ).rejects.toThrow();
     });
   });
 
@@ -705,6 +921,21 @@ describe('record.service', () => {
       });
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }).catch(() => undefined);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+    });
+
+    it('rejects one of two concurrent imports with the same source.id and persists only one record', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+
+      const results = await Promise.allSettled([
+        importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }),
+        importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
 
       const records = await getRecords();
       expect(records).toHaveLength(1);

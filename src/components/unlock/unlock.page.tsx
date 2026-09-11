@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { UnlockSession } from '@/services/session.service';
+import { CreateMenu } from './create.menu';
 import { ImportMenu } from './import.menu';
 import { UnlockForm } from './unlock.form';
 
@@ -21,7 +22,10 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
           <div className="border border-zinc-700/80 bg-zinc-950/60 p-3 sm:p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h1 className="text-sm font-semibold tracking-[0.08em] uppercase">Unlock</h1>
-              <ImportMenu onRecordImported={update} />
+              <div className="flex items-center gap-2">
+                <ImportMenu onRecordImported={update} />
+                <CreateMenu onRecordCreated={update} />
+              </div>
             </div>
 
             <UnlockForm recordsReloadToken={recordsReloadToken} setSession={setSession} update={update} />

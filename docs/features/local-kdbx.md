@@ -7,6 +7,7 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 ## Scope
 
 - Local file selection.
+- Creating a brand-new, empty local database.
 - Unlock with password and optional key file.
 - Browser-local save/export behavior.
 
@@ -17,6 +18,12 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
   2. user optionally selects key file from local file input (loaded into memory)
   3. user enters password
   4. app opens DB and renders workspace
+- Local create flow (distinct from open flow above — no existing file is selected):
+  1. user enters a database name
+  2. user enters and confirms a master password
+  3. user optionally enables a generated key file
+  4. app creates an empty KDBX database (`kdbx.Kdbx.create`), persists it as a `local` record, and downloads the generated key file (if requested) automatically
+  5. new record is added and selected; unlocking it still requires the standard credential unlock flow
 - Save behavior for local files:
   - after each edit, keep latest encrypted state in Encrypted Offline Cache (IndexedDB)
   - do not write back to originally selected local file path
@@ -60,3 +67,4 @@ Define local `.kdbx` open and save behavior in a browser-first deployment.
 - Every edit updates local encrypted cached state.
 - User can download current latest encrypted `.kdbx` from local mode.
 - Save failures are visible and recoverable.
+- A newly created local database is added as a selected record and unlocks with the entered password (and generated key file, if requested).

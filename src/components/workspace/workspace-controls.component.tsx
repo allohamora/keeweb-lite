@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toEncryptedBytes } from '@/services/record.service';
 import type { UnlockSession } from '@/services/session.service';
+import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 import { toast } from 'sonner';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
@@ -31,16 +32,7 @@ export const WorkspaceControls = ({
   const download = async () => {
     const bytes = await toEncryptedBytes(database);
 
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = recordName.endsWith('.kdbx') ? recordName : `${recordName}.kdbx`;
-    anchor.style.display = 'none';
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    downloadBytes({ bytes, fileName: recordName.endsWith('.kdbx') ? recordName : `${recordName}.kdbx` });
   };
 
   const onDownload = async () => {
