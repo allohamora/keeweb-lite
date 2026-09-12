@@ -27,7 +27,7 @@ export const WorkspaceMobileMenu = ({
         <DialogHeader className="sr-only">
           <DialogTitle>Menu</DialogTitle>
         </DialogHeader>
-        <div className="box-border flex h-full min-h-0 flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:py-0">
+        <div className="box-border flex size-full min-h-0 min-w-0 flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:py-0">
           <MenuPane
             className="min-h-0 w-full flex-1 border-r-0"
             database={database}

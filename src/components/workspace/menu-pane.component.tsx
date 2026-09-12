@@ -25,10 +25,10 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
   return (
     <nav className={cn('flex h-full w-60 min-w-0 flex-col border-r border-border bg-card', className)}>
       <div className="border-b border-border px-3 py-2">
-        <p className="text-xs font-medium text-foreground">Groups</p>
+        <p className="text-xs font-medium text-foreground">Categories</p>
       </div>
 
-      <div aria-label="Workspace groups" className="flex min-h-0 flex-1 flex-col">
+      <div aria-label="Workspace groups" className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="p-2 pb-1">
           <button className={navItemClass(selectFilter === null)} onClick={() => onSelectFilter(null)} type="button">
             <HugeiconsIcon className="shrink-0" icon={GridViewIcon} size={14} strokeWidth={1.5} />
@@ -36,7 +36,7 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-2 pt-1">
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-2 pt-1">
           {tags.length > 0 ? (
             <div className="mb-2">
               <div className="mb-1 px-2 text-[11px] text-muted-foreground">Tags</div>
@@ -56,19 +56,22 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
             </div>
           ) : null}
 
-          <div className="mb-1 px-2 text-[11px] text-muted-foreground">Collections</div>
-          <div className="flex flex-col gap-0.5">
+          <div className="mb-1 px-2 text-[11px] text-muted-foreground">Groups</div>
+          <div className="flex flex-col items-start gap-0.5">
             {items.map(({ group, depth }) => {
               return (
                 <button
-                  className={navItemClass(isGroupSelect(selectFilter) && group.uuid.equals(selectFilter))}
+                  className={cn(
+                    navItemClass(isGroupSelect(selectFilter) && group.uuid.equals(selectFilter)),
+                    'w-max min-w-full',
+                  )}
                   key={group.uuid.toString()}
                   onClick={() => onSelectFilter(group.uuid)}
                   style={{ paddingLeft: `${8 + depth * 12}px` }}
                   type="button"
                 >
                   <HugeiconsIcon className="shrink-0" icon={Folder01Icon} size={14} strokeWidth={1.5} />
-                  <span className="truncate">{group.name}</span>
+                  <span className="whitespace-nowrap">{group.name}</span>
                 </button>
               );
             })}
