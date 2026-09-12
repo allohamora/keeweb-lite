@@ -1,6 +1,7 @@
 import kdbx from '@/lib/kdbx.lib';
+import { loadDemoDatabase } from '@/services/demo.service';
 import { getFile, updateFile } from '@/repositories/google-drive.repository';
-import { updateRecord, type FileRecord } from '@/repositories/record.repository';
+import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
 import { toEncryptedBytes, unlockKdbx } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
@@ -52,7 +53,7 @@ export const unlockForSession = async ({
   record,
   password,
 }: {
-  record: FileRecord;
+  record: PersistedFileRecord;
   password: string;
 }): Promise<UnlockSession> => {
   const database = await unlockKdbx({
@@ -67,4 +68,14 @@ export const unlockForSession = async ({
   });
 
   return { database, record: updatedRecord, version: 0 };
+};
+
+export const createDemoSession = async (): Promise<UnlockSession> => {
+  const database = await loadDemoDatabase();
+
+  return {
+    database,
+    record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
+    version: 0,
+  };
 };

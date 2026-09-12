@@ -1,6 +1,7 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { expectPersisted } from '../fixtures/kdbx.fixture';
 import { unlockKdbx } from '@/services/record.service';
 import {
   cloneDatabase,
@@ -819,7 +820,7 @@ describe('workspace.service', () => {
       });
 
       expect(nextRecord.id).toBe('update-record');
-      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(initialBytes);
+      expect(expectPersisted(nextRecord).kdbx.encryptedBytes).not.toEqual(initialBytes);
     });
   });
 
@@ -972,7 +973,7 @@ describe('workspace.service', () => {
       });
 
       expect(nextRecord.id).toBe('create-entry-record');
-      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(initialBytes);
+      expect(expectPersisted(nextRecord).kdbx.encryptedBytes).not.toEqual(initialBytes);
     });
 
     it('does not mutate the original database when selectFilter is null', async () => {
@@ -1193,7 +1194,7 @@ describe('workspace.service', () => {
       });
 
       expect(nextRecord.id).toBe('remove-record');
-      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(bytesBefore);
+      expect(expectPersisted(nextRecord).kdbx.encryptedBytes).not.toEqual(bytesBefore);
     });
 
     it('throws when the entry uuid is not found', async () => {
@@ -1287,7 +1288,7 @@ describe('workspace.service', () => {
       });
 
       expect(nextRecord.id).toBe('restore-record');
-      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(bytesBefore);
+      expect(expectPersisted(nextRecord).kdbx.encryptedBytes).not.toEqual(bytesBefore);
     });
 
     it('does not mutate the original database', async () => {
@@ -1386,7 +1387,19 @@ describe('workspace.service', () => {
       const { record: nextRecord } = await saveDatabase({ database, record: persistRecord });
 
       expect(nextRecord.id).toBe('persist-record');
-      expect(nextRecord.kdbx.encryptedBytes).not.toEqual(initialBytes);
+      expect(expectPersisted(nextRecord).kdbx.encryptedBytes).not.toEqual(initialBytes);
+    });
+
+    it('does not persist demo records to the repository', async () => {
+      const database = await createUnlockedDatabase();
+      database.createEntry(database.getDefaultGroup()).fields.set('Title', 'New Entry');
+
+      const demoRecord = { id: 'demo', type: 'demo' as const, kdbx: { name: 'Demo' } };
+
+      const { record: nextRecord } = await saveDatabase({ database, record: demoRecord });
+
+      expect(nextRecord).toBe(demoRecord);
+      await expect(getRecords()).resolves.toEqual([]);
     });
 
     it('handles concurrent saves without persisting partial state', async () => {

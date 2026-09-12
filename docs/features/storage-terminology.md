@@ -7,6 +7,7 @@ Use these canonical terms consistently across feature specs.
 - Record type (`type`)
   - `local`: browser-local file flow.
   - `google-drive`: Drive-backed file flow.
+  - `demo`: in-memory-only demo session (see `docs/features/demo-mode.md`). Never persisted; excluded from the Records Store schema so it can never be written to IndexedDB.
 - Sync error (`syncError`)
   - `null`: last sync succeeded (or no sync has been attempted yet for local records).
   - non-null string: last sync attempt failed; value is the error message.

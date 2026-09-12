@@ -1,5 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
-import type { FileRecord } from '@/repositories/record.repository';
+import type { FileRecord, PersistedFileRecord } from '@/repositories/record.repository';
 
 export const createTestDatabase = async () => {
   const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('component-test-password'));
@@ -21,7 +21,7 @@ export const createTestEntry = (database: kdbx.Kdbx) => {
   return entry;
 };
 
-export const createTestRecord = (): FileRecord => ({
+export const createTestRecord = (): PersistedFileRecord => ({
   id: 'test-record-id',
   kdbx: {
     encryptedBytes: new Uint8Array(),
@@ -29,3 +29,12 @@ export const createTestRecord = (): FileRecord => ({
   },
   type: 'local',
 });
+
+// narrows a FileRecord union result down to the persisted shape, for tests that only ever deal with local/google-drive records
+export const expectPersisted = (record: FileRecord): PersistedFileRecord => {
+  if (record.type === 'demo') {
+    throw new Error('expected a persisted record, got a demo record');
+  }
+
+  return record;
+};

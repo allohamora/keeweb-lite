@@ -168,6 +168,11 @@ export const saveDatabase = async ({
   database: kdbx.Kdbx;
   record: FileRecord;
 }): Promise<{ record: FileRecord }> => {
+  // demo records are never persisted, so there's nothing to write back to storage
+  if (record.type === 'demo') {
+    return { record };
+  }
+
   return saveDatabaseLock.runInLock(async () => {
     const encryptedBytes = await toEncryptedBytes(database);
     const savedRecord = await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });

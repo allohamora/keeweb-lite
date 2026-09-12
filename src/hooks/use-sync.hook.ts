@@ -36,7 +36,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   };
 
   const triggerSync = () => {
-    if (record.type === 'local') {
+    if (record.type !== 'google-drive') {
       return;
     }
 
