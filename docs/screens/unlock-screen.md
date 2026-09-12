@@ -230,7 +230,7 @@ Unlock-success runtime state contract:
 6. Importing a `local` record adds it and makes it selected immediately.
 7. Importing a `google-drive` record with valid `source.id` adds it and makes it selected immediately.
 8. Creating a `local` record adds it and makes it selected immediately; when a key file is requested, it downloads automatically on success.
-9. Creating a `google-drive` record adds it, makes it selected immediately, uploads a new file to Drive root, and is automatically sync-eligible thereafter; when a key file is requested, it downloads automatically on success.
+9. Creating a `google-drive` record adds it, uploads a new file to Drive root, and is automatically sync-eligible thereafter; when a key file is requested, it downloads automatically on success.
 10. Pressing `Enter` triggers unlock for the current selected/open context.
 11. Unlock failure keeps Unlock visible and surfaces actionable error text.
 12. Unlock success transitions to workspace and updates selected record `lastOpenedAt`.
