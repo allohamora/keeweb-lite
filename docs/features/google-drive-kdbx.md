@@ -8,11 +8,20 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 
 - OAuth auth flow.
 - Drive file listing/open/save.
+- Create new empty database directly on Drive.
 - Sync and revision handling.
 - Sync status UI.
 
 ## Functional Requirements
 
+- Create flow:
+  1. user opens the `Create` menu and selects `Google Drive`
+  2. user enters a database name, master password, confirms the password, and optionally enables a generated key file
+  3. app builds an empty KDBX database locally (`kdbx.Kdbx.create`) and performs the GIS implicit token flow if no cached token is available
+  4. app uploads the new file to Drive root via a `multipart/related` create request, receiving a new Drive file `id`
+  5. app persists a `google-drive` file record locally with `source.id` set to the returned Drive file id
+  6. if a key file was requested, it downloads automatically once creation succeeds
+  - no destination-folder picker is offered; the file is always created in Drive root ("My Drive"), matching both upstream KeeWeb's Drive storage adapter and Google's own "Save to Drive" button behavior (https://developers.google.com/drive/api/guides/savetodrive) — users can move the file into any folder from Drive's own UI afterward
 - Open flow:
   1. user starts Drive open
   2. app performs GIS implicit token flow (`google.accounts.oauth2.initTokenClient` + `requestAccessToken`, `prompt: 'select_account'`)
@@ -33,6 +42,7 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 - `Download` action exports current encrypted `.kdbx` bytes without changing remote sync state.
 - Repository functions:
   - `getFile(fileId)` — download file bytes
+  - `createFile(fileName, data)` — create a new file on Drive root (multipart upload), returns `{ id, name, modifiedTime }`
   - `updateFile(fileId, data)` — upload updated file bytes
   - `auth.clearAccessToken()` — clear the cached access token
 
@@ -74,5 +84,6 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 ## Acceptance Criteria
 
 - User can open and sync a Drive-backed `.kdbx`.
+- User can create a brand-new empty Drive-backed `.kdbx` from the Unlock screen, and it is automatically sync-eligible thereafter.
 - Background sync fires on unlock and after each save.
 - Auth and network failures are visible via "Sync error" status element and recoverable by clicking it.

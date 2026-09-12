@@ -1,13 +1,14 @@
 import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  type CreateFileRequestContext,
   type GetFileRequestContext,
   type UpdateFileRequestContext,
   googleDriveApi,
 } from '../mocks/google-drive.repository.mock';
 import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '../mocks/google-identity.mock';
 import { mockServer } from '../setup-unit-context';
-import { auth, getFile, updateFile } from '@/repositories/google-drive.repository';
+import { auth, createFile, getFile, updateFile } from '@/repositories/google-drive.repository';
 
 describe('google-drive.repository', () => {
   afterEach(async () => {
@@ -179,6 +180,94 @@ describe('google-drive.repository', () => {
 
       await expect(updateFile('file-xyz', new Uint8Array([1, 2, 3]))).rejects.toThrow(
         'Failed to update file: 500 Internal Server Error',
+      );
+    });
+  });
+
+  describe('createFile', () => {
+    it('returns the file metadata', async () => {
+      mockServer.addHandlers(
+        googleDriveApi.createFile.ok({
+          file: { id: 'drive-file-id-xyz', modifiedTime: '2026-02-01T00:00:00.000Z', name: 'vault.kdbx' },
+        }),
+      );
+
+      const result = await createFile('vault.kdbx', new Uint8Array([1, 2, 3]));
+
+      expect(result).toEqual({
+        id: 'drive-file-id-xyz',
+        modifiedTime: '2026-02-01T00:00:00.000Z',
+        name: 'vault.kdbx',
+      });
+    });
+
+    it('sends the file name as JSON metadata in the multipart body', async () => {
+      const resolver = vi.fn((_: CreateFileRequestContext) =>
+        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+      );
+      mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
+
+      await createFile('vault.kdbx', new Uint8Array([1, 2, 3]));
+
+      const context = resolver.mock.calls[0]?.[0];
+      expect(context?.metadata).toEqual({ name: 'vault.kdbx' });
+    });
+
+    it('sends the file bytes as the octet-stream part of the multipart body', async () => {
+      const resolver = vi.fn((_: CreateFileRequestContext) =>
+        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+      );
+      mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
+
+      const data = new Uint8Array([7, 8, 9, 10]);
+      await createFile('vault.kdbx', data);
+
+      const context = resolver.mock.calls[0]?.[0];
+      expect(context?.fileBytes).toEqual(data);
+    });
+
+    it('sends uploadType=multipart and fields=id,name,modifiedTime query params', async () => {
+      const resolver = vi.fn((_: CreateFileRequestContext) =>
+        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+      );
+      mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
+
+      await createFile('vault.kdbx', new Uint8Array([1, 2, 3]));
+
+      const context = resolver.mock.calls[0]?.[0];
+      expect(context?.uploadType).toBe('multipart');
+      expect(context?.fields).toBe('id,name,modifiedTime');
+    });
+
+    it('sends a multipart/related content type with a boundary', async () => {
+      const resolver = vi.fn((_: CreateFileRequestContext) =>
+        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+      );
+      mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
+
+      await createFile('vault.kdbx', new Uint8Array([1, 2, 3]));
+
+      const context = resolver.mock.calls[0]?.[0];
+      expect(context?.contentType).toMatch(/^multipart\/related; boundary=.+$/);
+    });
+
+    it('sends the Authorization header with the access token', async () => {
+      const resolver = vi.fn((_: CreateFileRequestContext) =>
+        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+      );
+      mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
+
+      await createFile('vault.kdbx', new Uint8Array([1, 2, 3]));
+
+      const context = resolver.mock.calls[0]?.[0];
+      expect(context?.authorization).toBe('Bearer test');
+    });
+
+    it('throws when the API returns an error response', async () => {
+      mockServer.addHandlers(googleDriveApi.createFile.error({ status: 500, statusText: 'Internal Server Error' }));
+
+      await expect(createFile('vault.kdbx', new Uint8Array([1, 2, 3]))).rejects.toThrow(
+        'Failed to create file: 500 Internal Server Error',
       );
     });
   });

@@ -28,7 +28,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
    - Supports dismissing transient messages.
 2. Quick actions area
    - Primary actions for opening existing records, importing records, and creating a new local record.
-   - `Create` is a menu with a single `Local` option (mirrors the `Import` menu shape; additional create sources may be added later).
+   - `Create` is a menu with `Local` and `Google Drive` options (mirrors the `Import` menu shape).
    - Secondary source actions for lite-supported providers.
 3. Source context selector
    - Values: `Local`, `Google Drive`.
@@ -71,7 +71,7 @@ Transient operation flags (not top-level view states):
 - `isImportingRecord`
   - `true` while `importLocalRecord`/`importGoogleDriveRecord` is in flight.
 - `isCreatingRecord`
-  - `true` while `createLocalRecord` is in flight.
+  - `true` while `createLocalRecord`/`createGoogleDriveRecord` is in flight.
 - `isUnlocking`
   - `true` while unlock request is in flight.
 - `inlineMessage`
@@ -97,6 +97,7 @@ Repository source of truth:
   - `createRecord`
   - `updateRecord`
 - `createLocalRecord` (`src/services/record.service.ts`) builds a brand-new empty `local` record (calls `createRecord` internally) from a database name, master password, and optional generated key file.
+- `createGoogleDriveRecord` (`src/services/record.service.ts`) builds a brand-new empty `google-drive` record (uploads it to Drive via `createFile`, then calls `createRecord` internally) from a database name, master password, and optional generated key file; `source.id` is taken from the Drive API response, not caller-supplied.
 
 Fields used by Unlock list and selection:
 
@@ -143,10 +144,10 @@ Unlock-success runtime state contract:
    - User picks source (`Local` or `Google Drive`).
    - User triggers `Import`.
    - Unlock sets `isImportingRecord = true`, calls `importLocalRecord`/`importGoogleDriveRecord`, refreshes records, selects imported record, then clears `isImportingRecord`.
-4. Create local record
-   - User opens the `Create` menu and selects `Local`.
+4. Create record
+   - User opens the `Create` menu and selects `Local` or `Google Drive`.
    - User enters a database name, master password, and confirms the password; optionally enables a generated key file.
-   - Unlock sets `isCreatingRecord = true`, calls `createLocalRecord`.
+   - Unlock sets `isCreatingRecord = true`, calls `createLocalRecord`/`createGoogleDriveRecord`.
    - If a key file was requested, the generated key file bytes are downloaded automatically once creation succeeds.
    - Refreshes records, selects the newly created record, then clears `isCreatingRecord`.
 5. Select record
@@ -171,11 +172,11 @@ Unlock-success runtime state contract:
   - `local` record must not include Google Drive-only fields.
   - `google-drive` record must include valid `source` with `id`.
 - Key file is optional; when provided, it is treated as unlock credential input only.
-- `createLocalRecord` submit is blocked when:
+- `createLocalRecord`/`createGoogleDriveRecord` submit is blocked when:
   - database name is empty
   - master password is empty
   - confirm password does not match master password
-  - a `local` record already exists with the resulting name (a `.kdbx` suffix is appended automatically if not typed)
+  - for `local` only: a `local` record already exists with the resulting name (a `.kdbx` suffix is appended automatically if not typed); `google-drive` create has no equivalent duplicate-name check, since Drive itself permits multiple files with the same name and the uniqueness key (`source.id`) doesn't exist until after the file is created
 - Source selector labels are fixed:
   - `Local`
   - `Google Drive`
@@ -229,14 +230,15 @@ Unlock-success runtime state contract:
 6. Importing a `local` record adds it and makes it selected immediately.
 7. Importing a `google-drive` record with valid `source.id` adds it and makes it selected immediately.
 8. Creating a `local` record adds it and makes it selected immediately; when a key file is requested, it downloads automatically on success.
-9. Pressing `Enter` triggers unlock for the current selected/open context.
-10. Unlock failure keeps Unlock visible and surfaces actionable error text.
-11. Unlock success transitions to workspace and updates selected record `lastOpenedAt`.
-12. Unlock success writes unlocked DB/session into runtime app state (in-memory, non-persistent).
-13. Optional key-file path is supported for both record types.
-14. Accessibility requirements pass for keyboard flow, focus order, and `aria-live` status updates.
-15. At viewport width `<=768px`, unlock controls remain visible and usable while virtual keyboard is open.
-16. At viewport width `<=768px`, import local/drive dialogs remain scrollable without clipped footers, and the Google Picker remains actionable when opened from the Drive dialog.
+9. Creating a `google-drive` record adds it, uploads a new file to Drive root, and is automatically sync-eligible thereafter; when a key file is requested, it downloads automatically on success.
+10. Pressing `Enter` triggers unlock for the current selected/open context.
+11. Unlock failure keeps Unlock visible and surfaces actionable error text.
+12. Unlock success transitions to workspace and updates selected record `lastOpenedAt`.
+13. Unlock success writes unlocked DB/session into runtime app state (in-memory, non-persistent).
+14. Optional key-file path is supported for both record types.
+15. Accessibility requirements pass for keyboard flow, focus order, and `aria-live` status updates.
+16. At viewport width `<=768px`, unlock controls remain visible and usable while virtual keyboard is open.
+17. At viewport width `<=768px`, import local/drive dialogs remain scrollable without clipped footers, and the Google Picker remains actionable when opened from the Drive dialog.
 
 ## Out of Scope
 

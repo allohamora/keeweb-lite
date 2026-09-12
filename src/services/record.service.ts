@@ -1,5 +1,5 @@
 import kdbx from '@/lib/kdbx.lib';
-import { getFile } from '@/repositories/google-drive.repository';
+import { createFile, getFile } from '@/repositories/google-drive.repository';
 import { createRecord, getRecords as getRepositoryRecords } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
@@ -90,6 +90,40 @@ const generateKeyFile = async (databaseName: string) => {
   return { key, keyFileBytes };
 };
 
+const validateNewDatabaseInput = (databaseName: string, password: string) => {
+  const name = databaseName.trim();
+  if (!name) {
+    throw new Error('Database name is required.');
+  }
+  if (!password) {
+    throw new Error('Master password is required.');
+  }
+
+  const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
+
+  return { name, kdbxFileName };
+};
+
+const createEmptyKdbx = async ({
+  name,
+  password,
+  useKeyFile,
+}: {
+  name: string;
+  password: string;
+  useKeyFile?: boolean;
+}) => {
+  const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
+
+  const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
+  await credentials.ready;
+
+  const database = kdbx.Kdbx.create(credentials, name);
+  const encryptedBytes = await toEncryptedBytes(database);
+
+  return { encryptedBytes, generatedKey };
+};
+
 export const importGoogleDriveRecord = async ({
   fileId,
   fileName,
@@ -100,8 +134,6 @@ export const importGoogleDriveRecord = async ({
   keyFile?: FileList;
 }) => {
   return createImportLock.runInLock(async () => {
-    const id = crypto.randomUUID();
-
     const records = await getRepositoryRecords();
     if (records.some((record) => record.type === 'google-drive' && record.source.id === fileId)) {
       throw new Error('A record for this file already exists.');
@@ -111,7 +143,7 @@ export const importGoogleDriveRecord = async ({
     const key = await toKey(keyFile);
 
     await createRecord({
-      id,
+      id: crypto.randomUUID(),
       kdbx: { encryptedBytes, name: fileName },
       key,
       source: { id: fileId },
@@ -122,11 +154,8 @@ export const importGoogleDriveRecord = async ({
 
 export const importLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {
   return createImportLock.runInLock(async () => {
-    const id = crypto.randomUUID();
-
     const database = await toKdbx(databaseFile);
     const records = await getRepositoryRecords();
-
     if (records.some((record) => record.type === 'local' && record.kdbx.name === database.name)) {
       throw new Error(`A record named "${database.name}" already exists.`);
     }
@@ -134,7 +163,7 @@ export const importLocalRecord = async ({ databaseFile, keyFile }: { databaseFil
     const key = await toKey(keyFile);
 
     await createRecord({
-      id,
+      id: crypto.randomUUID(),
       kdbx: database,
       key,
       type: 'local',
@@ -152,28 +181,14 @@ export const createLocalRecord = async ({
   useKeyFile?: boolean;
 }) => {
   return createImportLock.runInLock(async () => {
-    const name = databaseName.trim();
-    if (!name) {
-      throw new Error('Database name is required.');
-    }
-    if (!password) {
-      throw new Error('Master password is required.');
-    }
-
-    const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
+    const { name, kdbxFileName } = validateNewDatabaseInput(databaseName, password);
 
     const records = await getRepositoryRecords();
     if (records.some((record) => record.type === 'local' && record.kdbx.name === kdbxFileName)) {
       throw new Error(`A record named "${kdbxFileName}" already exists.`);
     }
 
-    const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
-
-    const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
-    await credentials.ready;
-
-    const database = kdbx.Kdbx.create(credentials, name);
-    const encryptedBytes = await toEncryptedBytes(database);
+    const { encryptedBytes, generatedKey } = await createEmptyKdbx({ name, password, useKeyFile });
 
     await createRecord({
       id: crypto.randomUUID(),
@@ -181,6 +196,41 @@ export const createLocalRecord = async ({
       key: generatedKey?.key,
       type: 'local',
     });
+
+    return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
+  });
+};
+
+export const createGoogleDriveRecord = async ({
+  databaseName,
+  password,
+  useKeyFile,
+}: {
+  databaseName: string;
+  password: string;
+  useKeyFile?: boolean;
+}) => {
+  return createImportLock.runInLock(async () => {
+    const { name, kdbxFileName } = validateNewDatabaseInput(databaseName, password);
+
+    const { encryptedBytes, generatedKey } = await createEmptyKdbx({ name, password, useKeyFile });
+
+    const driveFile = await createFile(kdbxFileName, encryptedBytes);
+
+    try {
+      await createRecord({
+        id: crypto.randomUUID(),
+        kdbx: { encryptedBytes, name: kdbxFileName },
+        key: generatedKey?.key,
+        source: { id: driveFile.id },
+        type: 'google-drive',
+      });
+    } catch (cause) {
+      throw new Error(
+        `"${kdbxFileName}" was created on Google Drive, but couldn't be saved locally. Use "Import from Google Drive" to add it.`,
+        { cause },
+      );
+    }
 
     return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
   });
