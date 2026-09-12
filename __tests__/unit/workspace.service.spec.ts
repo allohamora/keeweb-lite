@@ -19,6 +19,7 @@ import {
   getEntryValues,
   getFieldText,
   getTags,
+  isEntryExpired,
   isEntryInRecycleBin,
   removeEntry,
   restoreEntry,
@@ -686,6 +687,45 @@ describe('workspace.service', () => {
 
       expect(result.password).toBe('secret-pass');
     });
+
+    it('returns the expiry date as an ISO date string when the entry expires', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(2027, 5, 15);
+
+      const result = getEntryValues(entry);
+
+      expect(result.expiryTime).toBe('2027-06-15');
+    });
+
+    it('returns an empty string for expiryTime when the entry does not expire', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = false;
+      entry.times.expiryTime = new Date(2027, 5, 15);
+
+      const result = getEntryValues(entry);
+
+      expect(result.expiryTime).toBe('');
+    });
+
+    it('returns an empty string for expiryTime when no expiry date is set', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      const result = getEntryValues(entry);
+
+      expect(result.expiryTime).toBe('');
+    });
   });
 
   describe('updateEntry', () => {
@@ -715,6 +755,7 @@ describe('workspace.service', () => {
         url: 'https://updated.example.com',
         notes: 'Updated notes',
         tags: ['updated'],
+        expiryTime: '',
       });
 
       expect(getFieldText(entry.fields.get('Title'))).toBe('Updated Title');
@@ -735,9 +776,46 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Original notes',
         tags: ['first'],
+        expiryTime: '',
       });
 
       expect(getFieldText(entry.fields.get('Password'))).toBe('new-password');
+    });
+
+    it('sets times.expiryTime and times.expires when expiryTime is provided', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '2027-06-15',
+      });
+
+      expect(entry.times.expires).toBe(true);
+      expect(entry.times.expiryTime).toEqual(new Date(2027, 5, 15));
+    });
+
+    it('clears times.expiryTime and times.expires when expiryTime is empty', async () => {
+      const { entry } = await createEntryWithValues();
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(2027, 5, 15);
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '',
+      });
+
+      expect(entry.times.expires).toBe(false);
+      expect(entry.times.expiryTime).toBeUndefined();
     });
 
     it('creates entry history and updates last modification time', async () => {
@@ -752,6 +830,7 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Updated notes',
         tags: ['first'],
+        expiryTime: '',
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
@@ -772,6 +851,7 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Original notes',
         tags: ['first'],
+        expiryTime: '',
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
@@ -817,6 +897,7 @@ describe('workspace.service', () => {
           url: 'https://updated.example.com',
           notes: 'Updated notes',
           tags: ['updated'],
+          expiryTime: '',
         },
       });
 
@@ -851,6 +932,7 @@ describe('workspace.service', () => {
             url: 'https://example.com',
             notes: 'notes',
             tags: ['tag'],
+            expiryTime: '',
           },
         }),
       ).rejects.toThrow('Entry not found.');
@@ -870,6 +952,7 @@ describe('workspace.service', () => {
           url: 'https://example.com',
           notes: 'Original notes',
           tags: ['first'],
+          expiryTime: '',
         },
       });
 
@@ -895,6 +978,7 @@ describe('workspace.service', () => {
           url: 'https://updated.example.com',
           notes: 'Updated notes',
           tags: ['updated'],
+          expiryTime: '',
         },
       });
 
@@ -1103,6 +1187,49 @@ describe('workspace.service', () => {
       const result = isEntryInRecycleBin({ groups: database.groups, meta: { recycleBinUuid: undefined } }, entry);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('isEntryExpired', () => {
+    it('returns true when the entry expires and the expiry date is in the past', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(2000, 0, 1);
+
+      expect(isEntryExpired(entry)).toBe(true);
+    });
+
+    it('returns false when the entry expires but the expiry date is in the future', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(Date.now() + 1000 * 60 * 60 * 24);
+
+      expect(isEntryExpired(entry)).toBe(false);
+    });
+
+    it('returns false when the expiry date is in the past but expires is false', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = false;
+      entry.times.expiryTime = new Date(2000, 0, 1);
+
+      expect(isEntryExpired(entry)).toBe(false);
+    });
+
+    it('returns false when no expiry date is set', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      expect(isEntryExpired(entry)).toBe(false);
     });
   });
 

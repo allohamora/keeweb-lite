@@ -9,6 +9,7 @@ import { Copy01Icon, LinkSquare02Icon, ViewIcon, ViewOffIcon } from '@hugeicons/
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { InputGroupAddon, InputGroupButton } from '@/components/ui/input-group';
 import {
@@ -43,6 +44,7 @@ const entryEditSchema = z.object({
   url: z.string(),
   notes: z.string(),
   tags: z.array(z.string()),
+  expiryTime: z.string(),
 });
 
 type EntryEditValues = z.infer<typeof entryEditSchema>;
@@ -351,6 +353,20 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
                     onChange={field.onChange}
                     placeholder="Add tags..."
                   />
+                  <FieldError errors={[fieldState.error]} />
+                </FieldContent>
+              </Field>
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="expiryTime"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="entry-expires">Expires</FieldLabel>
+                <FieldContent>
+                  <DatePicker id="entry-expires" strikethroughPast value={field.value} onChange={field.onChange} />
                   <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
