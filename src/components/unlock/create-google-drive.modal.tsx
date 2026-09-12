@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { InformationCircleIcon } from '@hugeicons/core-free-icons';
-import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -44,8 +43,6 @@ const createGoogleDriveModalSchema = z
 type CreateGoogleDriveModalFormValues = z.infer<typeof createGoogleDriveModalSchema>;
 
 export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: CreateGoogleDriveModalProps) => {
-  const [isDestinationInfoOpen, setIsDestinationInfoOpen] = useState(false);
-
   const {
     control,
     formState: { isSubmitting },
@@ -86,12 +83,10 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1.5">
             Create Google Drive Record
-            <Popover onOpenChange={setIsDestinationInfoOpen} open={isDestinationInfoOpen}>
+            <Popover>
               <PopoverTrigger
                 aria-label="Drive destination info"
                 className="cursor-default text-muted-foreground"
-                onMouseEnter={() => setIsDestinationInfoOpen(true)}
-                onMouseLeave={() => setIsDestinationInfoOpen(false)}
                 type="button"
               >
                 <HugeiconsIcon icon={InformationCircleIcon} size={14} />
