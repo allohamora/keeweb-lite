@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { UnlockPage } from '@/components/unlock/unlock.page';
 import { WorkspacePage } from '@/components/workspace/workspace.page';
 import { SafeNetProvider } from '@/hooks/use-safe-net.hook';
@@ -17,7 +16,7 @@ export const App = () => {
   }, [session]);
 
   return (
-    <TooltipProvider>
+    <>
       {!session ? (
         <UnlockPage setSession={setSession} />
       ) : (
@@ -28,6 +27,6 @@ export const App = () => {
         </SafeNetProvider>
       )}
       <Toaster />
-    </TooltipProvider>
+    </>
   );
 };

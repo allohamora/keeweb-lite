@@ -20,6 +20,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
   - `local`
   - `google-drive`
 - Unlock preselects the latest accessed record by `lastOpenedAt`.
+- Unlock also offers a `Demo` quick action that starts an in-memory-only, non-persisted `demo` session (see `docs/features/demo-mode.md`).
 
 ## Layout Regions
 
@@ -29,6 +30,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 2. Quick actions area
    - Primary actions for opening existing records, importing records, and creating a new local record.
    - `Create` is a menu with `Local` and `Google Drive` options (mirrors the `Import` menu shape).
+   - `Demo` is a single button (no menu, no form) that immediately starts a demo session.
    - Secondary source actions for lite-supported providers.
 3. Source context selector
    - Values: `Local`, `Google Drive`.

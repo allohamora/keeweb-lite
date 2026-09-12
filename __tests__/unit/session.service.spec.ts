@@ -5,7 +5,9 @@ import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
-import { syncForSession, unlockForSession } from '@/services/session.service';
+import { createDemoSession, syncForSession, unlockForSession } from '@/services/session.service';
+import { demoFile } from '../utils/demo-file.utils';
+import { expectPersisted } from '../fixtures/kdbx.fixture';
 
 describe('session.service', () => {
   const createDatabase = async ({
@@ -66,7 +68,7 @@ describe('session.service', () => {
 
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'test-record');
-      expect(updatedRecord?.lastOpenedAt).toBe(result.record.lastOpenedAt);
+      expect(updatedRecord?.lastOpenedAt).toBe(expectPersisted(result.record).lastOpenedAt);
     });
 
     it('throws on incorrect password', async () => {
@@ -120,6 +122,19 @@ describe('session.service', () => {
 
       expect(result.database).toBeDefined();
       expect(result.record.id).toBe('test-record');
+    });
+  });
+
+  describe('createDemoSession', () => {
+    it('returns an in-memory demo session that is not backed by a persisted record', async () => {
+      mockServer.addHandlers(demoFile.ok());
+
+      const session = await createDemoSession();
+
+      expect(session.record.type).toBe('demo');
+      expect(session.version).toBe(0);
+      expect(session.database.meta.name).toBe('Demo');
+      await expect(getRecords()).resolves.toEqual([]);
     });
   });
 
@@ -185,7 +200,7 @@ describe('session.service', () => {
       const updated = records.find(({ id }) => id === 'gd-record');
       expect(updated).toBeDefined();
       expect(updated?.kdbx.encryptedBytes).toBeInstanceOf(Uint8Array);
-      expect(result.record.kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
+      expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
     });
 
     it('throws on Drive sync failure', async () => {
@@ -230,7 +245,7 @@ describe('session.service', () => {
       const records = await getRecords();
       const updated = records.find(({ id }) => id === 'gd-keyfile-record');
       expect(updated?.kdbx.encryptedBytes).toBeInstanceOf(Uint8Array);
-      expect(result.record.kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
+      expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
     });
 
     it('accumulates mutations from both concurrent calls in the final merged result', async () => {
@@ -311,7 +326,7 @@ describe('session.service', () => {
 
       const records = await getRecords();
       const updated = records.find(({ id }) => id === 'gd-lock-concurrent');
-      expect(updated?.kdbx.encryptedBytes).toEqual(lastResult.record.kdbx.encryptedBytes);
+      expect(updated?.kdbx.encryptedBytes).toEqual(expectPersisted(lastResult.record).kdbx.encryptedBytes);
     });
   });
 });

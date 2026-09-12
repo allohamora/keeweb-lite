@@ -71,6 +71,23 @@ describe('workspace-controls.component', () => {
       toEncryptedBytes.mockRestore();
     });
 
+    it('hides the download button for demo records', () => {
+      render(
+        <WorkspaceControls
+          database={database}
+          recordName="Demo"
+          recordType="demo"
+          syncStatus="synced"
+          syncErrorMessage={null}
+          onLock={vi.fn()}
+          onSyncRetry={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByRole('button', { name: 'Download database' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Lock workspace' })).toBeInTheDocument();
+    });
+
     it('retries sync directly when there are no unsaved changes', async () => {
       const user = userEvent.setup();
       const onSyncRetry = vi.fn();

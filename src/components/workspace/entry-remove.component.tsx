@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoPopover } from '@/components/ui/info-popover';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
@@ -72,13 +72,10 @@ export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemovePr
         <DialogHeader className="grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center">
           <DialogTitle className="flex items-center gap-1.5">
             Remove entry?
-            <Tooltip>
-              <TooltipTrigger className="cursor-default text-xs text-muted-foreground">(?)</TooltipTrigger>
-              <TooltipContent className="max-w-56">
-                If the entry is already in the recycle bin, it will be permanently deleted. Otherwise, it will be moved
-                to the recycle bin if enabled, or permanently deleted if the recycle bin is disabled.
-              </TooltipContent>
-            </Tooltip>
+            <InfoPopover ariaLabel="Remove entry info">
+              If the entry is already in the recycle bin, it will be permanently deleted. Otherwise, it will be moved to
+              the recycle bin if enabled, or permanently deleted if the recycle bin is disabled.
+            </InfoPopover>
           </DialogTitle>
           <DialogDescription>Are you sure you want to remove this entry?</DialogDescription>
         </DialogHeader>

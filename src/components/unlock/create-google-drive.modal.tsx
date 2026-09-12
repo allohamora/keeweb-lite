@@ -1,6 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { InformationCircleIcon } from '@hugeicons/core-free-icons';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -15,9 +13,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { InfoPopover } from '@/components/ui/info-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { createGoogleDriveRecord } from '@/services/record.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
@@ -83,19 +81,10 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1.5">
             Create Google Drive Record
-            <Popover>
-              <PopoverTrigger
-                aria-label="Drive destination info"
-                className="cursor-default text-muted-foreground"
-                type="button"
-              >
-                <HugeiconsIcon icon={InformationCircleIcon} size={14} />
-              </PopoverTrigger>
-              <PopoverContent className="w-64 text-xs font-normal">
-                Files are always created in Drive root — intentional, matching Google's own Save to Drive behavior. Move
-                it to a folder from Drive afterward.
-              </PopoverContent>
-            </Popover>
+            <InfoPopover ariaLabel="Drive destination info" contentClassName="w-64">
+              Files are always created in Drive root — intentional, matching Google's own Save to Drive behavior. Move
+              it to a folder from Drive afterward.
+            </InfoPopover>
           </DialogTitle>
           <DialogDescription>Create a new empty database on Google Drive.</DialogDescription>
         </DialogHeader>

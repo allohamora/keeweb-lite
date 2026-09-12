@@ -79,7 +79,7 @@ export const WorkspaceControls = ({
           <span className="min-w-0 truncate font-medium text-foreground">
             {recordName} ({recordType})
           </span>
-          {recordType !== 'local' && (
+          {recordType === 'google-drive' && (
             <button
               aria-label={`Sync status: ${syncStatus}`}
               className="flex shrink-0 cursor-pointer appearance-none items-center gap-1 border-0 bg-transparent p-0 text-[11px] text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
@@ -106,16 +106,18 @@ export const WorkspaceControls = ({
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        <Button
-          aria-label="Download database"
-          className="h-6 px-1.5 text-[11px]"
-          onClick={handleDownloadClick}
-          size="xs"
-          type="button"
-          variant="outline"
-        >
-          Download
-        </Button>
+        {recordType !== 'demo' && (
+          <Button
+            aria-label="Download database"
+            className="h-6 px-1.5 text-[11px]"
+            onClick={handleDownloadClick}
+            size="xs"
+            type="button"
+            variant="outline"
+          >
+            Download
+          </Button>
+        )}
         <Button
           aria-label="Lock workspace"
           className="h-6 px-1.5 text-[11px]"

@@ -38,7 +38,17 @@ const googleDriveFileRecordSchema = z.object({
 const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, googleDriveFileRecordSchema]);
 const fileRecordsSchema = z.array(fileRecordSchema);
 
-export type FileRecord = z.infer<typeof fileRecordSchema>;
+export type PersistedFileRecord = z.infer<typeof fileRecordSchema>;
+
+// never persisted: intentionally excluded from fileRecordSchema so it can never pass
+// getRecords/createRecord/updateRecord validation and land in IndexedDB
+export type DemoFileRecord = {
+  id: string;
+  type: 'demo';
+  kdbx: { name: string };
+};
+
+export type FileRecord = PersistedFileRecord | DemoFileRecord;
 
 export const getRecords = async () => {
   return lock.runInLock(async () => {
@@ -57,7 +67,7 @@ export const getRecords = async () => {
   });
 };
 
-export const setRecords = async (records: FileRecord[]) => {
+export const setRecords = async (records: PersistedFileRecord[]) => {
   await lock.runInLock(async () => {
     const parsedRecords = fileRecordsSchema.parse(records);
 
@@ -65,7 +75,7 @@ export const setRecords = async (records: FileRecord[]) => {
   });
 };
 
-const updateRecords = async (updater: (oldRecords: FileRecord[]) => FileRecord[]) => {
+const updateRecords = async (updater: (oldRecords: PersistedFileRecord[]) => PersistedFileRecord[]) => {
   await lock.runInLock(async () => {
     await update(RECORDS_STORAGE_KEY, (oldValue) => {
       const parseResult = fileRecordsSchema.safeParse(oldValue);
@@ -82,7 +92,7 @@ export const clearRecords = async () => {
   });
 };
 
-export const createRecord = async (record: FileRecord) => {
+export const createRecord = async (record: PersistedFileRecord) => {
   const parsedRecord = fileRecordSchema.parse(record);
   await updateRecords((oldRecords) => {
     const existingRecord = oldRecords.find(({ id }) => id === parsedRecord.id);
@@ -109,7 +119,7 @@ export const removeRecord = async (recordId: string) => {
   await updateRecords((oldRecords) => oldRecords.filter(({ id }) => id !== recordId));
 };
 
-export const updateRecord = async (record: FileRecord) => {
+export const updateRecord = async (record: PersistedFileRecord) => {
   const parsedRecord = fileRecordSchema.parse(record);
 
   await updateRecords((oldRecords) =>

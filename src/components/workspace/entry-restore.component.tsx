@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoPopover } from '@/components/ui/info-popover';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
@@ -68,10 +68,7 @@ export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestor
         <DialogHeader className="grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center">
           <DialogTitle className="flex items-center gap-1.5">
             Restore entry?
-            <Tooltip>
-              <TooltipTrigger className="cursor-default text-xs text-muted-foreground">(?)</TooltipTrigger>
-              <TooltipContent className="max-w-56">The entry will be moved back to the default group.</TooltipContent>
-            </Tooltip>
+            <InfoPopover ariaLabel="Restore entry info">The entry will be moved back to the default group.</InfoPopover>
           </DialogTitle>
           <DialogDescription>Are you sure you want to restore this entry?</DialogDescription>
         </DialogHeader>
