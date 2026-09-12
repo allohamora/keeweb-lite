@@ -2,7 +2,7 @@ import type kdbx from '@/lib/kdbx.lib';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Delete01Icon, Folder01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
-import { getAllTags, filterGroups, isGroupSelect, type SelectFilter } from '@/services/workspace.service';
+import { getAllTags, getGroupTree, isGroupSelect, type SelectFilter } from '@/services/workspace.service';
 
 type MenuPaneProps = {
   className?: string;
@@ -19,7 +19,7 @@ const navItemClass = (isSelected: boolean) => {
 };
 
 export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: MenuPaneProps) => {
-  const { groups, recycleBinGroup } = filterGroups(database);
+  const { items, recycleBinGroup } = getGroupTree(database);
   const tags = getAllTags(database);
 
   return (
@@ -58,12 +58,13 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
 
           <div className="mb-1 px-2 text-[11px] text-muted-foreground">Collections</div>
           <div className="flex flex-col gap-0.5">
-            {groups.map((group) => {
+            {items.map(({ group, depth }) => {
               return (
                 <button
                   className={navItemClass(isGroupSelect(selectFilter) && group.uuid.equals(selectFilter))}
                   key={group.uuid.toString()}
                   onClick={() => onSelectFilter(group.uuid)}
+                  style={{ paddingLeft: `${8 + depth * 12}px` }}
                   type="button"
                 >
                   <HugeiconsIcon className="shrink-0" icon={Folder01Icon} size={14} strokeWidth={1.5} />

@@ -11,6 +11,7 @@ import {
   findEntryByUuid,
   findGroupByUuid,
   getAllGroups,
+  getGroupTree,
   isGroupSelect,
   getAllTags,
   getAllUsernames,
@@ -87,6 +88,69 @@ describe('workspace.service', () => {
 
       expect(result.recycleBinGroup).toBeNull();
       expect(result.groups).toEqual([first, second]);
+    });
+
+    it('excludes recycle bin descendants from the visible groups', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const recycleBinChild = database.createGroup(recycleBin, 'Deleted Folder');
+
+      const result = filterGroups({
+        groups: [first, recycleBin],
+        meta: { recycleBinUuid: recycleBin.uuid },
+      });
+
+      expect(result.recycleBinGroup).toBe(recycleBin);
+      expect(result.groups).toEqual([first]);
+      expect(result.groups).not.toContain(recycleBinChild);
+    });
+  });
+
+  describe('getGroupTree', () => {
+    it('annotates each group with its nesting depth in depth-first order', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const parent = database.createGroup(root, 'Parent');
+      const child = database.createGroup(parent, 'Child');
+      const grandchild = database.createGroup(child, 'Grandchild');
+      const sibling = database.createGroup(root, 'Sibling');
+
+      const result = getGroupTree({
+        groups: [parent, sibling],
+        meta: { recycleBinUuid: undefined },
+      });
+
+      expect(result.items).toEqual([
+        { group: parent, depth: 0 },
+        { group: child, depth: 1 },
+        { group: grandchild, depth: 2 },
+        { group: sibling, depth: 0 },
+      ]);
+    });
+
+    it('excludes the recycle bin group and its descendants, but still returns it as recycleBinGroup', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const recycleBinChild = database.createGroup(recycleBin, 'Deleted Folder');
+
+      const result = getGroupTree({
+        groups: [first, recycleBin],
+        meta: { recycleBinUuid: recycleBin.uuid },
+      });
+
+      expect(result.items).toEqual([{ group: first, depth: 0 }]);
+      expect(result.items.map((item) => item.group)).not.toContain(recycleBinChild);
+      expect(result.recycleBinGroup).toBe(recycleBin);
+    });
+
+    it('returns an empty tree and a null recycle bin group when no groups are provided', () => {
+      const result = getGroupTree({ groups: [], meta: { recycleBinUuid: undefined } });
+
+      expect(result).toEqual({ items: [], recycleBinGroup: null });
     });
   });
 
@@ -186,6 +250,21 @@ describe('workspace.service', () => {
       const result = getEntriesForList({ database, selectFilter: selectedGroup.uuid });
 
       expect(result).toEqual([entry]);
+    });
+
+    it('returns entries from the group and all of its descendant groups when a parent group is selected', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const parent = database.createGroup(root, 'Parent');
+      const child = database.createGroup(parent, 'Child');
+      const grandchild = database.createGroup(child, 'Grandchild');
+      const parentEntry = database.createEntry(parent);
+      const childEntry = database.createEntry(child);
+      const grandchildEntry = database.createEntry(grandchild);
+
+      const result = getEntriesForList({ database, selectFilter: parent.uuid });
+
+      expect(result).toEqual([parentEntry, childEntry, grandchildEntry]);
     });
 
     it('returns entries from all groups when no group is selected', async () => {
