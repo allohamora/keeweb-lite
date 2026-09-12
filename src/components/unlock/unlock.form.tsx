@@ -23,12 +23,20 @@ const unlockFormSchema = z.object({
 type UnlockFormValues = z.infer<typeof unlockFormSchema>;
 
 export type UnlockFormProps = {
+  disabled?: boolean;
   recordsReloadToken: number;
+  runUnlockAction: (fn: () => Promise<void>) => Promise<void>;
   setSession: (session: UnlockSession) => void;
   update: () => void;
 };
 
-export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFormProps) => {
+export const UnlockForm = ({
+  disabled = false,
+  recordsReloadToken,
+  runUnlockAction,
+  setSession,
+  update,
+}: UnlockFormProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -54,26 +62,28 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
   const [showPassword, setShowPassword] = useState(false);
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
-    try {
-      const record = records.find(({ id }) => id === selectedRecordId);
-      if (!record) {
-        throw new Error('Selected record not found.');
+    await runUnlockAction(async () => {
+      try {
+        const record = records.find(({ id }) => id === selectedRecordId);
+        if (!record) {
+          throw new Error('Selected record not found.');
+        }
+
+        const session = await unlockForSession({
+          record,
+          password,
+        });
+
+        setSession(session);
+      } catch (error) {
+        toast.error(
+          getErrorMessage({
+            error,
+            fallback: 'Database unlock failed. Please check your password and try again.',
+          }),
+        );
       }
-
-      const session = await unlockForSession({
-        record,
-        password,
-      });
-
-      setSession(session);
-    } catch (error) {
-      toast.error(
-        getErrorMessage({
-          error,
-          fallback: 'Database unlock failed. Please check your password and try again.',
-        }),
-      );
-    }
+    });
   });
 
   const handleRemove = () => {
@@ -119,7 +129,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
             <FieldContent>
               <Select
                 {...field}
-                disabled={isLoadingRecords || records.length === 0 || isSubmitting}
+                disabled={isLoadingRecords || records.length === 0 || isSubmitting || disabled}
                 onValueChange={field.onChange}
                 value={field.value}
               >
@@ -165,7 +175,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
-                  disabled={!selectedRecordId || isSubmitting}
+                  disabled={!selectedRecordId || isSubmitting || disabled}
                   id="unlock-password"
                   placeholder="Enter password"
                   type={showPassword ? 'text' : 'password'}
@@ -174,7 +184,7 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
                   <button
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
-                    disabled={!selectedRecordId || isSubmitting}
+                    disabled={!selectedRecordId || isSubmitting || disabled}
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -192,12 +202,12 @@ export const UnlockForm = ({ recordsReloadToken, setSession, update }: UnlockFor
       <div className="flex items-center justify-between gap-2 pt-3">
         <RecordRemove
           recordId={selectedRecordId}
-          disabled={!selectedRecordId || isSubmitting}
+          disabled={!selectedRecordId || isSubmitting || disabled}
           onRemove={handleRemove}
         />
         <Button
           className="ml-auto h-8 px-4 text-xs"
-          disabled={!selectedRecordId || isSubmitting}
+          disabled={!selectedRecordId || isSubmitting || disabled}
           type="submit"
           variant="outline"
         >
