@@ -58,6 +58,7 @@ export const TagSelect = ({
     <CreatableSelect<Option, true>
       isMulti
       unstyled
+      closeMenuOnSelect={false}
       inputId={inputId}
       isDisabled={disabled}
       options={options.map(toOption)}
