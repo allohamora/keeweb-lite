@@ -84,6 +84,6 @@ Define target Google Drive integration behavior based on KeeWeb storage-adapter 
 ## Acceptance Criteria
 
 - User can open and sync a Drive-backed `.kdbx`.
-- User can create a brand-new empty Drive-backed `.kdbx` from the Unlock screen, and it becomes selected immediately and is automatically sync-eligible thereafter.
+- User can create a brand-new empty Drive-backed `.kdbx` from the Unlock screen, and it is automatically sync-eligible thereafter.
 - Background sync fires on unlock and after each save.
 - Auth and network failures are visible via "Sync error" status element and recoverable by clicking it.
