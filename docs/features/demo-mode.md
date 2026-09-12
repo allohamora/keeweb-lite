@@ -47,7 +47,7 @@ must-revalidate` rule.
 
 ## Security and Privacy
 
-- The demo password is fixed and public (it matches upstream KeeWeb's own demo password); this is fine specifically because Download is disabled and nothing is ever persisted, so there's no encrypted artifact anywhere that this password could be used to open.
+- The demo password is fixed and public (it matches upstream KeeWeb's own demo password). The bundled `src/assets/demo.kdbx` is itself an encrypted artifact this password opens, but that's fine because the demo database and password are both intentionally public. Download is disabled and nothing is ever persisted, so there's nothing session-specific this password could expose.
 
 ## Acceptance Criteria
 
