@@ -53,7 +53,7 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
             </div>
 
             <UnlockForm
-              disabled={isUnlocking}
+              isUnlocking={isUnlocking}
               recordsReloadToken={recordsReloadToken}
               runUnlockAction={runUnlockAction}
               setSession={setSession}

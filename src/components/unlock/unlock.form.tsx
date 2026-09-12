@@ -23,7 +23,7 @@ const unlockFormSchema = z.object({
 type UnlockFormValues = z.infer<typeof unlockFormSchema>;
 
 export type UnlockFormProps = {
-  disabled?: boolean;
+  isUnlocking?: boolean;
   recordsReloadToken: number;
   runUnlockAction: (fn: () => Promise<void>) => Promise<void>;
   setSession: (session: UnlockSession) => void;
@@ -31,7 +31,7 @@ export type UnlockFormProps = {
 };
 
 export const UnlockForm = ({
-  disabled = false,
+  isUnlocking = false,
   recordsReloadToken,
   runUnlockAction,
   setSession,
@@ -129,7 +129,7 @@ export const UnlockForm = ({
             <FieldContent>
               <Select
                 {...field}
-                disabled={isLoadingRecords || records.length === 0 || isSubmitting || disabled}
+                disabled={isLoadingRecords || records.length === 0 || isSubmitting || isUnlocking}
                 onValueChange={field.onChange}
                 value={field.value}
               >
@@ -175,7 +175,7 @@ export const UnlockForm = ({
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
-                  disabled={!selectedRecordId || isSubmitting || disabled}
+                  disabled={!selectedRecordId || isSubmitting || isUnlocking}
                   id="unlock-password"
                   placeholder="Enter password"
                   type={showPassword ? 'text' : 'password'}
@@ -184,7 +184,7 @@ export const UnlockForm = ({
                   <button
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
-                    disabled={!selectedRecordId || isSubmitting || disabled}
+                    disabled={!selectedRecordId || isSubmitting || isUnlocking}
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -202,12 +202,12 @@ export const UnlockForm = ({
       <div className="flex items-center justify-between gap-2 pt-3">
         <RecordRemove
           recordId={selectedRecordId}
-          disabled={!selectedRecordId || isSubmitting || disabled}
+          disabled={!selectedRecordId || isSubmitting || isUnlocking}
           onRemove={handleRemove}
         />
         <Button
           className="ml-auto h-8 px-4 text-xs"
-          disabled={!selectedRecordId || isSubmitting || disabled}
+          disabled={!selectedRecordId || isSubmitting || isUnlocking}
           type="submit"
           variant="outline"
         >
