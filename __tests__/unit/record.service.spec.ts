@@ -1,3 +1,4 @@
+import * as recordRepository from '@/repositories/record.repository';
 import kdbx from '@/lib/kdbx.lib';
 import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -970,6 +971,17 @@ describe('record.service', () => {
       ).rejects.toThrow();
 
       expect(await getRecords()).toEqual([]);
+    });
+
+    it('throws an error naming the uploaded file and pointing to Import when the local write fails after Drive upload succeeds', async () => {
+      mockServer.addHandlers(googleDriveApi.createFile.ok({ file: { id: 'drive-file-id-xyz' } }));
+      vi.spyOn(recordRepository, 'createRecord').mockRejectedValueOnce(new Error('IndexedDB write failed'));
+
+      await expect(
+        createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
+      ).rejects.toThrow(
+        '"My Vault.kdbx" was created on Google Drive, but couldn\'t be saved locally. Use "Import from Google Drive" to add it.',
+      );
     });
 
     it('generates a unique id per record and does not set lastOpenedAt', async () => {

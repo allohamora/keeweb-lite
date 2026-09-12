@@ -217,13 +217,20 @@ export const createGoogleDriveRecord = async ({
 
     const driveFile = await createFile(kdbxFileName, encryptedBytes);
 
-    await createRecord({
-      id: crypto.randomUUID(),
-      kdbx: { encryptedBytes, name: kdbxFileName },
-      key: generatedKey?.key,
-      source: { id: driveFile.id },
-      type: 'google-drive',
-    });
+    try {
+      await createRecord({
+        id: crypto.randomUUID(),
+        kdbx: { encryptedBytes, name: kdbxFileName },
+        key: generatedKey?.key,
+        source: { id: driveFile.id },
+        type: 'google-drive',
+      });
+    } catch (cause) {
+      throw new Error(
+        `"${kdbxFileName}" was created on Google Drive, but couldn't be saved locally. Use "Import from Google Drive" to add it.`,
+        { cause },
+      );
+    }
 
     return { keyFileBytes: generatedKey?.keyFileBytes, keyFileName: generatedKey?.key.name };
   });
