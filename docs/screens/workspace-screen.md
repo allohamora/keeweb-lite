@@ -183,7 +183,7 @@ View-state transitions:
 11. At viewport width `<=768px`, list pane is default, selecting an entry transitions to details pane, details pane includes a back action returning to list pane, and menu button opens a drawer where selecting a navigation item closes it.
 12. At viewport width `>768px`, three-pane desktop layout (menu, list, details) remains available.
 13. Groups in the menu pane and entries in the list pane render their standard KeePass icon, falling back to a folder/key icon respectively when unset.
-14. Entry editing exposes a combined icon and color picker; icon selection is limited to the standard 69 KeePass icons and color selection to a fixed 6-color palette plus "no color", and the selected icon/color is reflected in list and details rendering.
+14. Entry editing exposes a combined icon and color picker; icon selection is limited to the standard 69 KeePass icons and color selection to a fixed 6-color palette, "no color", and colors already used elsewhere in the database, and the selected icon/color is reflected in list and details rendering.
 15. The menu pane shows a `Colors` row with a "No color" option plus every distinct background color present on entries; clicking "No color" filters to uncolored entries, clicking a swatch filters to entries with that color, and the row is absent when no entry has a color.
 
 ## Out of Scope
