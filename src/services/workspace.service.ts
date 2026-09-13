@@ -188,7 +188,7 @@ export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): v
   entry.fields.set('URL', values.url);
   entry.fields.set('Notes', values.notes);
   entry.tags = values.tags;
-  entry.times.expiryTime = values.expiryTime ? new Date(values.expiryTime) : undefined;
+  entry.times.expiryTime = values.expiryTime ? new Date(`${values.expiryTime}T00:00:00`) : undefined;
   entry.times.expires = !!values.expiryTime;
 
   entry.times.update();

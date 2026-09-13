@@ -799,6 +799,22 @@ describe('workspace.service', () => {
       expect(entry.times.expiryTime).toEqual(new Date(2027, 5, 15));
     });
 
+    it('round-trips expiryTime through updateEntry and getEntryValues unchanged', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '2027-06-15',
+      });
+
+      expect(getEntryValues(entry).expiryTime).toBe('2027-06-15');
+    });
+
     it('clears times.expiryTime and times.expires when expiryTime is empty', async () => {
       const { entry } = await createEntryWithValues();
       entry.times.expires = true;
