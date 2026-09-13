@@ -282,7 +282,7 @@ export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbx.
   const { recycleBinGroup } = filterGroups(database);
   if (!recycleBinGroup) return false;
 
-  return recycleBinGroup.entries.some((item) => item.uuid.equals(entry.uuid));
+  return [...recycleBinGroup.allGroups()].some((group) => group.entries.some((item) => item.uuid.equals(entry.uuid)));
 };
 
 type RemoveEntryInput = {

@@ -1188,6 +1188,18 @@ describe('workspace.service', () => {
 
       expect(result).toBe(false);
     });
+
+    it('returns true when entry is in a nested subgroup of the recycle bin', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const recycleBin = database.createGroup(root, 'Trash');
+      const recycleBinChild = database.createGroup(recycleBin, 'Deleted Folder');
+      const entry = database.createEntry(recycleBinChild);
+
+      const result = isEntryInRecycleBin({ groups: database.groups, meta: { recycleBinUuid: recycleBin.uuid } }, entry);
+
+      expect(result).toBe(true);
+    });
   });
 
   describe('isEntryExpired', () => {
