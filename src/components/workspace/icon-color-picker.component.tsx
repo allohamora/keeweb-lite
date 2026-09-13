@@ -57,6 +57,7 @@ export const IconColorPicker = ({
             )}
             onClick={() => onColorChange(null)}
             aria-label="No color"
+            aria-pressed={colorValue === null}
           >
             <ColorSwatch color={null} size={16} />
           </button>
@@ -70,6 +71,7 @@ export const IconColorPicker = ({
               )}
               onClick={() => onColorChange(hex)}
               aria-label={`Color ${name}`}
+              aria-pressed={colorValue === hex}
             >
               <ColorSwatch color={hex} size={16} />
             </button>
@@ -89,6 +91,7 @@ export const IconColorPicker = ({
               )}
               onClick={() => onIconChange(index)}
               aria-label={`Standard icon ${index}`}
+              aria-pressed={iconValue === index}
             >
               <HugeiconsIcon icon={icon} size={16} style={colorValue ? { color: colorValue } : undefined} />
             </button>
