@@ -1,7 +1,8 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Delete01Icon, Folder01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
+import { Delete01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
+import { getGroupIcon, resolveStandardIcon } from '@/services/icon.service';
 import { getAllTags, getGroupTree, isGroupSelect, type SelectFilter } from '@/services/workspace.service';
 
 type MenuPaneProps = {
@@ -70,7 +71,12 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
                   style={{ paddingLeft: `${8 + depth * 12}px` }}
                   type="button"
                 >
-                  <HugeiconsIcon className="shrink-0" icon={Folder01Icon} size={14} strokeWidth={1.5} />
+                  <HugeiconsIcon
+                    className="shrink-0"
+                    icon={resolveStandardIcon(getGroupIcon(group))}
+                    size={14}
+                    strokeWidth={1.5}
+                  />
                   <span className="whitespace-nowrap">{group.name}</span>
                 </button>
               );

@@ -2,6 +2,7 @@ import kdbx from '@/lib/kdbx.lib';
 import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 import { updateRecord, type FileRecord } from '@/repositories/record.repository';
+import { getEntryIcon } from '@/services/icon.service';
 
 export type SelectFilter = kdbx.KdbxUuid | string | null;
 
@@ -146,6 +147,7 @@ export type EntryUpdateValues = {
   notes: string;
   tags: string[];
   expiryTime: string;
+  icon: number;
 };
 
 type UpdateEntryInput = {
@@ -169,6 +171,7 @@ export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
   notes: getFieldText(entry.fields.get('Notes')),
   tags: getTags(entry),
   expiryTime: entry.times.expires && entry.times.expiryTime ? entry.times.expiryTime.toISOString() : '',
+  icon: getEntryIcon(entry),
 });
 
 export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): void => {
@@ -182,6 +185,7 @@ export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): v
   entry.tags = values.tags;
   entry.times.expiryTime = values.expiryTime ? new Date(values.expiryTime) : undefined;
   entry.times.expires = !!values.expiryTime;
+  entry.icon = values.icon;
 
   entry.times.update();
 };
