@@ -13,6 +13,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
   - selecting entries and showing editable details
   - showing sync status dot for Drive-backed records
   - exposing source-aware actions (`Download` for all opened records, `Sync` for Drive-backed records when last sync failed)
+  - rendering standard KeePass icons for groups and entries, and picking an entry's icon when editing
 - Workspace must support both record types:
   - `local`
   - `google-drive`
@@ -26,9 +27,11 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
 2. Left menu pane
    - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
    - Tag items are clickable and filter the entry list to only entries that carry the selected tag.
+   - Each group is shown with its standard KeePass icon (falls back to a folder icon when the group has none set).
    - Recycle Bin is shown as a dedicated navigation item and is not included in `All Items`, tag-derived filters, or the standard collections list.
 3. Entry list pane
    - Displays entries for the selected navigation context.
+   - Each entry is shown with its standard KeePass icon (falls back to a key icon when the entry has none set).
    - Provides a debounced text search input that filters the visible entries by title (case-insensitive, substring match).
    - The record count in the pane header reflects the number of entries after search filtering is applied.
    - When a search query produces no matches, an explicit "No matching entries." message is shown.
@@ -37,6 +40,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Displays selected entry details.
    - Displays selected entry tags when present.
    - Supports editing flow and history access/restore actions.
+   - Editing flow includes an icon picker for choosing the entry's standard KeePass icon (from the fixed set of 69; no custom image upload or favicon fetch).
 5. Context panel area
    - Used for temporary workflows that replace or overlay standard list/details content (for example, import-related flows).
 6. Footer bar
@@ -99,8 +103,9 @@ View-state transitions:
    - The record count updates to reflect the filtered result.
    - Clearing the search restores the full list for the current navigation context.
 4. Edit and save feedback
-   - User edits selected entry fields (title, username, password, URL, tags, notes).
+   - User edits selected entry fields (title, username, password, URL, tags, notes, icon).
    - The username field offers autocomplete suggestions drawn from other entries' usernames in the same database; free text is always allowed.
+   - The icon picker shows the fixed set of standard KeePass icons; selecting one updates the entry's icon shown in the list and details pane.
    - User clicks the Save button to persist changes.
    - On success, a confirmation notification is shown.
    - On failure, an error notification is shown with the failure reason.
@@ -173,6 +178,8 @@ View-state transitions:
 10. Accessibility requirements pass for keyboard flow, focus behavior, and `aria-live` status updates.
 11. At viewport width `<=768px`, list pane is default, selecting an entry transitions to details pane, details pane includes a back action returning to list pane, and menu button opens a drawer where selecting a navigation item closes it.
 12. At viewport width `>768px`, three-pane desktop layout (menu, list, details) remains available.
+13. Groups in the menu pane and entries in the list pane render their standard KeePass icon, falling back to a folder/key icon respectively when unset.
+14. Entry editing exposes an icon picker limited to the standard 69 KeePass icons; the selected icon is reflected in list and details rendering.
 
 ## Out of Scope
 
