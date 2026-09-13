@@ -34,6 +34,7 @@ import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
 import { PasswordGenerator } from '@/components/workspace/password-generator.component';
+import { IconPicker } from '@/components/workspace/icon-picker.component';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
@@ -45,6 +46,7 @@ const entryEditSchema = z.object({
   notes: z.string(),
   tags: z.array(z.string()),
   expiryTime: z.string(),
+  icon: z.number().int().min(0).max(68),
 });
 
 type EntryEditValues = z.infer<typeof entryEditSchema>;
@@ -176,11 +178,25 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
                     <Input
                       {...field}
                       aria-invalid={fieldState.invalid}
-                      className="h-8 pr-8 text-xs"
+                      className="h-8 px-8 text-xs"
                       id="entry-title"
                       placeholder="Title"
                       type="text"
                     />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-1">
+                      <Controller
+                        control={control}
+                        name="icon"
+                        render={({ field: iconField }) => (
+                          <IconPicker
+                            value={iconField.value}
+                            onChange={iconField.onChange}
+                            className="size-6 border-none text-muted-foreground hover:bg-transparent hover:text-foreground"
+                            iconSize={16}
+                          />
+                        )}
+                      />
+                    </div>
                     <div className="absolute inset-y-0 right-0 flex items-center">
                       <button
                         type="button"

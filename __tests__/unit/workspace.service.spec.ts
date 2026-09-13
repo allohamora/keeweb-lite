@@ -757,6 +757,7 @@ describe('workspace.service', () => {
         notes: 'Updated notes',
         tags: ['updated'],
         expiryTime: '',
+        icon: 0,
       });
 
       expect(getFieldText(entry.fields.get('Title'))).toBe('Updated Title');
@@ -778,6 +779,7 @@ describe('workspace.service', () => {
         notes: 'Original notes',
         tags: ['first'],
         expiryTime: '',
+        icon: 0,
       });
 
       expect(getFieldText(entry.fields.get('Password'))).toBe('new-password');
@@ -795,6 +797,7 @@ describe('workspace.service', () => {
         notes: 'Original notes',
         tags: ['first'],
         expiryTime: expiryTime.toISOString(),
+        icon: 0,
       });
 
       expect(entry.times.expires).toBe(true);
@@ -813,6 +816,7 @@ describe('workspace.service', () => {
         notes: 'Original notes',
         tags: ['first'],
         expiryTime,
+        icon: 0,
       });
 
       expect(getEntryValues(entry).expiryTime).toBe(expiryTime);
@@ -831,6 +835,7 @@ describe('workspace.service', () => {
         notes: 'Original notes',
         tags: ['first'],
         expiryTime: '',
+        icon: 0,
       });
 
       expect(entry.times.expires).toBe(false);
@@ -850,6 +855,7 @@ describe('workspace.service', () => {
         notes: 'Updated notes',
         tags: ['first'],
         expiryTime: '',
+        icon: 0,
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
@@ -871,10 +877,47 @@ describe('workspace.service', () => {
         notes: 'Original notes',
         tags: ['first'],
         expiryTime: '',
+        icon: 0,
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
       expect(entry.times.lastModTime?.getTime() ?? 0).toBeGreaterThanOrEqual(initialLastModTime);
+    });
+
+    it('sets the standard icon index on the entry', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '',
+        icon: 12,
+      });
+
+      expect(entry.icon).toBe(12);
+    });
+
+    it('leaves any preexisting custom icon reference untouched', async () => {
+      const { entry } = await createEntryWithValues();
+      const uuid = kdbx.KdbxUuid.random();
+      entry.customIcon = uuid;
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '',
+        icon: 12,
+      });
+
+      expect(entry.customIcon).toBe(uuid);
     });
   });
 
@@ -917,6 +960,7 @@ describe('workspace.service', () => {
           notes: 'Updated notes',
           tags: ['updated'],
           expiryTime: '',
+          icon: 0,
         },
       });
 
@@ -952,6 +996,7 @@ describe('workspace.service', () => {
             notes: 'notes',
             tags: ['tag'],
             expiryTime: '',
+            icon: 0,
           },
         }),
       ).rejects.toThrow('Entry not found.');
@@ -972,6 +1017,7 @@ describe('workspace.service', () => {
           notes: 'Original notes',
           tags: ['first'],
           expiryTime: '',
+          icon: 0,
         },
       });
 
@@ -998,6 +1044,7 @@ describe('workspace.service', () => {
           notes: 'Updated notes',
           tags: ['updated'],
           expiryTime: '',
+          icon: 0,
         },
       });
 
