@@ -12,7 +12,7 @@ import { render } from '../utils/render.utils';
 
 vi.mock('@/components/workspace/menu-pane.component', () => ({
   MenuPane: ({ onSelectFilter }: { onSelectFilter: (filter: SelectFilter) => void }) => (
-    <button onClick={() => onSelectFilter('tag-filter')}>Stub select filter</button>
+    <button onClick={() => onSelectFilter({ tag: 'tag-filter' })}>Stub select filter</button>
   ),
 }));
 

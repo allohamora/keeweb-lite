@@ -24,6 +24,7 @@ import {
   type SortOrder,
 } from '@/services/workspace.service';
 import { getEntryIcon } from '@/services/icon.service';
+import { getEntryColor } from '@/services/color.service';
 import { EntryIcon } from '@/components/workspace/entry-icon.component';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
@@ -140,6 +141,7 @@ export const EntryList = ({
             const title = getFieldText(entry.fields.get('Title')) || '(no title)';
             const username = getFieldText(entry.fields.get('UserName')) || '(no username)';
             const iconIndex = getEntryIcon(entry);
+            const color = getEntryColor(entry);
 
             return (
               <button
@@ -154,7 +156,7 @@ export const EntryList = ({
                 type="button"
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <EntryIcon index={iconIndex} size={16} />
+                  <EntryIcon index={iconIndex} color={color} size={16} />
                   <span className={cn('truncate text-xs font-medium', isExpired && 'line-through')}>{title}</span>
                 </span>
                 <span

@@ -23,6 +23,7 @@ import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
 import {
+  getAllColors,
   getAllTags,
   getAllUsernames,
   getEntryValues,
@@ -34,7 +35,7 @@ import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
 import { PasswordGenerator } from '@/components/workspace/password-generator.component';
-import { IconPicker } from '@/components/workspace/icon-picker.component';
+import { IconColorPicker } from '@/components/workspace/icon-color-picker.component';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
@@ -47,6 +48,7 @@ const entryEditSchema = z.object({
   tags: z.array(z.string()),
   expiryTime: z.string(),
   icon: z.number().int().min(0).max(68),
+  color: z.string().nullable(),
 });
 
 type EntryEditValues = z.infer<typeof entryEditSchema>;
@@ -156,6 +158,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
   const tagOptions = getAllTags(database);
   const usernameOptions = getAllUsernames(database);
+  const colorOptions = getAllColors(database);
   const isInTrash = isEntryInRecycleBin(database, entry);
 
   return (
@@ -188,11 +191,19 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
                         control={control}
                         name="icon"
                         render={({ field: iconField }) => (
-                          <IconPicker
-                            value={iconField.value}
-                            onChange={iconField.onChange}
-                            className="size-6 border-none text-muted-foreground hover:bg-transparent hover:text-foreground"
-                            iconSize={16}
+                          <Controller
+                            control={control}
+                            name="color"
+                            render={({ field: colorField }) => (
+                              <IconColorPicker
+                                iconValue={iconField.value}
+                                onIconChange={iconField.onChange}
+                                colorValue={colorField.value}
+                                onColorChange={colorField.onChange}
+                                databaseColors={colorOptions}
+                                className="text-muted-foreground hover:text-foreground"
+                              />
+                            )}
                           />
                         )}
                       />

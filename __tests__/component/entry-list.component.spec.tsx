@@ -87,5 +87,44 @@ describe('entry-list.component', () => {
       expect(screen.getByText('Test Entry')).toHaveClass('line-through');
       expect(screen.getByText('test-user')).toHaveClass('line-through');
     });
+
+    it('tints the entry icon with the entry color when set', () => {
+      const entry = createTestEntry(database);
+      entry.bgColor = '#FF0000';
+
+      render(
+        <EntryList
+          database={database}
+          selectFilter={null}
+          selectedEntryUuid={null}
+          onSelectEntry={vi.fn()}
+          onCreateEntry={vi.fn()}
+          showMenuButton={false}
+          onMenuOpen={vi.fn()}
+        />,
+      );
+
+      const icon = screen.getByText('Test Entry').closest('button')?.querySelector('svg');
+      expect(icon).toHaveStyle({ color: '#FF0000' });
+    });
+
+    it('leaves the entry icon untinted when no color is set', () => {
+      createTestEntry(database);
+
+      render(
+        <EntryList
+          database={database}
+          selectFilter={null}
+          selectedEntryUuid={null}
+          onSelectEntry={vi.fn()}
+          onCreateEntry={vi.fn()}
+          showMenuButton={false}
+          onMenuOpen={vi.fn()}
+        />,
+      );
+
+      const icon = screen.getByText('Test Entry').closest('button')?.querySelector('svg');
+      expect(icon?.style.color).toBe('');
+    });
   });
 });

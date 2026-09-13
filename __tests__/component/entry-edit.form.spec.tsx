@@ -94,6 +94,27 @@ describe('entry-edit.form', () => {
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     });
 
+    it('picks a color and icon from the combined picker and saves them', async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn();
+      const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
+      const saveEntry = vi.spyOn(workspaceService, 'saveEntry').mockResolvedValue(payload);
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={onSave} />);
+      await user.click(screen.getByRole('button', { name: 'Change icon and color' }));
+      await user.click(screen.getByRole('button', { name: 'Color Red' }));
+      await user.click(screen.getByRole('button', { name: 'Standard icon 5' }));
+      await user.keyboard('{Escape}');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          values: expect.objectContaining({ color: '#FF8080', icon: 5 }),
+        }),
+      );
+      expect(onSave).toHaveBeenCalledWith(payload);
+    });
+
     it('clears the global dirty flag on unmount so navigation is not blocked afterward', async () => {
       const user = userEvent.setup();
       const onGuardedAction = vi.fn();

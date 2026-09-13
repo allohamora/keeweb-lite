@@ -14,6 +14,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
   - showing sync status dot for Drive-backed records
   - exposing source-aware actions (`Download` for all opened records, `Sync` for Drive-backed records when last sync failed)
   - rendering standard KeePass icons for groups and entries, and picking an entry's icon when editing
+  - rendering an entry's background color, and filtering entries by color from the left menu pane
 - Workspace must support both record types:
   - `local`
   - `google-drive`
@@ -28,10 +29,11 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
    - Tag items are clickable and filter the entry list to only entries that carry the selected tag.
    - Each group is shown with its standard KeePass icon (falls back to a folder icon when the group has none set).
-   - Recycle Bin is shown as a dedicated navigation item and is not included in `All Items`, tag-derived filters, or the standard collections list.
+   - Shows a `Colors` row with a leading "No color" option followed by a swatch for each distinct background color currently present on any entry; clicking "No color" filters the entry list to entries with no color set, and clicking a swatch filters to entries with that exact color. The row is omitted when no entry has a color set.
+   - Recycle Bin is shown as a dedicated navigation item and is not included in `All Items`, tag-derived filters, color-derived filters, or the standard collections list.
 3. Entry list pane
    - Displays entries for the selected navigation context.
-   - Each entry is shown with its standard KeePass icon (falls back to a key icon when the entry has none set).
+   - Each entry is shown with its standard KeePass icon (falls back to a key icon when the entry has none set); when the entry has a background color set, the icon is tinted with that color.
    - Provides a debounced text search input that filters the visible entries by title (case-insensitive, substring match).
    - The record count in the pane header reflects the number of entries after search filtering is applied.
    - When a search query produces no matches, an explicit "No matching entries." message is shown.
@@ -40,7 +42,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
    - Displays selected entry details.
    - Displays selected entry tags when present.
    - Supports editing flow and history access/restore actions.
-   - Editing flow includes an icon picker for choosing the entry's standard KeePass icon (from the fixed set of 69; no custom image upload or favicon fetch).
+   - Editing flow includes a combined icon and color picker for the entry: icon selection is limited to the fixed set of 69 standard KeePass icons (no custom image upload or favicon fetch); color selection offers a fixed 6-color pastel palette, "no color", and any additional color currently in use elsewhere in the database (for example one set by another KeePass client) so it stays choosable while browsing the picker. New colors outside this offered set cannot be created. A color dropped in favor of another during editing is only actually lost once the entry is saved with the new value; until then it remains offered because nothing has been persisted yet.
 5. Context panel area
    - Used for temporary workflows that replace or overlay standard list/details content (for example, import-related flows).
 6. Footer bar
@@ -96,6 +98,8 @@ View-state transitions:
    - Entry list updates to selected context.
    - User clicks a tag in menu.
    - Entry list is filtered to show only entries that carry the selected tag.
+   - User clicks a color swatch in menu.
+   - Entry list is filtered to show only entries with that exact background color.
    - User selects an entry and details panel updates.
 3. Search entries
    - User types in the search input in the entry list pane.
@@ -103,9 +107,9 @@ View-state transitions:
    - The record count updates to reflect the filtered result.
    - Clearing the search restores the full list for the current navigation context.
 4. Edit and save feedback
-   - User edits selected entry fields (title, username, password, URL, tags, notes, icon).
+   - User edits selected entry fields (title, username, password, URL, tags, notes, icon, color).
    - The username field offers autocomplete suggestions drawn from other entries' usernames in the same database; free text is always allowed.
-   - The icon picker shows the fixed set of standard KeePass icons; selecting one updates the entry's icon shown in the list and details pane.
+   - The combined icon/color picker shows the fixed set of standard KeePass icons and the fixed 6-color palette; selecting an icon or color updates the entry's icon/color shown in the list and details pane.
    - User clicks the Save button to persist changes.
    - On success, a confirmation notification is shown.
    - On failure, an error notification is shown with the failure reason.
@@ -126,7 +130,7 @@ View-state transitions:
 - Workspace actions requiring an opened record are blocked when no unlocked session exists.
 - Entry-edit actions are blocked when no entry is selected.
 - Sync status element is shown only for `google-drive` records; never for `local` records.
-- Recycle Bin entries are excluded from `All Items` and tag-derived entry lists unless Recycle Bin itself is explicitly selected.
+- Recycle Bin entries are excluded from `All Items`, tag-derived, and color-derived entry lists unless Recycle Bin itself is explicitly selected.
 
 ## Accessibility Requirements
 
@@ -179,10 +183,12 @@ View-state transitions:
 11. At viewport width `<=768px`, list pane is default, selecting an entry transitions to details pane, details pane includes a back action returning to list pane, and menu button opens a drawer where selecting a navigation item closes it.
 12. At viewport width `>768px`, three-pane desktop layout (menu, list, details) remains available.
 13. Groups in the menu pane and entries in the list pane render their standard KeePass icon, falling back to a folder/key icon respectively when unset.
-14. Entry editing exposes an icon picker limited to the standard 69 KeePass icons; the selected icon is reflected in list and details rendering.
+14. Entry editing exposes a combined icon and color picker; icon selection is limited to the standard 69 KeePass icons and color selection to a fixed 6-color palette plus "no color", and the selected icon/color is reflected in list and details rendering.
+15. The menu pane shows a `Colors` row with a "No color" option plus every distinct background color present on entries; clicking "No color" filters to uncolored entries, clicking a swatch filters to entries with that color, and the row is absent when no entry has a color.
 
 ## Out of Scope
 
 - Unlock-screen behavior and recent-record creation flows (covered by `unlock-screen.md`).
+- Entry foreground (text) color and per-group colors.
 - Defining provider-specific auth protocol details beyond workspace-visible behavior.
 - Introducing server-side rendering, backend APIs, or non-browser persistence layers.
