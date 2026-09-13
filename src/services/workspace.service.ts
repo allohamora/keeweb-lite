@@ -148,14 +148,6 @@ export type EntryUpdateValues = {
   expiryTime: string;
 };
 
-const toISODateString = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-
 type UpdateEntryInput = {
   database: kdbx.Kdbx;
   record: FileRecord;
@@ -176,7 +168,7 @@ export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
   url: getFieldText(entry.fields.get('URL')),
   notes: getFieldText(entry.fields.get('Notes')),
   tags: getTags(entry),
-  expiryTime: entry.times.expires && entry.times.expiryTime ? toISODateString(entry.times.expiryTime) : '',
+  expiryTime: entry.times.expires && entry.times.expiryTime ? entry.times.expiryTime.toISOString() : '',
 });
 
 export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): void => {
@@ -188,7 +180,7 @@ export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): v
   entry.fields.set('URL', values.url);
   entry.fields.set('Notes', values.notes);
   entry.tags = values.tags;
-  entry.times.expiryTime = values.expiryTime ? new Date(`${values.expiryTime}T00:00:00`) : undefined;
+  entry.times.expiryTime = values.expiryTime ? new Date(values.expiryTime) : undefined;
   entry.times.expires = !!values.expiryTime;
 
   entry.times.update();

@@ -688,18 +688,19 @@ describe('workspace.service', () => {
       expect(result.password).toBe('secret-pass');
     });
 
-    it('returns the expiry date as an ISO date string when the entry expires', async () => {
+    it('returns the expiry date as an ISO date-time string when the entry expires', async () => {
       const database = await createDatabase();
       const root = database.getDefaultGroup();
       const group = database.createGroup(root, 'Entries');
       const entry = database.createEntry(group);
 
+      const expiryTime = new Date(2027, 5, 15, 14, 30);
       entry.times.expires = true;
-      entry.times.expiryTime = new Date(2027, 5, 15);
+      entry.times.expiryTime = expiryTime;
 
       const result = getEntryValues(entry);
 
-      expect(result.expiryTime).toBe('2027-06-15');
+      expect(result.expiryTime).toBe(expiryTime.toISOString());
     });
 
     it('returns an empty string for expiryTime when the entry does not expire', async () => {
@@ -709,7 +710,7 @@ describe('workspace.service', () => {
       const entry = database.createEntry(group);
 
       entry.times.expires = false;
-      entry.times.expiryTime = new Date(2027, 5, 15);
+      entry.times.expiryTime = new Date(2027, 5, 15, 14, 30);
 
       const result = getEntryValues(entry);
 
@@ -784,6 +785,7 @@ describe('workspace.service', () => {
 
     it('sets times.expiryTime and times.expires when expiryTime is provided', async () => {
       const { entry } = await createEntryWithValues();
+      const expiryTime = new Date(2027, 5, 15, 14, 30);
 
       updateEntry(entry, {
         title: 'Original Title',
@@ -792,15 +794,16 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Original notes',
         tags: ['first'],
-        expiryTime: '2027-06-15',
+        expiryTime: expiryTime.toISOString(),
       });
 
       expect(entry.times.expires).toBe(true);
-      expect(entry.times.expiryTime).toEqual(new Date(2027, 5, 15));
+      expect(entry.times.expiryTime).toEqual(expiryTime);
     });
 
     it('round-trips expiryTime through updateEntry and getEntryValues unchanged', async () => {
       const { entry } = await createEntryWithValues();
+      const expiryTime = new Date(2027, 5, 15, 14, 30).toISOString();
 
       updateEntry(entry, {
         title: 'Original Title',
@@ -809,16 +812,16 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Original notes',
         tags: ['first'],
-        expiryTime: '2027-06-15',
+        expiryTime,
       });
 
-      expect(getEntryValues(entry).expiryTime).toBe('2027-06-15');
+      expect(getEntryValues(entry).expiryTime).toBe(expiryTime);
     });
 
     it('clears times.expiryTime and times.expires when expiryTime is empty', async () => {
       const { entry } = await createEntryWithValues();
       entry.times.expires = true;
-      entry.times.expiryTime = new Date(2027, 5, 15);
+      entry.times.expiryTime = new Date(2027, 5, 15, 14, 30);
 
       updateEntry(entry, {
         title: 'Original Title',

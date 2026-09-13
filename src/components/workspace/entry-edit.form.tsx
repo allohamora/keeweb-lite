@@ -9,7 +9,7 @@ import { Copy01Icon, LinkSquare02Icon, ViewIcon, ViewOffIcon } from '@hugeicons/
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
-import { DatePicker } from '@/components/ui/date-picker';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Input } from '@/components/ui/input';
 import { InputGroupAddon, InputGroupButton } from '@/components/ui/input-group';
 import {
@@ -366,7 +366,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-expires">Expires</FieldLabel>
                 <FieldContent>
-                  <DatePicker id="entry-expires" strikethroughPast value={field.value} onChange={field.onChange} />
+                  <DateTimePicker id="entry-expires" strikethroughPast value={field.value} onChange={field.onChange} />
                   <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>

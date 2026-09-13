@@ -36,6 +36,7 @@
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.83.0",
+    "react-number-format": "^5.4.5",
     "react-select": "^5.10.2",
     "react-use": "^17.6.1",
     "shadcn": "^4.16.0",
