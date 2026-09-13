@@ -50,6 +50,7 @@ export const IconPicker = ({ value, onChange, className, iconSize = 18 }: IconPi
               )}
               onClick={() => select(index)}
               aria-label={`Standard icon ${index}`}
+              aria-pressed={value === index}
             >
               <HugeiconsIcon icon={icon} size={16} />
             </button>
