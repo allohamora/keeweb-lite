@@ -22,6 +22,7 @@ import {
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
+import { getEntryColor } from '@/services/color.service';
 import {
   getAllColors,
   getAllTags,
@@ -158,7 +159,10 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
   const tagOptions = getAllTags(database);
   const usernameOptions = getAllUsernames(database);
-  const colorOptions = getAllColors(database);
+  const currentColor = getEntryColor(entry);
+  // getAllColors excludes the recycle bin (for filter navigation), so add this entry's own
+  // color back in here, otherwise a trashed entry's unique color has no swatch in its own picker
+  const colorOptions = currentColor ? [...new Set([...getAllColors(database), currentColor])] : getAllColors(database);
   const isInTrash = isEntryInRecycleBin(database, entry);
 
   return (

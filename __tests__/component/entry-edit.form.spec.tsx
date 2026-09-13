@@ -115,6 +115,19 @@ describe('entry-edit.form', () => {
       expect(onSave).toHaveBeenCalledWith(payload);
     });
 
+    it("keeps a trashed entry's own color choosable in the picker, even if unused elsewhere", async () => {
+      const user = userEvent.setup();
+      const recycleBin = database.createGroup(database.getDefaultGroup(), 'Trash');
+      database.meta.recycleBinUuid = recycleBin.uuid;
+      database.move(entry, recycleBin);
+      entry.bgColor = '#123456';
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Change icon and color' }));
+
+      expect(screen.getByRole('button', { name: 'Color #123456' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
     it('clears the global dirty flag on unmount so navigation is not blocked afterward', async () => {
       const user = userEvent.setup();
       const onGuardedAction = vi.fn();
