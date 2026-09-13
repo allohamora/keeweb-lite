@@ -10,9 +10,12 @@ import {
   filterGroups,
   findEntryByUuid,
   findGroupByUuid,
+  getAllColors,
   getAllGroups,
   getGroupTree,
+  isColorSelect,
   isGroupSelect,
+  isTagSelect,
   getAllTags,
   getAllUsernames,
   getEntriesForList,
@@ -163,12 +166,62 @@ describe('workspace.service', () => {
       expect(isGroupSelect(group.uuid)).toBe(true);
     });
 
-    it('returns false for a string', () => {
-      expect(isGroupSelect('work')).toBe(false);
+    it('returns false for a tag select', () => {
+      expect(isGroupSelect({ tag: 'work' })).toBe(false);
     });
 
     it('returns false for null', () => {
       expect(isGroupSelect(null)).toBe(false);
+    });
+
+    it('returns false for a color select', () => {
+      expect(isGroupSelect({ color: '#FF0000' })).toBe(false);
+    });
+  });
+
+  describe('isTagSelect', () => {
+    it('returns true for a tag select object', () => {
+      expect(isTagSelect({ tag: 'work' })).toBe(true);
+    });
+
+    it('returns false for a KdbxUuid', async () => {
+      const database = await createDatabase();
+      const group = database.getDefaultGroup();
+
+      expect(isTagSelect(group.uuid)).toBe(false);
+    });
+
+    it('returns false for a color select', () => {
+      expect(isTagSelect({ color: '#FF0000' })).toBe(false);
+    });
+
+    it('returns false for null', () => {
+      expect(isTagSelect(null)).toBe(false);
+    });
+  });
+
+  describe('isColorSelect', () => {
+    it('returns true for a color select object', () => {
+      expect(isColorSelect({ color: '#FF0000' })).toBe(true);
+    });
+
+    it('returns true for a "no color" select object', () => {
+      expect(isColorSelect({ color: null })).toBe(true);
+    });
+
+    it('returns false for a KdbxUuid', async () => {
+      const database = await createDatabase();
+      const group = database.getDefaultGroup();
+
+      expect(isColorSelect(group.uuid)).toBe(false);
+    });
+
+    it('returns false for a tag select', () => {
+      expect(isColorSelect({ tag: 'work' })).toBe(false);
+    });
+
+    it('returns false for null', () => {
+      expect(isColorSelect(null)).toBe(false);
     });
   });
 
@@ -308,7 +361,7 @@ describe('workspace.service', () => {
           groups: [first, second, recycleBin],
           meta: { recycleBinUuid: recycleBin.uuid },
         },
-        selectFilter: 'work',
+        selectFilter: { tag: 'work' },
       });
 
       expect(result).toEqual([matchingEntry]);
@@ -329,7 +382,7 @@ describe('workspace.service', () => {
           groups: [first, recycleBin],
           meta: { recycleBinUuid: recycleBin.uuid },
         },
-        selectFilter: 'archived',
+        selectFilter: { tag: 'archived' },
       });
 
       expect(result).toEqual([]);
@@ -374,9 +427,56 @@ describe('workspace.service', () => {
       firstEntry.tags = ['one'];
       secondEntry.tags = ['two'];
 
-      const result = getEntriesForList({ database, selectFilter: '   ' });
+      const result = getEntriesForList({ database, selectFilter: { tag: '   ' } });
 
       expect(result).toEqual([firstEntry, secondEntry]);
+    });
+
+    it('returns entries matching a selected color and excludes recycle bin entries', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const second = database.createGroup(root, 'Second');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const matchingEntry = database.createEntry(first);
+      const otherEntry = database.createEntry(second);
+      const recycleBinEntry = database.createEntry(recycleBin);
+      matchingEntry.bgColor = '#FF0000';
+      otherEntry.bgColor = '#00FF00';
+      recycleBinEntry.bgColor = '#FF0000';
+
+      const result = getEntriesForList({
+        database: {
+          groups: [first, second, recycleBin],
+          meta: { recycleBinUuid: recycleBin.uuid },
+        },
+        selectFilter: { color: '#FF0000' },
+      });
+
+      expect(result).toEqual([matchingEntry]);
+    });
+
+    it('returns entries with no color when "no color" is selected, and excludes recycle bin entries', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const second = database.createGroup(root, 'Second');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const uncoloredEntry = database.createEntry(first);
+      const coloredEntry = database.createEntry(second);
+      const recycleBinEntry = database.createEntry(recycleBin);
+      coloredEntry.bgColor = '#FF0000';
+
+      const result = getEntriesForList({
+        database: {
+          groups: [first, second, recycleBin],
+          meta: { recycleBinUuid: recycleBin.uuid },
+        },
+        selectFilter: { color: null },
+      });
+
+      expect(result).toEqual([uncoloredEntry]);
+      expect(result).not.toContain(recycleBinEntry);
     });
   });
 
@@ -403,6 +503,34 @@ describe('workspace.service', () => {
       });
 
       expect(result).toEqual(['work', 'shared', 'personal']);
+    });
+  });
+
+  describe('getAllColors', () => {
+    it('returns unique colors from all groups, excludes recycle bin entries and entries with no color', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const nested = database.createGroup(first, 'Nested');
+      const second = database.createGroup(root, 'Second');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const firstEntry = database.createEntry(first);
+      const nestedEntry = database.createEntry(nested);
+      const secondEntry = database.createEntry(second);
+      const uncoloredEntry = database.createEntry(second);
+      const recycleBinEntry = database.createEntry(recycleBin);
+      firstEntry.bgColor = '#FF0000';
+      nestedEntry.bgColor = '#FF0000';
+      secondEntry.bgColor = '#00FF00';
+      recycleBinEntry.bgColor = '#0000FF';
+
+      const result = getAllColors({
+        groups: [first, second, recycleBin],
+        meta: { recycleBinUuid: recycleBin.uuid },
+      });
+
+      expect(result).toEqual(['#FF0000', '#00FF00']);
+      expect(uncoloredEntry.bgColor).toBeUndefined();
     });
   });
 
@@ -758,6 +886,7 @@ describe('workspace.service', () => {
         tags: ['updated'],
         expiryTime: '',
         icon: 0,
+        color: null,
       });
 
       expect(getFieldText(entry.fields.get('Title'))).toBe('Updated Title');
@@ -780,6 +909,7 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime: '',
         icon: 0,
+        color: null,
       });
 
       expect(getFieldText(entry.fields.get('Password'))).toBe('new-password');
@@ -798,6 +928,7 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime: expiryTime.toISOString(),
         icon: 0,
+        color: null,
       });
 
       expect(entry.times.expires).toBe(true);
@@ -817,6 +948,7 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime,
         icon: 0,
+        color: null,
       });
 
       expect(getEntryValues(entry).expiryTime).toBe(expiryTime);
@@ -836,6 +968,7 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime: '',
         icon: 0,
+        color: null,
       });
 
       expect(entry.times.expires).toBe(false);
@@ -856,6 +989,7 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime: '',
         icon: 0,
+        color: null,
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
@@ -878,6 +1012,7 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime: '',
         icon: 0,
+        color: null,
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
@@ -896,6 +1031,7 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime: '',
         icon: 12,
+        color: null,
       });
 
       expect(entry.icon).toBe(12);
@@ -915,9 +1051,47 @@ describe('workspace.service', () => {
         tags: ['first'],
         expiryTime: '',
         icon: 12,
+        color: null,
       });
 
       expect(entry.customIcon).toBe(uuid);
+    });
+
+    it('sets the entry background color', async () => {
+      const { entry } = await createEntryWithValues();
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '',
+        icon: 0,
+        color: '#FF0000',
+      });
+
+      expect(entry.bgColor).toBe('#FF0000');
+    });
+
+    it('clears the entry background color when color is null', async () => {
+      const { entry } = await createEntryWithValues();
+      entry.bgColor = '#FF0000';
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '',
+        icon: 0,
+        color: null,
+      });
+
+      expect(entry.bgColor).toBeUndefined();
     });
   });
 
@@ -961,6 +1135,7 @@ describe('workspace.service', () => {
           tags: ['updated'],
           expiryTime: '',
           icon: 0,
+          color: null,
         },
       });
 
@@ -997,6 +1172,7 @@ describe('workspace.service', () => {
             tags: ['tag'],
             expiryTime: '',
             icon: 0,
+            color: null,
           },
         }),
       ).rejects.toThrow('Entry not found.');
@@ -1018,6 +1194,7 @@ describe('workspace.service', () => {
           tags: ['first'],
           expiryTime: '',
           icon: 0,
+          color: null,
         },
       });
 
@@ -1045,6 +1222,7 @@ describe('workspace.service', () => {
           tags: ['updated'],
           expiryTime: '',
           icon: 0,
+          color: null,
         },
       });
 
@@ -1109,7 +1287,7 @@ describe('workspace.service', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
-        selectFilter: 'work',
+        selectFilter: { tag: 'work' },
       });
 
       expect(nextDatabase.getDefaultGroup().entries).toContain(findEntryByUuid(nextDatabase, nextEntryUuid));
@@ -1121,7 +1299,7 @@ describe('workspace.service', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
-        selectFilter: 'work',
+        selectFilter: { tag: 'work' },
       });
 
       expect(findEntryByUuid(nextDatabase, nextEntryUuid)?.tags).toEqual(['work']);

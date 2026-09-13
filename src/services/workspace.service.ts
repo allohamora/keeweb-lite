@@ -3,8 +3,9 @@ import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 import { updateRecord, type FileRecord } from '@/repositories/record.repository';
 import { getEntryIcon } from '@/services/icon.service';
+import { getEntryColor } from '@/services/color.service';
 
-export type SelectFilter = kdbx.KdbxUuid | string | null;
+export type SelectFilter = kdbx.KdbxUuid | { tag: string } | { color: string | null } | null;
 
 export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
   return groups.flatMap((group) => [...group.allGroups()]);
@@ -25,9 +26,12 @@ export const getFieldText = (field?: string | kdbx.ProtectedValue): string => {
   return field.getText();
 };
 
-const isTagSelect = (selectFilter: SelectFilter): selectFilter is string => typeof selectFilter === 'string';
 export const isGroupSelect = (selectFilter: SelectFilter): selectFilter is kdbx.KdbxUuid =>
-  selectFilter !== null && !isTagSelect(selectFilter);
+  selectFilter instanceof kdbx.KdbxUuid;
+export const isTagSelect = (selectFilter: SelectFilter): selectFilter is { tag: string } =>
+  selectFilter !== null && !isGroupSelect(selectFilter) && 'tag' in selectFilter;
+export const isColorSelect = (selectFilter: SelectFilter): selectFilter is { color: string | null } =>
+  selectFilter !== null && !isGroupSelect(selectFilter) && 'color' in selectFilter;
 
 export const findEntryByUuid = (
   database: Pick<kdbx.Kdbx, 'groups'>,
@@ -104,9 +108,14 @@ export const getEntriesForList = ({
 
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
+
+  if (isColorSelect(selectFilter)) {
+    return entries.filter((entry) => getEntryColor(entry) === selectFilter.color);
+  }
+
   if (!isTagSelect(selectFilter)) return entries;
 
-  const normalizedTag = normalize(selectFilter);
+  const normalizedTag = normalize(selectFilter.tag);
   if (!normalizedTag) return entries;
 
   return entries.filter((entry) => entry.tags.some((tag) => normalize(tag) === normalizedTag));
@@ -148,6 +157,7 @@ export type EntryUpdateValues = {
   tags: string[];
   expiryTime: string;
   icon: number;
+  color: string | null;
 };
 
 type UpdateEntryInput = {
@@ -172,6 +182,7 @@ export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
   tags: getTags(entry),
   expiryTime: entry.times.expires && entry.times.expiryTime ? entry.times.expiryTime.toISOString() : '',
   icon: getEntryIcon(entry),
+  color: getEntryColor(entry),
 });
 
 export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): void => {
@@ -186,6 +197,7 @@ export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): v
   entry.times.expiryTime = values.expiryTime ? new Date(values.expiryTime) : undefined;
   entry.times.expires = !!values.expiryTime;
   entry.icon = values.icon;
+  entry.bgColor = values.color ?? undefined;
 
   entry.times.update();
 };
@@ -262,7 +274,7 @@ export const createEntry = async ({
 
   const nextEntry = nextDatabase.createEntry(group);
   if (isTagSelect(selectFilter)) {
-    nextEntry.tags = [selectFilter];
+    nextEntry.tags = [selectFilter.tag];
   }
 
   const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
@@ -343,6 +355,14 @@ export const getAllTags = (database: RecycleAwareDatabase): string[] => {
   const normalizedTags = entries.flatMap((entry) => getTags(entry));
 
   return [...new Set(normalizedTags.filter((tag) => tag.length > 0))];
+};
+
+export const getAllColors = (database: RecycleAwareDatabase): string[] => {
+  const { groups } = filterGroups(database);
+  const entries = groups.flatMap((group) => group.entries);
+  const colors = entries.map((entry) => getEntryColor(entry)).filter((color): color is string => color !== null);
+
+  return [...new Set(colors)];
 };
 
 export const getAllUsernames = (database: RecycleAwareDatabase): string[] => {
