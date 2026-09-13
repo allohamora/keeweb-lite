@@ -11,23 +11,6 @@ export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
 
 type RecycleAwareDatabase = Pick<kdbx.Kdbx, 'groups'> & { meta: Pick<kdbx.KdbxMeta, 'recycleBinUuid'> };
 
-export const filterGroups = (database: RecycleAwareDatabase) => {
-  const recycleBinUuid = database.meta.recycleBinUuid;
-
-  return getAllGroups(database.groups).reduce<{ groups: kdbx.KdbxGroup[]; recycleBinGroup: kdbx.KdbxGroup | null }>(
-    (state, group) => {
-      if (recycleBinUuid && group.uuid.equals(recycleBinUuid)) {
-        state.recycleBinGroup = group;
-      } else {
-        state.groups.push(group);
-      }
-
-      return state;
-    },
-    { groups: [], recycleBinGroup: null },
-  );
-};
-
 const normalize = (tag: string): string => tag.trim().toLocaleLowerCase();
 
 export const getTags = ({ tags }: Pick<kdbx.KdbxEntry, 'tags'>): string[] => {
@@ -69,6 +52,40 @@ export const findGroupByUuid = (
   return null;
 };
 
+export type GroupTreeItem = { group: kdbx.KdbxGroup; depth: number };
+type GroupTree = { items: GroupTreeItem[]; recycleBinGroup: kdbx.KdbxGroup | null };
+
+// preserves nesting depth, unlike getAllGroups, and excludes the recycle bin group's entire subtree
+export const getGroupTree = (database: RecycleAwareDatabase): GroupTree => {
+  const recycleBinUuid = database.meta.recycleBinUuid;
+
+  const buildTree = (groups: kdbx.KdbxGroup[], depth: number): GroupTree => {
+    return groups.reduce<GroupTree>(
+      (state, group) => {
+        if (recycleBinUuid && group.uuid.equals(recycleBinUuid)) {
+          state.recycleBinGroup = group;
+          return state;
+        }
+
+        const nested = buildTree(group.groups, depth + 1);
+        state.items.push({ group, depth }, ...nested.items);
+        state.recycleBinGroup ??= nested.recycleBinGroup;
+
+        return state;
+      },
+      { items: [], recycleBinGroup: null },
+    );
+  };
+
+  return buildTree(database.groups, 0);
+};
+
+export const filterGroups = (database: RecycleAwareDatabase) => {
+  const { items, recycleBinGroup } = getGroupTree(database);
+
+  return { groups: items.map((item) => item.group), recycleBinGroup };
+};
+
 export const getEntriesForList = ({
   database,
   selectFilter,
@@ -76,7 +93,13 @@ export const getEntriesForList = ({
   database: RecycleAwareDatabase;
   selectFilter: SelectFilter;
 }): kdbx.KdbxEntry[] => {
-  if (isGroupSelect(selectFilter)) return findGroupByUuid(database, selectFilter)?.entries ?? [];
+  if (isGroupSelect(selectFilter)) {
+    const group = findGroupByUuid(database, selectFilter);
+    if (!group) return [];
+
+    // a selected group shows its own entries plus every descendant group's entries
+    return [...group.allGroups()].flatMap((item) => item.entries);
+  }
 
   const { groups } = filterGroups(database);
   const entries = groups.flatMap((group) => group.entries);
@@ -122,6 +145,7 @@ export type EntryUpdateValues = {
   url: string;
   notes: string;
   tags: string[];
+  expiryTime: string;
 };
 
 type UpdateEntryInput = {
@@ -144,6 +168,7 @@ export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
   url: getFieldText(entry.fields.get('URL')),
   notes: getFieldText(entry.fields.get('Notes')),
   tags: getTags(entry),
+  expiryTime: entry.times.expires && entry.times.expiryTime ? entry.times.expiryTime.toISOString() : '',
 });
 
 export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): void => {
@@ -155,6 +180,8 @@ export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): v
   entry.fields.set('URL', values.url);
   entry.fields.set('Notes', values.notes);
   entry.tags = values.tags;
+  entry.times.expiryTime = values.expiryTime ? new Date(values.expiryTime) : undefined;
+  entry.times.expires = !!values.expiryTime;
 
   entry.times.update();
 };
@@ -239,11 +266,15 @@ export const createEntry = async ({
   return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
 
+export const isEntryExpired = (entry: kdbx.KdbxEntry): boolean => {
+  return !!entry.times.expires && !!entry.times.expiryTime && entry.times.expiryTime.getTime() < Date.now();
+};
+
 export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbx.KdbxEntry): boolean => {
   const { recycleBinGroup } = filterGroups(database);
   if (!recycleBinGroup) return false;
 
-  return recycleBinGroup.entries.some((item) => item.uuid.equals(entry.uuid));
+  return [...recycleBinGroup.allGroups()].some((group) => group.entries.some((item) => item.uuid.equals(entry.uuid)));
 };
 
 type RemoveEntryInput = {

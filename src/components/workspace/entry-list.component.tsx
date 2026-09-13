@@ -18,6 +18,7 @@ import {
   getEntriesForList,
   getFieldText,
   filterEntriesBySearch,
+  isEntryExpired,
   sortEntries,
   type SelectFilter,
   type SortOrder,
@@ -132,6 +133,7 @@ export const EntryList = ({
         ) : (
           filteredEntries.map((entry) => {
             const isSelected = selectedEntryUuid !== null && entry.uuid.equals(selectedEntryUuid);
+            const isExpired = isEntryExpired(entry);
 
             const title = getFieldText(entry.fields.get('Title')) || '(no title)';
             const username = getFieldText(entry.fields.get('UserName')) || '(no username)';
@@ -148,8 +150,10 @@ export const EntryList = ({
                 onClick={() => onSelectEntry(entry.uuid)}
                 type="button"
               >
-                <span className="truncate text-xs font-medium">{title}</span>
-                <span className="min-h-4 truncate text-[11px] text-muted-foreground">{username}</span>
+                <span className={cn('truncate text-xs font-medium', isExpired && 'line-through')}>{title}</span>
+                <span className={cn('min-h-4 truncate text-[11px] text-muted-foreground', isExpired && 'line-through')}>
+                  {username}
+                </span>
               </button>
             );
           })

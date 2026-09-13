@@ -11,6 +11,7 @@ import {
   findEntryByUuid,
   findGroupByUuid,
   getAllGroups,
+  getGroupTree,
   isGroupSelect,
   getAllTags,
   getAllUsernames,
@@ -18,6 +19,7 @@ import {
   getEntryValues,
   getFieldText,
   getTags,
+  isEntryExpired,
   isEntryInRecycleBin,
   removeEntry,
   restoreEntry,
@@ -87,6 +89,69 @@ describe('workspace.service', () => {
 
       expect(result.recycleBinGroup).toBeNull();
       expect(result.groups).toEqual([first, second]);
+    });
+
+    it('excludes recycle bin descendants from the visible groups', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const recycleBinChild = database.createGroup(recycleBin, 'Deleted Folder');
+
+      const result = filterGroups({
+        groups: [first, recycleBin],
+        meta: { recycleBinUuid: recycleBin.uuid },
+      });
+
+      expect(result.recycleBinGroup).toBe(recycleBin);
+      expect(result.groups).toEqual([first]);
+      expect(result.groups).not.toContain(recycleBinChild);
+    });
+  });
+
+  describe('getGroupTree', () => {
+    it('annotates each group with its nesting depth in depth-first order', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const parent = database.createGroup(root, 'Parent');
+      const child = database.createGroup(parent, 'Child');
+      const grandchild = database.createGroup(child, 'Grandchild');
+      const sibling = database.createGroup(root, 'Sibling');
+
+      const result = getGroupTree({
+        groups: [parent, sibling],
+        meta: { recycleBinUuid: undefined },
+      });
+
+      expect(result.items).toEqual([
+        { group: parent, depth: 0 },
+        { group: child, depth: 1 },
+        { group: grandchild, depth: 2 },
+        { group: sibling, depth: 0 },
+      ]);
+    });
+
+    it('excludes the recycle bin group and its descendants, but still returns it as recycleBinGroup', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const first = database.createGroup(root, 'First');
+      const recycleBin = database.createGroup(root, 'Trash');
+      const recycleBinChild = database.createGroup(recycleBin, 'Deleted Folder');
+
+      const result = getGroupTree({
+        groups: [first, recycleBin],
+        meta: { recycleBinUuid: recycleBin.uuid },
+      });
+
+      expect(result.items).toEqual([{ group: first, depth: 0 }]);
+      expect(result.items.map((item) => item.group)).not.toContain(recycleBinChild);
+      expect(result.recycleBinGroup).toBe(recycleBin);
+    });
+
+    it('returns an empty tree and a null recycle bin group when no groups are provided', () => {
+      const result = getGroupTree({ groups: [], meta: { recycleBinUuid: undefined } });
+
+      expect(result).toEqual({ items: [], recycleBinGroup: null });
     });
   });
 
@@ -186,6 +251,21 @@ describe('workspace.service', () => {
       const result = getEntriesForList({ database, selectFilter: selectedGroup.uuid });
 
       expect(result).toEqual([entry]);
+    });
+
+    it('returns entries from the group and all of its descendant groups when a parent group is selected', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const parent = database.createGroup(root, 'Parent');
+      const child = database.createGroup(parent, 'Child');
+      const grandchild = database.createGroup(child, 'Grandchild');
+      const parentEntry = database.createEntry(parent);
+      const childEntry = database.createEntry(child);
+      const grandchildEntry = database.createEntry(grandchild);
+
+      const result = getEntriesForList({ database, selectFilter: parent.uuid });
+
+      expect(result).toEqual([parentEntry, childEntry, grandchildEntry]);
     });
 
     it('returns entries from all groups when no group is selected', async () => {
@@ -607,6 +687,46 @@ describe('workspace.service', () => {
 
       expect(result.password).toBe('secret-pass');
     });
+
+    it('returns the expiry date as an ISO date-time string when the entry expires', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      const expiryTime = new Date(2027, 5, 15, 14, 30);
+      entry.times.expires = true;
+      entry.times.expiryTime = expiryTime;
+
+      const result = getEntryValues(entry);
+
+      expect(result.expiryTime).toBe(expiryTime.toISOString());
+    });
+
+    it('returns an empty string for expiryTime when the entry does not expire', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = false;
+      entry.times.expiryTime = new Date(2027, 5, 15, 14, 30);
+
+      const result = getEntryValues(entry);
+
+      expect(result.expiryTime).toBe('');
+    });
+
+    it('returns an empty string for expiryTime when no expiry date is set', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const group = database.createGroup(root, 'Entries');
+      const entry = database.createEntry(group);
+
+      const result = getEntryValues(entry);
+
+      expect(result.expiryTime).toBe('');
+    });
   });
 
   describe('updateEntry', () => {
@@ -636,6 +756,7 @@ describe('workspace.service', () => {
         url: 'https://updated.example.com',
         notes: 'Updated notes',
         tags: ['updated'],
+        expiryTime: '',
       });
 
       expect(getFieldText(entry.fields.get('Title'))).toBe('Updated Title');
@@ -656,9 +777,64 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Original notes',
         tags: ['first'],
+        expiryTime: '',
       });
 
       expect(getFieldText(entry.fields.get('Password'))).toBe('new-password');
+    });
+
+    it('sets times.expiryTime and times.expires when expiryTime is provided', async () => {
+      const { entry } = await createEntryWithValues();
+      const expiryTime = new Date(2027, 5, 15, 14, 30);
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: expiryTime.toISOString(),
+      });
+
+      expect(entry.times.expires).toBe(true);
+      expect(entry.times.expiryTime).toEqual(expiryTime);
+    });
+
+    it('round-trips expiryTime through updateEntry and getEntryValues unchanged', async () => {
+      const { entry } = await createEntryWithValues();
+      const expiryTime = new Date(2027, 5, 15, 14, 30).toISOString();
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime,
+      });
+
+      expect(getEntryValues(entry).expiryTime).toBe(expiryTime);
+    });
+
+    it('clears times.expiryTime and times.expires when expiryTime is empty', async () => {
+      const { entry } = await createEntryWithValues();
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(2027, 5, 15, 14, 30);
+
+      updateEntry(entry, {
+        title: 'Original Title',
+        username: 'original-user',
+        password: 'original-password',
+        url: 'https://example.com',
+        notes: 'Original notes',
+        tags: ['first'],
+        expiryTime: '',
+      });
+
+      expect(entry.times.expires).toBe(false);
+      expect(entry.times.expiryTime).toBeUndefined();
     });
 
     it('creates entry history and updates last modification time', async () => {
@@ -673,6 +849,7 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Updated notes',
         tags: ['first'],
+        expiryTime: '',
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
@@ -693,6 +870,7 @@ describe('workspace.service', () => {
         url: 'https://example.com',
         notes: 'Original notes',
         tags: ['first'],
+        expiryTime: '',
       });
 
       expect(entry.history).toHaveLength(initialHistoryLength + 1);
@@ -738,6 +916,7 @@ describe('workspace.service', () => {
           url: 'https://updated.example.com',
           notes: 'Updated notes',
           tags: ['updated'],
+          expiryTime: '',
         },
       });
 
@@ -772,6 +951,7 @@ describe('workspace.service', () => {
             url: 'https://example.com',
             notes: 'notes',
             tags: ['tag'],
+            expiryTime: '',
           },
         }),
       ).rejects.toThrow('Entry not found.');
@@ -791,6 +971,7 @@ describe('workspace.service', () => {
           url: 'https://example.com',
           notes: 'Original notes',
           tags: ['first'],
+          expiryTime: '',
         },
       });
 
@@ -816,6 +997,7 @@ describe('workspace.service', () => {
           url: 'https://updated.example.com',
           notes: 'Updated notes',
           tags: ['updated'],
+          expiryTime: '',
         },
       });
 
@@ -1024,6 +1206,61 @@ describe('workspace.service', () => {
       const result = isEntryInRecycleBin({ groups: database.groups, meta: { recycleBinUuid: undefined } }, entry);
 
       expect(result).toBe(false);
+    });
+
+    it('returns true when entry is in a nested subgroup of the recycle bin', async () => {
+      const database = await createDatabase();
+      const root = database.getDefaultGroup();
+      const recycleBin = database.createGroup(root, 'Trash');
+      const recycleBinChild = database.createGroup(recycleBin, 'Deleted Folder');
+      const entry = database.createEntry(recycleBinChild);
+
+      const result = isEntryInRecycleBin({ groups: database.groups, meta: { recycleBinUuid: recycleBin.uuid } }, entry);
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('isEntryExpired', () => {
+    it('returns true when the entry expires and the expiry date is in the past', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(2000, 0, 1);
+
+      expect(isEntryExpired(entry)).toBe(true);
+    });
+
+    it('returns false when the entry expires but the expiry date is in the future', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(Date.now() + 1000 * 60 * 60 * 24);
+
+      expect(isEntryExpired(entry)).toBe(false);
+    });
+
+    it('returns false when the expiry date is in the past but expires is false', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      entry.times.expires = false;
+      entry.times.expiryTime = new Date(2000, 0, 1);
+
+      expect(isEntryExpired(entry)).toBe(false);
+    });
+
+    it('returns false when no expiry date is set', async () => {
+      const database = await createDatabase();
+      const group = database.createGroup(database.getDefaultGroup(), 'Entries');
+      const entry = database.createEntry(group);
+
+      expect(isEntryExpired(entry)).toBe(false);
     });
   });
 

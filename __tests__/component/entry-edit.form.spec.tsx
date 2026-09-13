@@ -107,6 +107,67 @@ describe('entry-edit.form', () => {
       expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
     });
 
+    it('picks a date from the Expires calendar and marks the form dirty', async () => {
+      const user = userEvent.setup();
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+
+      expect(screen.getByLabelText('Expires')).toHaveTextContent('No expiration');
+
+      await user.click(screen.getByLabelText('Expires'));
+      await user.click(screen.getByRole('button', { name: /^Today,/ }));
+      await user.click(screen.getByRole('button', { name: 'Done' }));
+
+      const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      expect(screen.getByLabelText('Expires')).toHaveTextContent(today);
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
+    it('discards the picked date when the Expires popover is closed without clicking Done', async () => {
+      const user = userEvent.setup();
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+
+      await user.click(screen.getByLabelText('Expires'));
+      await user.click(screen.getByRole('button', { name: /^Today,/ }));
+      await user.keyboard('{Escape}');
+
+      expect(screen.getByLabelText('Expires')).toHaveTextContent('No expiration');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    it('disables Done while the expiry time is incomplete', async () => {
+      const user = userEvent.setup();
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+
+      await user.click(screen.getByLabelText('Expires'));
+      await user.click(screen.getByRole('button', { name: /^Today,/ }));
+
+      expect(screen.getByRole('button', { name: 'Done' })).toBeEnabled();
+
+      const timeInput = screen.getByLabelText('Expiration time');
+      await user.clear(timeInput);
+      await user.type(timeInput, '1');
+
+      expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
+    });
+
+    it('shows a past expiry date struck through and clears it via the clear button', async () => {
+      const user = userEvent.setup();
+      entry.times.expires = true;
+      entry.times.expiryTime = new Date(2000, 0, 1);
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+
+      expect(screen.getByText(/Jan 1, 2000/)).toHaveClass('line-through');
+
+      await user.click(screen.getByRole('button', { name: 'Clear date' }));
+
+      expect(screen.getByLabelText('Expires')).toHaveTextContent('No expiration');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
     it('blocks Remove while Save is still pending, and re-enables it once Save settles', async () => {
       const user = userEvent.setup();
       let resolveSave: (payload: {

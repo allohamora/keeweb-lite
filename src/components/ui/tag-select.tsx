@@ -1,5 +1,8 @@
 import CreatableSelect from 'react-select/creatable';
-import type { MultiValue } from 'react-select';
+import { components as SelectComponents } from 'react-select';
+import type { ClearIndicatorProps, DropdownIndicatorProps, MultiValue, MultiValueRemoveProps } from 'react-select';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Cancel01Icon, UnfoldMoreIcon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
 
 type Option = { value: string; label: string };
@@ -19,6 +22,24 @@ type TagSelectProps = {
 
 const toOption = (value: string): Option => ({ value, label: value });
 
+const ClearIndicator = (props: ClearIndicatorProps<Option, true>) => (
+  <SelectComponents.ClearIndicator {...props}>
+    <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} size={14} />
+  </SelectComponents.ClearIndicator>
+);
+
+const DropdownIndicator = (props: DropdownIndicatorProps<Option, true>) => (
+  <SelectComponents.DropdownIndicator {...props}>
+    <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} size={14} />
+  </SelectComponents.DropdownIndicator>
+);
+
+const MultiValueRemove = (props: MultiValueRemoveProps<Option, true>) => (
+  <SelectComponents.MultiValueRemove {...props}>
+    <HugeiconsIcon icon={Cancel01Icon} size={14} />
+  </SelectComponents.MultiValueRemove>
+);
+
 export const TagSelect = ({
   value,
   onChange,
@@ -37,6 +58,7 @@ export const TagSelect = ({
     <CreatableSelect<Option, true>
       isMulti
       unstyled
+      closeMenuOnSelect={false}
       inputId={inputId}
       isDisabled={disabled}
       options={options.map(toOption)}
@@ -50,34 +72,39 @@ export const TagSelect = ({
       aria-describedby={ariaDescribedBy}
       aria-invalid={invalid || undefined}
       formatCreateLabel={(inputValue) => inputValue}
+      components={{ ClearIndicator, DropdownIndicator, MultiValueRemove }}
       classNames={{
         control: ({ isFocused }) =>
           cn(
-            'flex min-h-8 w-full rounded-md border border-input bg-background px-3 text-xs shadow-sm transition-colors',
-            isFocused && 'ring-1 ring-ring outline-none',
+            'flex min-h-8! w-full rounded-none border border-input bg-transparent text-xs transition-colors dark:bg-input/30',
+            isFocused && 'border-ring ring-1 ring-ring/50 outline-none',
+            invalid &&
+              'border-destructive ring-1 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
           ),
-        menu: () => 'z-50 mt-1 rounded-md bg-popover shadow-md',
+        menu: () => 'z-50 mt-1 rounded-none bg-popover shadow-md ring-1 ring-foreground/10',
         menuList: () => '!flex !flex-row !flex-wrap gap-x-3 gap-y-1 px-3 py-2',
         option: ({ isSelected }) =>
           cn(
-            'inline-flex! h-5! w-auto! cursor-pointer items-center rounded-sm! px-1.5! text-[11px]! leading-none!',
+            'inline-flex! h-5! w-auto! cursor-pointer items-center rounded-none! px-1.5! text-[11px]! leading-none!',
             isSelected
               ? 'bg-primary! text-primary-foreground!'
               : 'bg-secondary! text-secondary-foreground! hover:bg-accent! hover:text-accent-foreground!',
           ),
         multiValue: () =>
-          'inline-flex items-center h-5 rounded-sm bg-secondary text-secondary-foreground pl-1.5 pr-0.5 gap-0.5',
-        multiValueLabel: () => 'text-[11px] leading-none',
+          'inline-flex shrink-0 items-center h-5 rounded-none bg-muted text-foreground pl-1.5 pr-0.5 gap-0.5',
+        multiValueLabel: () => 'text-[11px] leading-none pr-1',
         multiValueRemove: () =>
-          'rounded-sm opacity-50 hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground px-0.5',
+          'rounded-none opacity-50 hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground pr-0.5',
         placeholder: () => 'text-muted-foreground text-xs',
         input: () => 'text-xs',
-        valueContainer: () => 'gap-1 py-1 flex-wrap',
+        valueContainer: () =>
+          'gap-1 py-1 pl-2.5 flex-nowrap! overflow-x-auto! [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         noOptionsMessage: () => 'text-[11px] text-muted-foreground',
         loadingMessage: () => 'text-[11px] text-muted-foreground',
         indicatorSeparator: () => 'hidden',
-        dropdownIndicator: () => 'hidden',
-        clearIndicator: () => 'text-muted-foreground hover:text-foreground px-1 cursor-pointer',
+        indicatorsContainer: () => 'h-8',
+        dropdownIndicator: () => 'flex items-center px-2 text-muted-foreground hover:text-foreground',
+        clearIndicator: () => 'flex items-center px-2 text-muted-foreground hover:text-foreground',
       }}
     />
   );
