@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createTestDatabase, createTestEntry } from '../fixtures/kdbx.fixture';
-import { DEFAULT_ICON, STANDARD_ICON_MAP, getEntryIcon, resolveStandardIcon } from '@/services/icon.service';
+import {
+  DEFAULT_ICON,
+  STANDARD_ICON_MAP,
+  getEntryIcon,
+  getGroupIcon,
+  resolveStandardIcon,
+} from '@/services/icon.service';
 
 describe('icon.service', () => {
   describe('getEntryIcon', () => {
@@ -18,6 +24,24 @@ describe('icon.service', () => {
       entry.icon = undefined;
 
       expect(getEntryIcon(entry)).toBe(0);
+    });
+  });
+
+  describe('getGroupIcon', () => {
+    it('returns the group icon index when set', async () => {
+      const database = await createTestDatabase();
+      const group = database.getDefaultGroup();
+      group.icon = 5;
+
+      expect(getGroupIcon(group)).toBe(5);
+    });
+
+    it('defaults to 48 when unset', async () => {
+      const database = await createTestDatabase();
+      const group = database.getDefaultGroup();
+      group.icon = undefined;
+
+      expect(getGroupIcon(group)).toBe(48);
     });
   });
 

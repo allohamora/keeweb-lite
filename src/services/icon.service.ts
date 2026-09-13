@@ -145,8 +145,14 @@ export const STANDARD_ICON_MAP: IconSvgElement[] = [
   SmartPhone01Icon,
 ];
 
-export const DEFAULT_ICON = STANDARD_ICON_MAP[0];
+// standard KeePass icon indices used as fallbacks when an entry/group has no icon set
+const KEY_ICON_INDEX = 0;
+const FOLDER_ICON_INDEX = 48;
 
-export const getEntryIcon = (entry: kdbx.KdbxEntry): number => entry.icon ?? 0;
+export const DEFAULT_ICON = STANDARD_ICON_MAP[KEY_ICON_INDEX];
+
+export const getEntryIcon = (entry: kdbx.KdbxEntry): number => entry.icon ?? KEY_ICON_INDEX;
+
+export const getGroupIcon = (group: kdbx.KdbxGroup): number => group.icon ?? FOLDER_ICON_INDEX;
 
 export const resolveStandardIcon = (index: number): IconSvgElement => STANDARD_ICON_MAP[index] ?? DEFAULT_ICON;
