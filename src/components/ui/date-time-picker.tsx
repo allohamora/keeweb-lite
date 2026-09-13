@@ -31,15 +31,14 @@ const isPastInstant = (date: Date): boolean => date.getTime() < Date.now();
 type DateTimePickerProps = {
   id?: string;
   disabled?: boolean;
-  strikethroughPast?: boolean;
   value: string;
   onChange: (value: string) => void;
 };
 
-export const DateTimePicker = ({ id, disabled, strikethroughPast, value, onChange }: DateTimePickerProps) => {
+export const DateTimePicker = ({ id, disabled, value, onChange }: DateTimePickerProps) => {
   const [open, setOpen] = useState(false);
   const selected = value ? new Date(value) : undefined;
-  const isSelectedPast = strikethroughPast && !!selected && isPastInstant(selected);
+  const isSelectedPast = !!selected && isPastInstant(selected);
 
   const [draft, setDraft] = useState(selected);
   const [timeDigits, setTimeDigits] = useState(() => (selected ? toTimeDigits(selected) : ''));

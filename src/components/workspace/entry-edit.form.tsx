@@ -366,7 +366,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-expires">Expires</FieldLabel>
                 <FieldContent>
-                  <DateTimePicker id="entry-expires" strikethroughPast value={field.value} onChange={field.onChange} />
+                  <DateTimePicker id="entry-expires" value={field.value} onChange={field.onChange} />
                   <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
