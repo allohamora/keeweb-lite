@@ -102,8 +102,10 @@ export const getEntriesForList = ({
     const group = findGroupByUuid(database, selectFilter);
     if (!group) return [];
 
-    // a selected group shows its own entries plus every descendant group's entries
-    return [...group.allGroups()].flatMap((item) => item.entries);
+    // TODO: entries in a trashed subfolder (nested under the recycle bin group, e.g. from an
+    // imported .kdbx that already had a deleted folder) are unreachable here since this only
+    // returns the group's own entries. Not handled, since this app never creates that nesting itself.
+    return group.entries;
   }
 
   const { groups } = filterGroups(database);

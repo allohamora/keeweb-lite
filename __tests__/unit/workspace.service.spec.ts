@@ -306,19 +306,19 @@ describe('workspace.service', () => {
       expect(result).toEqual([entry]);
     });
 
-    it('returns entries from the group and all of its descendant groups when a parent group is selected', async () => {
+    it("returns only the selected group's own entries, not descendant groups' entries", async () => {
       const database = await createDatabase();
       const root = database.getDefaultGroup();
       const parent = database.createGroup(root, 'Parent');
       const child = database.createGroup(parent, 'Child');
       const grandchild = database.createGroup(child, 'Grandchild');
       const parentEntry = database.createEntry(parent);
-      const childEntry = database.createEntry(child);
-      const grandchildEntry = database.createEntry(grandchild);
+      database.createEntry(child);
+      database.createEntry(grandchild);
 
       const result = getEntriesForList({ database, selectFilter: parent.uuid });
 
-      expect(result).toEqual([parentEntry, childEntry, grandchildEntry]);
+      expect(result).toEqual([parentEntry]);
     });
 
     it('returns entries from all groups when no group is selected', async () => {
