@@ -47,42 +47,44 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
           </button>
         </div>
 
-        {colors.length > 0 && (
-          <div className="px-2 pb-1">
-            <div className="mb-1 px-2 text-[11px] text-muted-foreground">Colors</div>
-            <div aria-label="Workspace colors" className="flex flex-wrap gap-1 px-2">
-              <button
-                aria-label="No color"
-                aria-pressed={isColorSelect(selectFilter) && selectFilter.color === null}
-                className={cn(
-                  'flex items-center justify-center rounded-none border p-0.5',
-                  isColorSelect(selectFilter) && selectFilter.color === null ? 'border-ring' : 'border-transparent',
-                )}
-                onClick={() => onSelectFilter({ color: null })}
-                type="button"
-              >
-                <ColorSwatch color={null} size={14} />
-              </button>
-              {colors.map((color) => (
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-2 pt-1">
+          {colors.length > 0 && (
+            <div className="mb-2">
+              <div className="mb-1 px-2 text-[11px] text-muted-foreground">Colors</div>
+              <div aria-label="Workspace colors" className="flex flex-wrap gap-1 px-2">
                 <button
-                  aria-label={`Color ${color}`}
-                  aria-pressed={isColorSelect(selectFilter) && selectFilter.color === color}
+                  aria-label="No color"
+                  aria-pressed={isColorSelect(selectFilter) && selectFilter.color === null}
                   className={cn(
                     'flex items-center justify-center rounded-none border p-0.5',
-                    isColorSelect(selectFilter) && selectFilter.color === color ? 'border-ring' : 'border-transparent',
+                    isColorSelect(selectFilter) && selectFilter.color === null ? 'border-ring' : 'border-transparent',
                   )}
-                  key={color}
-                  onClick={() => onSelectFilter({ color })}
+                  onClick={() => onSelectFilter({ color: null })}
                   type="button"
                 >
-                  <ColorSwatch color={color} size={14} />
+                  <ColorSwatch color={null} size={14} />
                 </button>
-              ))}
+                {colors.map((color) => (
+                  <button
+                    aria-label={`Color ${color}`}
+                    aria-pressed={isColorSelect(selectFilter) && selectFilter.color === color}
+                    className={cn(
+                      'flex items-center justify-center rounded-none border p-0.5',
+                      isColorSelect(selectFilter) && selectFilter.color === color
+                        ? 'border-ring'
+                        : 'border-transparent',
+                    )}
+                    key={color}
+                    onClick={() => onSelectFilter({ color })}
+                    type="button"
+                  >
+                    <ColorSwatch color={color} size={14} />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-2 pt-1">
           {tags.length > 0 ? (
             <div className="mb-2">
               <div className="mb-1 px-2 text-[11px] text-muted-foreground">Tags</div>
