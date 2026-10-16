@@ -1,5 +1,5 @@
 import { Lock } from '@/utils/lock.utils';
-import { PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
+import { requireGoogleDriveConfiguration } from '@/providers/google-drive.config';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
@@ -11,11 +11,12 @@ class Auth {
 
   private async requestAccessToken(): Promise<google.accounts.oauth2.TokenResponse> {
     const { promise, resolve, reject } = Promise.withResolvers<google.accounts.oauth2.TokenResponse>();
+    const { clientId } = requireGoogleDriveConfiguration();
 
     // this client just make requests to get access tokens
     // without storing them, so we can just create a new instance
     const client = google.accounts.oauth2.initTokenClient({
-      client_id: PUBLIC_GOOGLE_CLIENT_ID,
+      client_id: clientId,
       scope: 'https://www.googleapis.com/auth/drive.file',
       prompt: 'select_account',
       callback: (res) => {
@@ -70,13 +71,15 @@ type File = {
   modifiedTime: string;
 };
 
-export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
+export const getFile = async (fileId: string, signal?: AbortSignal): Promise<Uint8Array<ArrayBuffer>> => {
   const accessToken = await auth.getAccessToken();
+  signal?.throwIfAborted();
 
   const params = new URLSearchParams({ alt: 'media' });
 
   const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?${params}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
   });
 
   if (!response.ok) {
@@ -87,8 +90,13 @@ export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> 
   return new Uint8Array(buffer);
 };
 
-export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>): Promise<File> => {
+export const createFile = async (
+  fileName: string,
+  data: Uint8Array<ArrayBuffer>,
+  signal?: AbortSignal,
+): Promise<File> => {
   const accessToken = await auth.getAccessToken();
+  signal?.throwIfAborted();
 
   const boundary = crypto.randomUUID();
   // No `parents` set, so the file is created in Drive root ("My Drive"), matching
@@ -116,6 +124,7 @@ export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>
       'Content-Type': `multipart/related; boundary=${boundary}`,
     },
     body,
+    signal,
   });
 
   if (!response.ok) {
@@ -125,8 +134,13 @@ export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>
   return (await response.json()) as File;
 };
 
-export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<File> => {
+export const updateFile = async (
+  fileId: string,
+  data: Uint8Array<ArrayBuffer>,
+  signal?: AbortSignal,
+): Promise<File> => {
   const accessToken = await auth.getAccessToken();
+  signal?.throwIfAborted();
 
   const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime' });
 
@@ -137,6 +151,7 @@ export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>):
       'Content-Type': 'application/octet-stream',
     },
     body: data,
+    signal,
   });
 
   if (!response.ok) {

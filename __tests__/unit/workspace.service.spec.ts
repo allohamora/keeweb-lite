@@ -1,6 +1,6 @@
 import kdbx from '@/lib/kdbx.lib';
 import { afterEach, describe, expect, it } from 'vitest';
-import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { clearRecords, createRecord, getRecord, getRecords } from '@/repositories/record.repository';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 import { unlockKdbx } from '@/services/record.service';
 import {
@@ -1833,6 +1833,28 @@ describe('workspace.service', () => {
       const updated = records.find(({ id }) => id === 'persist-record');
       expect(updated?.lastOpenedAt).toBe('2026-01-01T00:00:00.000Z');
       expect(updated?.kdbx.name).toBe('persist.kdbx');
+    });
+
+    it('marks a saved remote edit pending without advancing its common version', async () => {
+      const database = await createUnlockedDatabase();
+      const commonVersionBytes = new Uint8Array(await database.save());
+      const persistRecord = await createRecord({
+        id: 'drive-persist-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: commonVersionBytes, name: 'persist.kdbx' },
+        source: { id: 'drive-file-id' },
+        synchronization: { generation: 0, pending: false, commonVersion: { bytes: commonVersionBytes } },
+      });
+
+      database.createEntry(database.getDefaultGroup()).fields.set('Title', 'Pending Edit');
+
+      await saveDatabase({ database, record: persistRecord });
+
+      const updated = await getRecord('drive-persist-record');
+      const synchronization = (updated as typeof persistRecord).synchronization;
+      expect(synchronization?.pending).toBe(true);
+      expect(synchronization?.generation).toBe(1);
+      expect(synchronization?.commonVersion?.bytes).toEqual(commonVersionBytes);
     });
 
     it('returns the updated FileRecord', async () => {

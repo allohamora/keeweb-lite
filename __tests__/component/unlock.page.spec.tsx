@@ -48,7 +48,7 @@ describe('unlock.page', () => {
 
     render(<UnlockPage setSession={setSession} />);
     await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
-    await user.click(await screen.findByRole('option', { name: 'My Vault (local)' }));
+    await user.click(await screen.findByRole('option', { name: 'My Vault (Local)' }));
 
     await user.click(screen.getByRole('button', { name: 'Demo' }));
 
@@ -87,7 +87,7 @@ describe('unlock.page', () => {
 
     render(<UnlockPage setSession={setSession} />);
     await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
-    await user.click(await screen.findByRole('option', { name: 'My Vault (local)' }));
+    await user.click(await screen.findByRole('option', { name: 'My Vault (Local)' }));
     await user.type(screen.getByLabelText('Password'), 'password');
     await user.click(screen.getByRole('button', { name: 'Unlock' }));
 

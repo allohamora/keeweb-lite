@@ -4,9 +4,12 @@ import {
   RECORDS_STORAGE_KEY,
   clearRecords,
   createRecord,
+  getRecordIssues,
   getRecord,
   getRecords,
+  getCredentialRecord,
   removeRecord,
+  setCredentialRecord,
   setRecords,
   updateRecord,
 } from '@/repositories/record.repository';
@@ -58,17 +61,46 @@ describe('record.repository', () => {
       expect(await getRecords()).toEqual(records);
     });
 
-    it('returns an empty array and removes invalid records', async () => {
-      await set(RECORDS_STORAGE_KEY, [
-        {
-          id: 'google-drive-record-1',
-          type: 'google-drive',
-          kdbx: { name: 'vault.kdbx' },
-          source: {},
+    it('keeps healthy records and reports invalid records individually', async () => {
+      const validLocalRecord = {
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: {
+          encryptedBytes: new Uint8Array([1, 2, 3]),
+          name: 'vault.kdbx',
         },
+      };
+      const validDriveRecord = {
+        id: 'drive-record-1',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([4, 5, 6]), name: 'drive-vault.kdbx' },
+        key: { hash: 'remembered-key-hash', name: 'vault.keyx' },
+        lastOpenedAt: '2026-01-01T00:00:00.000Z',
+        source: { id: 'drive-file-id' },
+      };
+
+      await set(RECORDS_STORAGE_KEY, [
+        validLocalRecord,
+        validDriveRecord,
+        { id: 'broken-drive-record', type: 'google-drive', kdbx: { name: 'broken.kdbx' }, source: {} },
       ]);
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecords()).toEqual([validLocalRecord, validDriveRecord]);
+      expect(await getRecordIssues()).toEqual([
+        { recordId: 'broken-drive-record', message: 'Unsupported or invalid database provider record.' },
+      ]);
+
+      expect(await get(RECORDS_STORAGE_KEY)).toEqual({
+        version: 1,
+        records: [validLocalRecord, validDriveRecord],
+        invalidRecords: [
+          {
+            recordId: 'broken-drive-record',
+            value: { id: 'broken-drive-record', type: 'google-drive', kdbx: { name: 'broken.kdbx' }, source: {} },
+          },
+        ],
+        forgottenRecordIds: [],
+      });
     });
 
     it('returns an empty array when storage is empty', async () => {
@@ -536,6 +568,23 @@ describe('record.repository', () => {
           },
         },
       ]);
+    });
+
+    it('removes encrypted connection credentials and prevents late writes from restoring a forgotten record', async () => {
+      const record = {
+        id: 'forgotten-record',
+        type: 'local' as const,
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'forgotten.kdbx' },
+      };
+      await createRecord(record);
+      await setCredentialRecord(record.id, new Uint8Array([7, 8, 9]));
+
+      await removeRecord(record.id);
+
+      expect(await getCredentialRecord(record.id)).toBeUndefined();
+      await expect(createRecord(record)).rejects.toThrow('A forgotten database cannot be restored.');
+      await expect(updateRecord(record)).rejects.toThrow('This database was forgotten.');
+      expect(await getRecords()).toEqual([]);
     });
   });
 

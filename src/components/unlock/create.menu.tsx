@@ -6,16 +6,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CreateGoogleDriveModal } from './create-google-drive.modal';
-import { CreateLocalModal } from './create-local.modal';
+import { getProvidersWithSetupAction } from '@/providers/registry';
+import { ProviderSetupModal } from './provider-setup-modal';
 
 type CreateMenuProps = {
   onRecordCreated: () => void;
 };
 
 export const CreateMenu = ({ onRecordCreated }: CreateMenuProps) => {
-  const [isCreateLocalOpen, setIsCreateLocalOpen] = useState(false);
-  const [isCreateGoogleDriveOpen, setIsCreateGoogleDriveOpen] = useState(false);
+  const providers = getProvidersWithSetupAction('create');
+  const [openProviderId, setOpenProviderId] = useState<string | null>(null);
 
   return (
     <>
@@ -26,22 +26,31 @@ export const CreateMenu = ({ onRecordCreated }: CreateMenuProps) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setIsCreateLocalOpen(true)}>Local</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setIsCreateGoogleDriveOpen(true)}>Google Drive</DropdownMenuItem>
+          {providers.map((provider) => (
+            <DropdownMenuItem key={provider.id} onSelect={() => setOpenProviderId(provider.id)}>
+              {provider.label}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CreateLocalModal
-        onOpenChange={setIsCreateLocalOpen}
-        onRecordCreated={onRecordCreated}
-        open={isCreateLocalOpen}
-      />
+      {providers.map((provider) => {
+        const action = provider.setupActions.create;
+        if (!action) return null;
 
-      <CreateGoogleDriveModal
-        onOpenChange={setIsCreateGoogleDriveOpen}
-        onRecordCreated={onRecordCreated}
-        open={isCreateGoogleDriveOpen}
-      />
+        return (
+          <ProviderSetupModal
+            key={provider.id}
+            action="create"
+            definition={action}
+            onComplete={onRecordCreated}
+            onOpenChange={(open) => {
+              if (!open) setOpenProviderId(null);
+            }}
+            open={openProviderId === provider.id}
+          />
+        );
+      })}
     </>
   );
 };

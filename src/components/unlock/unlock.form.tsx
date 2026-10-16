@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { unlockForSession, type UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
 import { getRecords } from '@/services/record.service';
+import { getRecordIssues } from '@/repositories/record.repository';
+import { getDatabaseProvider } from '@/providers/registry';
+import type { ProviderRecord } from '@/providers/database-provider';
 import { toast } from 'sonner';
 import { RecordRemove } from './record-remove.component';
 
@@ -56,8 +59,13 @@ export const UnlockForm = ({
   const {
     error: recordsLoadError,
     loading: isLoadingRecords,
-    value: records = [],
-  } = useAsync(async () => await getRecords(), [recordsReloadToken]);
+    value: recordStore,
+  } = useAsync(async () => ({ records: await getRecords(), issues: await getRecordIssues() }), [recordsReloadToken]);
+
+  const records = recordStore?.records ?? [];
+  const recordIssues = recordStore?.issues ?? [];
+  const selectedRecord = records.find(({ id }) => id === selectedRecordId);
+  const hasPendingSelectedChanges = Boolean((selectedRecord as ProviderRecord | undefined)?.synchronization?.pending);
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -151,7 +159,7 @@ export const UnlockForm = ({
                 <SelectContent position="popper">
                   {records.map((record) => (
                     <SelectItem key={record.id} value={record.id}>
-                      {record.kdbx.name} ({record.type})
+                      {record.kdbx.name} ({getDatabaseProvider(record.type)?.label ?? record.type})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -161,6 +169,17 @@ export const UnlockForm = ({
           </Field>
         )}
       />
+
+      {recordIssues.length > 0 && (
+        <div aria-live="polite" className="space-y-1 text-xs text-amber-300" role="status">
+          {recordIssues.map(({ recordId, message }, index) => (
+            <p key={`${recordId ?? 'unknown'}-${index}`}>
+              {recordId ? `Database ${recordId}: ` : 'Database list: '}
+              {message} This saved record was preserved.
+            </p>
+          ))}
+        </div>
+      )}
 
       <Controller
         control={control}
@@ -202,6 +221,7 @@ export const UnlockForm = ({
       <div className="flex items-center justify-between gap-2 pt-3">
         <RecordRemove
           recordId={selectedRecordId}
+          hasPendingChanges={hasPendingSelectedChanges}
           disabled={!selectedRecordId || isSubmitting || isUnlocking}
           onRemove={handleRemove}
         />

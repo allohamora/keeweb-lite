@@ -7,26 +7,36 @@ import { getErrorMessage } from '@/utils/error.utils';
 import { toast } from 'sonner';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
-type SyncStatus = 'synced' | 'syncing' | 'error';
+type SyncStatus = 'saved' | 'synced' | 'syncing' | 'error';
 
 type WorkspaceControlsProps = {
   database: UnlockSession['database'];
   recordName: string;
   recordType: string;
+  canSync: boolean;
+  hasPendingChanges: boolean;
   syncStatus: SyncStatus;
   syncErrorMessage: string | null;
+  canReplaceCredentials: boolean;
+  credentialActionLabel: string;
   onLock: () => void;
   onSyncRetry: () => void;
+  onReplaceCredentials: () => void;
 };
 
 export const WorkspaceControls = ({
   database,
   recordName,
   recordType,
+  canSync,
+  hasPendingChanges,
   syncStatus,
   syncErrorMessage,
+  canReplaceCredentials,
+  credentialActionLabel,
   onLock,
   onSyncRetry,
+  onReplaceCredentials,
 }: WorkspaceControlsProps) => {
   const { guardNavigation } = useSafeNet();
   const download = async () => {
@@ -52,11 +62,15 @@ export const WorkspaceControls = ({
   const onSync = () => {
     switch (syncStatus) {
       case 'error':
-        toast.error(syncErrorMessage ?? 'Drive sync failed.');
+        toast.error(syncErrorMessage ?? 'Database sync failed.');
         onSyncRetry();
         break;
       case 'syncing':
         toast.success('Database syncing.');
+        break;
+      case 'saved':
+        toast.success('Saved locally. Retrying synchronization.');
+        onSyncRetry();
         break;
       case 'synced':
         toast.success('Database synced.');
@@ -79,33 +93,53 @@ export const WorkspaceControls = ({
           <span className="min-w-0 truncate font-medium text-foreground">
             {recordName} ({recordType})
           </span>
-          {recordType === 'google-drive' && (
+          {canSync && (
             <button
               aria-label={`Sync status: ${syncStatus}`}
               className="flex shrink-0 cursor-pointer appearance-none items-center gap-1 border-0 bg-transparent p-0 text-[11px] text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
               onClick={handleSyncClick}
               title={
-                syncStatus === 'error' ? 'Sync error — click to retry' : syncStatus === 'syncing' ? 'Syncing' : 'Synced'
+                syncStatus === 'error'
+                  ? 'Sync error — click to retry'
+                  : syncStatus === 'syncing'
+                    ? 'Syncing'
+                    : syncStatus === 'saved'
+                      ? 'Saved locally — click to retry'
+                      : 'Synced'
               }
               type="button"
             >
               <span
                 className={cn('inline-block size-2 rounded-full', {
                   'bg-green-500': syncStatus === 'synced',
-                  'bg-orange-500': syncStatus === 'syncing',
+                  'bg-orange-500': syncStatus === 'syncing' || syncStatus === 'saved',
                   'bg-destructive': syncStatus === 'error',
                 })}
               />
               <span className="text-foreground">
                 {syncStatus === 'synced' && 'Synced'}
                 {syncStatus === 'syncing' && 'Syncing'}
+                {syncStatus === 'saved' && 'Saved locally'}
                 {syncStatus === 'error' && 'Sync error'}
               </span>
+              {syncStatus === 'error' && hasPendingChanges && <span className="text-amber-300">Saved locally</span>}
             </button>
           )}
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        {canReplaceCredentials && (
+          <Button
+            aria-label="Replace connection credentials"
+            className="h-6 px-1.5 text-[11px]"
+            onClick={onReplaceCredentials}
+            size="xs"
+            type="button"
+            variant="outline"
+          >
+            {credentialActionLabel}
+          </Button>
+        )}
         {recordType !== 'demo' && (
           <Button
             aria-label="Download database"

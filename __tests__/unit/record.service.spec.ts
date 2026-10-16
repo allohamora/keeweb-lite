@@ -1,21 +1,26 @@
 import * as recordRepository from '@/repositories/record.repository';
 import kdbx from '@/lib/kdbx.lib';
-import { HttpResponse } from 'msw';
+import { HttpResponse, http } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type CreateFileRequestContext, googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
-import { clearRecords, createRecord } from '@/repositories/record.repository';
+import { clearRecords, createRecord, getCredentialRecord, removeRecord } from '@/repositories/record.repository';
 import {
+  createDatabaseRecord,
   createGoogleDriveRecord,
   createLocalRecord,
   getRecords,
   importGoogleDriveRecord,
   importLocalRecord,
+  importWebDavRecord,
+  replaceDatabaseCredentials,
   toEncryptedBytes,
   unlockKdbx,
 } from '@/services/record.service';
 import { unlockForSession } from '@/services/session.service';
+import { LocalRecoveryRecordSavedError } from '@/services/record.service';
+import { readCredentialContainer } from '@/services/kdbx.service';
 
 type DatabaseRecordInput = {
   name: string;
@@ -1164,6 +1169,185 @@ describe('record.service', () => {
 
       const records = await getRecords();
       expect(records).toHaveLength(1);
+    });
+  });
+
+  describe('WebDAV database workflows', () => {
+    const endpoint = 'https://dav.example.test/files/vault.kdbx';
+
+    afterEach(async () => {
+      const records = await getRecords();
+      await Promise.all(records.map(({ id }) => removeRecord(id)));
+      await clearRecords();
+    });
+
+    it('imports only after verifying the database password and stores connection credentials separately encrypted', async () => {
+      const { encryptedBytes, password } = await createDatabase({
+        databaseName: 'WebDAV Vault',
+        keyFile: null,
+        records: [],
+      });
+      const authorizationHeaders: string[] = [];
+      mockServer.addHandlers(
+        http.get(endpoint, ({ request }) => {
+          authorizationHeaders.push(request.headers.get('Authorization') ?? '');
+          return new HttpResponse(encryptedBytes, { headers: { ETag: '"remote-1"' } });
+        }),
+      );
+
+      await importWebDavRecord({
+        url: endpoint,
+        username: 'alice',
+        password: 'app-password',
+        databasePassword: password,
+      });
+
+      const records = await getRecords();
+      expect(records).toHaveLength(1);
+      const record = records[0];
+      expect(record?.type).toBe('webdav');
+      if (record?.type !== 'webdav') throw new Error('Expected a WebDAV database record.');
+      expect(record.source.url).toBe(endpoint);
+      expect(record.synchronization?.commonVersion?.revision).toBe('"remote-1"');
+      expect(JSON.stringify(record)).not.toContain('app-password');
+
+      const encryptedCredentials = await getCredentialRecord(record.source.credentialRecordId);
+      expect(encryptedCredentials).toBeDefined();
+      expect(new TextDecoder().decode(encryptedCredentials)).not.toContain('app-password');
+      await expect(
+        readCredentialContainer({ encryptedBytes: encryptedCredentials!, password: 'wrong-password' }),
+      ).rejects.toThrow();
+      await expect(readCredentialContainer({ encryptedBytes: encryptedCredentials!, password })).resolves.toMatchObject(
+        { Username: 'alice', Password: 'app-password' },
+      );
+      expect(authorizationHeaders).toEqual([`Basic ${btoa('alice:app-password')}`]);
+
+      const session = await unlockForSession({ record, password });
+      expect(session.providerSession).toBeDefined();
+      expect(authorizationHeaders).toHaveLength(1);
+      await session.providerSession?.read();
+      expect(authorizationHeaders).toHaveLength(2);
+      session.providerSession?.dispose();
+    });
+
+    it('does not persist a WebDAV record or credentials when database unlock verification fails', async () => {
+      const { encryptedBytes } = await createDatabase({ databaseName: 'WebDAV Vault', keyFile: null, records: [] });
+      mockServer.addHandlers(
+        http.get(endpoint, () => new HttpResponse(encryptedBytes, { headers: { ETag: '"remote-1"' } })),
+      );
+
+      await expect(
+        importWebDavRecord({
+          url: endpoint,
+          username: 'alice',
+          password: 'app-password',
+          databasePassword: 'wrong-password',
+        }),
+      ).rejects.toThrow('Invalid password or key file.');
+      await expect(getRecords()).resolves.toEqual([]);
+    });
+
+    it('uses conditional create and persists an exportable local copy if creation fails', async () => {
+      const conditions: string[] = [];
+      mockServer.addHandlers(
+        http.put(endpoint, ({ request }) => {
+          conditions.push(request.headers.get('If-None-Match') ?? '');
+          return new HttpResponse(null, { status: 201, headers: { ETag: '"created-1"' } });
+        }),
+      );
+
+      await createDatabaseRecord({
+        providerId: 'webdav',
+        databaseName: 'New Vault',
+        password: 'database-password',
+        setupInput: { url: endpoint, username: 'alice', password: 'app-password' },
+      });
+
+      const createdRecord = (await getRecords())[0];
+      expect(createdRecord?.type).toBe('webdav');
+      if (createdRecord?.type !== 'webdav') throw new Error('Expected a WebDAV database record.');
+      expect(conditions).toEqual(['*']);
+      expect(createdRecord.synchronization).toMatchObject({ pending: false, createPending: false });
+      expect(createdRecord.synchronization?.commonVersion?.revision).toBe('"created-1"');
+
+      const racedEndpoint = 'https://dav.example.test/files/raced-vault.kdbx';
+      mockServer.addHandlers(http.put(racedEndpoint, () => new HttpResponse(null, { status: 412 })));
+      await expect(
+        createDatabaseRecord({
+          providerId: 'webdav',
+          databaseName: 'Recovery Vault',
+          password: 'database-password',
+          setupInput: { url: racedEndpoint, username: 'alice', password: 'app-password' },
+        }),
+      ).rejects.toBeInstanceOf(LocalRecoveryRecordSavedError);
+
+      const records = await getRecords();
+      expect(records).toHaveLength(2);
+      expect(records[1]?.synchronization).toMatchObject({ pending: true, createPending: true });
+    });
+
+    it('validates a replacement connection before switching the encrypted credential record and URL', async () => {
+      const { encryptedBytes, password } = await createDatabase({
+        databaseName: 'WebDAV Vault',
+        keyFile: null,
+        records: [],
+      });
+      const authorizationHeaders: string[] = [];
+      mockServer.addHandlers(
+        http.get(endpoint, ({ request }) => {
+          authorizationHeaders.push(request.headers.get('Authorization') ?? '');
+          return new HttpResponse(encryptedBytes, { headers: { ETag: '"remote-1"' } });
+        }),
+      );
+      await importWebDavRecord({
+        url: endpoint,
+        username: 'alice',
+        password: 'old-app-password',
+        databasePassword: password,
+      });
+      const record = (await getRecords())[0];
+      if (record?.type !== 'webdav') throw new Error('Expected a WebDAV database record.');
+      const database = await unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password });
+      const oldCredentialRecordId = record.source.credentialRecordId;
+      const nextUrl = 'https://dav.example.test/moved/vault.kdbx';
+      const nextAuthorization = `Basic ${btoa('bob:new-app-password')}`;
+      const rejectedUrl = 'https://dav.example.test/rejected/vault.kdbx';
+      mockServer.addHandlers(http.get(rejectedUrl, () => new HttpResponse(null, { status: 401 })));
+      await expect(
+        replaceDatabaseCredentials({
+          record,
+          database,
+          setupInput: { url: rejectedUrl, username: 'bob', password: 'bad-app-password' },
+        }),
+      ).rejects.toMatchObject({ kind: 'authentication' });
+      expect(await getCredentialRecord(oldCredentialRecordId)).toBeDefined();
+      expect((await getRecords())[0]?.source).toEqual(record.source);
+
+      mockServer.addHandlers(
+        http.get(nextUrl, ({ request }) => {
+          authorizationHeaders.push(request.headers.get('Authorization') ?? '');
+          return new HttpResponse(encryptedBytes, { headers: { ETag: '"remote-2"' } });
+        }),
+      );
+
+      const result = await replaceDatabaseCredentials({
+        record,
+        database,
+        setupInput: { url: nextUrl, username: 'bob', password: 'new-app-password' },
+      });
+
+      expect(result.record.type).toBe('webdav');
+      if (result.record.type !== 'webdav') throw new Error('Expected a WebDAV database record.');
+      expect(result.record.source.url).toBe(nextUrl);
+      expect(result.record.source.credentialRecordId).not.toBe(oldCredentialRecordId);
+      expect(await getCredentialRecord(oldCredentialRecordId)).toBeUndefined();
+      const encryptedCredentials = await getCredentialRecord(result.record.source.credentialRecordId);
+      expect(encryptedCredentials).toBeDefined();
+      await expect(readCredentialContainer({ encryptedBytes: encryptedCredentials!, password })).resolves.toMatchObject(
+        { Username: 'bob', Password: 'new-app-password' },
+      );
+      expect(authorizationHeaders).toEqual([`Basic ${btoa('alice:old-app-password')}`, nextAuthorization]);
+      result.providerSession.dispose();
     });
   });
 });

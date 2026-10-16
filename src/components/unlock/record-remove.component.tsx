@@ -16,11 +16,12 @@ import {
 
 type RecordRemoveProps = {
   recordId: string;
+  hasPendingChanges: boolean;
   disabled?: boolean;
   onRemove: () => void;
 };
 
-export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps) => {
+export const RecordRemove = ({ recordId, hasPendingChanges, disabled, onRemove }: RecordRemoveProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -42,13 +43,17 @@ export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isRemoving || disabled}>
-          Remove
+          Forget database
         </Button>
       </DialogTrigger>
       <DialogContent showCloseButton={false} className="sm:max-w-xs">
         <DialogHeader className="grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center">
-          <DialogTitle>Remove record?</DialogTitle>
-          <DialogDescription>Are you sure you want to remove this record?</DialogDescription>
+          <DialogTitle>Forget database?</DialogTitle>
+          <DialogDescription>
+            {hasPendingChanges
+              ? 'This database has changes that are not synced. Forgetting it deletes the local database and connection credentials from this device. Download or sync your changes first if you want to keep them. The server file is not deleted.'
+              : 'This deletes the local database and connection credentials from this device. The server file is not deleted.'}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter className="grid grid-cols-2">
           <DialogClose asChild>
@@ -62,7 +67,7 @@ export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps
             disabled={isRemoving || disabled}
             onClick={() => void handleRemove()}
           >
-            {isRemoving ? 'Removing...' : 'Remove'}
+            {isRemoving ? 'Forgetting...' : 'Forget database'}
           </Button>
         </DialogFooter>
       </DialogContent>

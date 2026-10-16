@@ -1,11 +1,12 @@
 import kdbx from '@/lib/kdbx.lib';
-import { HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
-import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { clearRecords, createRecord, getRecords, removeRecord, updateRecord } from '@/repositories/record.repository';
 import { createDemoSession, syncForSession, unlockForSession } from '@/services/session.service';
+import { importWebDavRecord } from '@/services/record.service';
 import { demoFile } from '../utils/demo-file.utils';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 
@@ -147,6 +148,28 @@ describe('session.service', () => {
       return { database, encryptedBytes, password };
     };
 
+    const createDriveRecord = async ({
+      id,
+      encryptedBytes,
+      key,
+      pending = false,
+      sourceId = 'drive-file-id',
+    }: {
+      id: string;
+      encryptedBytes: Uint8Array;
+      key?: { hash: string; name: string };
+      pending?: boolean;
+      sourceId?: string;
+    }) =>
+      createRecord({
+        id,
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        key,
+        source: { id: sourceId },
+        synchronization: { generation: 0, pending, commonVersion: { bytes: encryptedBytes } },
+      });
+
     it('returns unchanged session state for a local record', async () => {
       const getAccessTokenSpy = vi.spyOn(auth, 'getAccessToken');
       const { database, encryptedBytes } = await createSyncableDatabase();
@@ -165,14 +188,253 @@ describe('session.service', () => {
       expect(getAccessTokenSpy).not.toHaveBeenCalled();
     });
 
+    it('refreshes a clean WebDAV record without writing a newly encrypted copy', async () => {
+      const endpoint = 'https://dav.example.test/files/clean-vault.kdbx';
+      const { encryptedBytes, password } = await createSyncableDatabase();
+      const authorizationHeaders: string[] = [];
+      const putRequests: Request[] = [];
+      mockServer.addHandlers(
+        http.get(endpoint, ({ request }) => {
+          authorizationHeaders.push(request.headers.get('Authorization') ?? '');
+          return new HttpResponse(encryptedBytes.slice(), { headers: { ETag: '"webdav-revision-1"' } });
+        }),
+        http.put(endpoint, ({ request }) => {
+          putRequests.push(request);
+          return new HttpResponse(null, { status: 204, headers: { ETag: '"webdav-revision-2"' } });
+        }),
+      );
+
+      await importWebDavRecord({
+        url: endpoint,
+        username: 'alice',
+        password: 'app-password',
+        databasePassword: password,
+      });
+      const [record] = await getRecords();
+      if (!record || record.type !== 'webdav') throw new Error('Expected an imported WebDAV record.');
+      const session = await unlockForSession({ record, password });
+
+      try {
+        const result = await syncForSession({
+          record: session.record,
+          database: session.database,
+          providerSession: session.providerSession,
+        });
+
+        expect(result.record.type).toBe('webdav');
+        if (result.record.type !== 'webdav') throw new Error('Expected a synchronized WebDAV record.');
+        expect(result.record.synchronization).toMatchObject({
+          pending: false,
+          commonVersion: { revision: '"webdav-revision-1"' },
+        });
+        expect(authorizationHeaders).toEqual([
+          `Basic ${btoa('alice:app-password')}`,
+          `Basic ${btoa('alice:app-password')}`,
+        ]);
+        expect(putRequests).toEqual([]);
+      } finally {
+        session.providerSession?.dispose();
+        await removeRecord(record.id);
+      }
+    });
+
+    it('reconciles a stale WebDAV write once and preserves both conflicting edits', async () => {
+      const endpoint = 'https://dav.example.test/files/conflicted-vault.kdbx';
+      const password = 'sync-test-password';
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      await credentials.ready;
+      const baselineDatabase = kdbx.Kdbx.create(credentials, 'Conflict Sync DB');
+      const sharedEntry = baselineDatabase.createEntry(baselineDatabase.getDefaultGroup());
+      sharedEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Shared entry'));
+      sharedEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('base value'));
+      const baselineBytes = new Uint8Array(await baselineDatabase.save());
+
+      const localDatabase = await kdbx.Kdbx.load(baselineBytes.slice().buffer, credentials);
+      const localEntry = localDatabase.getDefaultGroup().entries[0];
+      if (!localEntry) throw new Error('Expected the shared entry in the local database.');
+      localEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('local edit'));
+      localEntry.times.lastModTime = new Date('2026-01-01T00:00:00.000Z');
+
+      const remoteDatabase = await kdbx.Kdbx.load(baselineBytes.slice().buffer, credentials);
+      const remoteEntry = remoteDatabase.getDefaultGroup().entries[0];
+      if (!remoteEntry) throw new Error('Expected the shared entry in the remote database.');
+      remoteEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('remote edit'));
+      remoteEntry.times.lastModTime = new Date('2026-01-01T00:00:00.000Z');
+      const remoteV2Bytes = new Uint8Array(await remoteDatabase.save());
+
+      const latestRemoteDatabase = await kdbx.Kdbx.load(remoteV2Bytes.slice().buffer, credentials);
+      const serverEntry = latestRemoteDatabase.createEntry(latestRemoteDatabase.getDefaultGroup());
+      serverEntry.fields.set('Title', kdbx.ProtectedValue.fromString('Server added entry'));
+      const remoteV3Bytes = new Uint8Array(await latestRemoteDatabase.save());
+
+      let getCount = 0;
+      let putCount = 0;
+      const conditionalValidators: Array<string | null> = [];
+      let uploadedBytes: Uint8Array | undefined;
+      mockServer.addHandlers(
+        http.get(endpoint, () => {
+          getCount++;
+          if (getCount === 1) return new HttpResponse(baselineBytes.slice(), { headers: { ETag: '"base-revision"' } });
+          if (getCount === 2)
+            return new HttpResponse(remoteV2Bytes.slice(), { headers: { ETag: '"remote-revision-2"' } });
+          return new HttpResponse(remoteV3Bytes.slice(), { headers: { ETag: '"remote-revision-3"' } });
+        }),
+        http.put(endpoint, async ({ request }) => {
+          putCount++;
+          conditionalValidators.push(request.headers.get('If-Match'));
+          if (putCount === 1) return new HttpResponse(null, { status: 412 });
+
+          uploadedBytes = new Uint8Array(await request.arrayBuffer());
+          return new HttpResponse(null, { status: 204, headers: { ETag: '"merged-revision-4"' } });
+        }),
+      );
+
+      await importWebDavRecord({
+        url: endpoint,
+        username: 'alice',
+        password: 'app-password',
+        databasePassword: password,
+      });
+      const [storedRecord] = await getRecords();
+      if (!storedRecord || storedRecord.type !== 'webdav') throw new Error('Expected an imported WebDAV record.');
+      const session = await unlockForSession({ record: storedRecord, password });
+      if (session.record.type !== 'webdav') throw new Error('Expected an unlocked WebDAV record.');
+      const pendingRecord = {
+        ...session.record,
+        synchronization: {
+          ...session.record.synchronization,
+          generation: session.record.synchronization?.generation ?? 0,
+          pending: true,
+        },
+      };
+
+      try {
+        const result = await syncForSession({
+          record: pendingRecord,
+          database: localDatabase,
+          providerSession: session.providerSession,
+        });
+
+        expect(getCount).toBe(3);
+        expect(putCount).toBe(2);
+        expect(conditionalValidators).toEqual(['"remote-revision-2"', '"remote-revision-3"']);
+        if (result.record.type !== 'webdav') throw new Error('Expected a synchronized WebDAV record.');
+        expect(result.record.synchronization).toMatchObject({
+          pending: false,
+          commonVersion: { revision: '"merged-revision-4"' },
+        });
+        if (!uploadedBytes) throw new Error('Expected the reconciled database to be uploaded.');
+
+        const uploadedDatabase = await kdbx.Kdbx.load(uploadedBytes.slice().buffer, result.database.credentials);
+        const titles = uploadedDatabase.getDefaultGroup().entries.map((entry) => {
+          const title = entry.fields.get('Title');
+          return title instanceof kdbx.ProtectedValue ? title.getText() : String(title ?? '');
+        });
+        const usernames = uploadedDatabase.getDefaultGroup().entries.map((entry) => {
+          const username = entry.fields.get('UserName');
+          return username instanceof kdbx.ProtectedValue ? username.getText() : String(username ?? '');
+        });
+
+        expect(titles).toContain('Server added entry');
+        expect(usernames).toContain('remote edit');
+        expect(usernames).toContain('local edit');
+        expect(titles.filter((title) => title.endsWith('(Conflict copy)'))).toHaveLength(1);
+      } finally {
+        session.providerSession?.dispose();
+        await removeRecord(storedRecord.id);
+      }
+    });
+
+    it('keeps a saved WebDAV edit pending during network failure and synchronizes it on retry', async () => {
+      const endpoint = 'https://dav.example.test/files/offline-vault.kdbx';
+      const password = 'sync-test-password';
+      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      await credentials.ready;
+      const database = kdbx.Kdbx.create(credentials, 'Offline Sync DB');
+      const entry = database.createEntry(database.getDefaultGroup());
+      entry.fields.set('Title', kdbx.ProtectedValue.fromString('Offline entry'));
+      entry.fields.set('UserName', kdbx.ProtectedValue.fromString('before offline edit'));
+      const baselineBytes = new Uint8Array(await database.save());
+      let remoteIsOffline = false;
+      let uploadedBytes: Uint8Array | undefined;
+      mockServer.addHandlers(
+        http.get(endpoint, () => {
+          if (remoteIsOffline) return new HttpResponse(null, { status: 503 });
+          return new HttpResponse(baselineBytes.slice(), { headers: { ETag: '"offline-base"' } });
+        }),
+        http.put(endpoint, async ({ request }) => {
+          uploadedBytes = new Uint8Array(await request.arrayBuffer());
+          return new HttpResponse(null, { status: 204, headers: { ETag: '"offline-synced"' } });
+        }),
+      );
+
+      await importWebDavRecord({
+        url: endpoint,
+        username: 'alice',
+        password: 'app-password',
+        databasePassword: password,
+      });
+      const [importedRecord] = await getRecords();
+      if (!importedRecord || importedRecord.type !== 'webdav') throw new Error('Expected an imported WebDAV record.');
+
+      const localDatabase = await kdbx.Kdbx.load(baselineBytes.slice().buffer, credentials);
+      const localEntry = localDatabase.getDefaultGroup().entries[0];
+      if (!localEntry) throw new Error('Expected the offline entry.');
+      localEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('saved offline edit'));
+      const localBytes = new Uint8Array(await localDatabase.save());
+      const pendingRecord = await updateRecord({
+        ...importedRecord,
+        kdbx: { ...importedRecord.kdbx, encryptedBytes: localBytes },
+        synchronization: {
+          generation: 1,
+          pending: true,
+          commonVersion: importedRecord.synchronization?.commonVersion,
+        },
+      });
+      const session = await unlockForSession({ record: pendingRecord, password });
+      if (session.record.type !== 'webdav') throw new Error('Expected an unlocked WebDAV record.');
+      remoteIsOffline = true;
+
+      try {
+        await expect(
+          syncForSession({
+            record: session.record,
+            database: session.database,
+            providerSession: session.providerSession,
+          }),
+        ).rejects.toThrow('WebDAV request failed with HTTP 503');
+
+        const savedDuringFailure = (await getRecords()).find(({ id }) => id === importedRecord.id);
+        expect(savedDuringFailure?.kdbx.encryptedBytes).toEqual(localBytes);
+        expect(savedDuringFailure?.synchronization).toMatchObject({ pending: true, generation: 1 });
+
+        remoteIsOffline = false;
+        const retry = await syncForSession({
+          record: session.record,
+          database: session.database,
+          providerSession: session.providerSession,
+        });
+
+        if (retry.record.type !== 'webdav') throw new Error('Expected a synchronized WebDAV record.');
+        expect(retry.record.synchronization).toMatchObject({
+          pending: false,
+          commonVersion: { revision: '"offline-synced"' },
+        });
+        if (!uploadedBytes) throw new Error('Expected the retry to upload the cached edit.');
+        const synchronizedDatabase = await kdbx.Kdbx.load(uploadedBytes.slice().buffer, retry.database.credentials);
+        const synchronizedUserName = synchronizedDatabase.getDefaultGroup().entries[0]?.fields.get('UserName');
+        expect(synchronizedUserName instanceof kdbx.ProtectedValue ? synchronizedUserName.getText() : '').toBe(
+          'saved offline edit',
+        );
+      } finally {
+        session.providerSession?.dispose();
+        await removeRecord(importedRecord.id);
+      }
+    });
+
     it('returns next session state for a Google Drive record when sync succeeds', async () => {
       const { database, encryptedBytes } = await createSyncableDatabase();
-      const record = await createRecord({
-        id: 'gd-record',
-        type: 'google-drive',
-        kdbx: { encryptedBytes, name: 'vault.kdbx' },
-        source: { id: 'drive-file-id' },
-      });
+      const record = await createDriveRecord({ id: 'gd-record', encryptedBytes });
 
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
 
@@ -185,12 +447,7 @@ describe('session.service', () => {
 
     it('updates encryptedBytes in repository and returns updated record after sync', async () => {
       const { database, encryptedBytes } = await createSyncableDatabase();
-      const record = await createRecord({
-        id: 'gd-record',
-        type: 'google-drive',
-        kdbx: { encryptedBytes, name: 'vault.kdbx' },
-        source: { id: 'drive-file-id' },
-      });
+      const record = await createDriveRecord({ id: 'gd-record', encryptedBytes });
 
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
 
@@ -205,12 +462,7 @@ describe('session.service', () => {
 
     it('throws on Drive sync failure', async () => {
       const { database, encryptedBytes } = await createSyncableDatabase();
-      const record = await createRecord({
-        id: 'gd-record',
-        type: 'google-drive',
-        kdbx: { encryptedBytes, name: 'vault.kdbx' },
-        source: { id: 'drive-file-id' },
-      });
+      const record = await createDriveRecord({ id: 'gd-record', encryptedBytes });
 
       mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
 
@@ -227,11 +479,9 @@ describe('session.service', () => {
       await credentials.ready;
       const database = await kdbx.Kdbx.load(encryptedBytes.buffer as ArrayBuffer, credentials);
 
-      const record = await createRecord({
+      const record = await createDriveRecord({
         id: 'gd-keyfile-record',
-        type: 'google-drive',
-        kdbx: { encryptedBytes, name: 'vault.kdbx' },
-        source: { id: 'drive-file-id' },
+        encryptedBytes,
         key: keyFileHashBase64 ? { hash: keyFileHashBase64, name: 'key.keyx' } : undefined,
       });
 
@@ -288,12 +538,7 @@ describe('session.service', () => {
         entryBToUpdate.times.lastModTime = new Date(Date.now() + 1000);
       }
 
-      const record = await createRecord({
-        id: 'gd-lock-concurrent',
-        type: 'google-drive',
-        kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
-        source: { id: 'drive-file-id' },
-      });
+      const record = await createDriveRecord({ id: 'gd-lock-concurrent', encryptedBytes: initialBytes, pending: true });
 
       // Dynamic handler: getFile always returns the latest uploaded bytes so
       // the second lock holder sees the first lock holder's result and both

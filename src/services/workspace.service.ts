@@ -1,7 +1,9 @@
 import kdbx from '@/lib/kdbx.lib';
 import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
-import { updateRecord, type FileRecord } from '@/repositories/record.repository';
+import { updateRecordWith, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
+import { getDatabaseProvider } from '@/providers/registry';
+import type { ProviderRecord } from '@/providers/database-provider';
 import { getEntryIcon } from '@/services/icon.service';
 import { getEntryColor } from '@/services/color.service';
 
@@ -170,9 +172,12 @@ type UpdateEntryInput = {
 };
 
 export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => {
+  const editState = database.getLocalEditState();
   const databaseBytes = await database.save();
 
-  return kdbx.Kdbx.load(databaseBytes, database.credentials);
+  const clone = await kdbx.Kdbx.load(databaseBytes, database.credentials);
+  clone.setLocalEditState(editState);
+  return clone;
 };
 
 export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
@@ -219,8 +224,29 @@ export const saveDatabase = async ({
   }
 
   return saveDatabaseLock.runInLock(async () => {
+    const localEditState = getDatabaseProvider(record.type)?.capabilities.remote
+      ? database.getLocalEditState()
+      : undefined;
     const encryptedBytes = await toEncryptedBytes(database);
-    const savedRecord = await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
+    const savedRecord = await updateRecordWith(record.id, (currentRecord) => {
+      const provider = getDatabaseProvider(currentRecord.type);
+      if (!provider?.capabilities.remote) {
+        return { ...currentRecord, kdbx: { ...currentRecord.kdbx, encryptedBytes } };
+      }
+
+      const currentSync = (currentRecord as ProviderRecord).synchronization;
+
+      return {
+        ...currentRecord,
+        kdbx: { ...currentRecord.kdbx, encryptedBytes },
+        synchronization: {
+          ...currentSync,
+          generation: (currentSync?.generation ?? 0) + 1,
+          localEditState,
+          pending: true,
+        },
+      } as PersistedFileRecord;
+    });
 
     return { record: savedRecord };
   });

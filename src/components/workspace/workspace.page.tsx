@@ -1,8 +1,8 @@
 import type kdbx from '@/lib/kdbx.lib';
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { type UnlockSession } from '@/services/session.service';
 import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
-import type { FileRecord } from '@/repositories/record.repository';
+import type { FileRecord, PersistedFileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
@@ -15,16 +15,26 @@ import { useIdleLock } from '@/hooks/use-idle-lock.hook';
 import { useSync } from '@/hooks/use-sync.hook';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
+import { getDatabaseProvider } from '@/providers/registry';
+import { ProviderError, type ProviderRecord } from '@/providers/database-provider';
+import { replaceDatabaseCredentials } from '@/services/record.service';
+import { WebDavCredentialsModal } from '@/components/workspace/webdav-credentials.modal';
 
 type WorkspacePageProps = {
   session: UnlockSession;
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
 };
 
-export const WorkspacePage = ({ session: { database, record, version }, setSession }: WorkspacePageProps) => {
+export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
+  const { database, record } = session;
+  const sessionRef = useRef<UnlockSession | null>(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
   const isMobile = useMedia('(max-width: 768px)');
   const { guardNavigation } = useSafeNet();
   const { setMutating } = useEntryMutation();
@@ -34,9 +44,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     error: syncError,
     retrySync,
   } = useSync({
-    record,
-    database,
-    version,
+    ...session,
     setSession,
   });
 
@@ -65,16 +73,17 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     nextEntryUuid?: kdbx.KdbxUuid | null;
     nextRecord: FileRecord;
   }) => {
-    setSession((previousSession) => {
-      if (!previousSession) return previousSession;
-
-      return {
+    const previousSession = sessionRef.current;
+    if (previousSession) {
+      const updatedSession = {
         ...previousSession,
         database: nextDatabase,
         record: nextRecord,
         version: previousSession.version + 1,
       };
-    });
+      sessionRef.current = updatedSession;
+      setSession(updatedSession);
+    }
 
     if (nextEntryUuid !== undefined) {
       setSelectedEntryUuid(nextEntryUuid);
@@ -82,6 +91,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   };
 
   const onLock = () => {
+    sessionRef.current = null;
     setSession(null);
     setSelectedEntryUuid(null);
     setIsMobileMenuOpen(false);
@@ -91,6 +101,30 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
   useIdleLock({ onLock });
 
   const handleLock = () => guardNavigation(onLock);
+
+  const handleReplaceCredentials = async (values: { url: string; username: string; password: string }) => {
+    if (record.type !== 'webdav') return;
+
+    const result = await replaceDatabaseCredentials({
+      record: record as PersistedFileRecord,
+      database,
+      setupInput: values,
+    });
+    const currentSession = sessionRef.current;
+    if (!currentSession || currentSession.record.id !== record.id) {
+      result.providerSession.dispose();
+      return;
+    }
+    const nextSession = {
+      ...currentSession,
+      record: result.record,
+      providerSession: result.providerSession,
+      providerSessionError: undefined,
+    };
+    sessionRef.current = nextSession;
+    setSession(nextSession);
+    toast.success('WebDAV connection saved. Synchronization resumed.');
+  };
 
   const createNewEntry = async () => {
     setMutating(true);
@@ -108,8 +142,26 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     guardNavigation(() => void createNewEntry());
   };
 
-  const syncStatus = isSyncing ? 'syncing' : syncError ? 'error' : 'synced';
+  const canSync = record.type !== 'demo' && getDatabaseProvider(record.type)?.capabilities.remote === true;
+  const hasPendingChanges = record.type !== 'demo' && Boolean((record as ProviderRecord).synchronization?.pending);
+  const canUpdateWebDavUrl =
+    record.type === 'webdav' &&
+    syncError instanceof ProviderError &&
+    (syncError.kind === 'missing-resource' || syncError.kind === 'remote-conflict');
+  const canReplaceCredentials =
+    record.type === 'webdav' &&
+    (session.providerSessionError !== undefined ||
+      (syncError instanceof ProviderError && syncError.kind === 'authentication') ||
+      canUpdateWebDavUrl);
   const syncErrorMessage = syncError?.message ?? null;
+  const visibleSyncStatus = isSyncing
+    ? 'syncing'
+    : syncError
+      ? 'error'
+      : canSync && hasPendingChanges
+        ? 'saved'
+        : 'synced';
+  const providerLabel = record.type === 'demo' ? 'Demo' : (getDatabaseProvider(record.type)?.label ?? record.type);
   const isDesktopMode = !isMobile;
   const showListPane = isDesktopMode || !selectedEntryUuid;
   const showDetailsPane = isDesktopMode || Boolean(selectedEntryUuid);
@@ -119,11 +171,16 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
       <WorkspaceControls
         database={database}
         recordName={record.kdbx.name}
-        recordType={record.type}
-        syncStatus={syncStatus}
+        recordType={providerLabel}
+        canSync={canSync}
+        hasPendingChanges={hasPendingChanges}
+        syncStatus={visibleSyncStatus}
         syncErrorMessage={syncErrorMessage}
+        canReplaceCredentials={canReplaceCredentials}
+        credentialActionLabel={canUpdateWebDavUrl ? 'Update WebDAV connection' : 'Replace credentials'}
         onLock={handleLock}
         onSyncRetry={retrySync}
+        onReplaceCredentials={() => setIsCredentialsModalOpen(true)}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {isDesktopMode && (
@@ -167,6 +224,13 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
           selectFilter={selectFilter}
         />
       )}
+      <WebDavCredentialsModal
+        open={isCredentialsModalOpen}
+        currentUrl={record.type === 'webdav' ? record.source.url : ''}
+        allowUrlChange={canUpdateWebDavUrl}
+        onOpenChange={setIsCredentialsModalOpen}
+        onSubmit={handleReplaceCredentials}
+      />
     </div>
   );
 };

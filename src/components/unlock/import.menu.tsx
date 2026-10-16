@@ -6,16 +6,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ImportGoogleDriveModal } from './import-google-drive.modal';
-import { ImportLocalModal } from './import-local.modal';
+import { getProvidersWithSetupAction } from '@/providers/registry';
+import { ProviderSetupModal } from './provider-setup-modal';
 
 type ImportMenuProps = {
   onRecordImported: () => void;
 };
 
 export const ImportMenu = ({ onRecordImported }: ImportMenuProps) => {
-  const [isImportLocalOpen, setIsImportLocalOpen] = useState(false);
-  const [isImportGoogleDriveOpen, setIsImportGoogleDriveOpen] = useState(false);
+  const providers = getProvidersWithSetupAction('import');
+  const [openProviderId, setOpenProviderId] = useState<string | null>(null);
 
   return (
     <>
@@ -26,22 +26,31 @@ export const ImportMenu = ({ onRecordImported }: ImportMenuProps) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setIsImportLocalOpen(true)}>Local</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setIsImportGoogleDriveOpen(true)}>Google Drive</DropdownMenuItem>
+          {providers.map((provider) => (
+            <DropdownMenuItem key={provider.id} onSelect={() => setOpenProviderId(provider.id)}>
+              {provider.label}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ImportLocalModal
-        open={isImportLocalOpen}
-        onOpenChange={setIsImportLocalOpen}
-        onRecordImported={onRecordImported}
-      />
+      {providers.map((provider) => {
+        const action = provider.setupActions.import;
+        if (!action) return null;
 
-      <ImportGoogleDriveModal
-        open={isImportGoogleDriveOpen}
-        onOpenChange={setIsImportGoogleDriveOpen}
-        onRecordImported={onRecordImported}
-      />
+        return (
+          <ProviderSetupModal
+            key={provider.id}
+            action="import"
+            definition={action}
+            onComplete={onRecordImported}
+            onOpenChange={(open) => {
+              if (!open) setOpenProviderId(null);
+            }}
+            open={openProviderId === provider.id}
+          />
+        );
+      })}
     </>
   );
 };
