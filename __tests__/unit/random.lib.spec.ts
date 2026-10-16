@@ -1,48 +1,83 @@
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { random } from '@/lib/crypto.lib';
-import { randomElement, randomInt, shuffle } from '@/lib/random.lib';
+import { random, randomElement, randomInt, shuffle } from '@/lib/random.lib';
 
-vi.mock('@/lib/crypto.lib', () => ({
-  random: vi.fn(),
-}));
+const randomSpy = vi.spyOn(kdbxweb.CryptoEngine, 'random');
 
-const randomMock = vi.mocked(random);
+const toBytes = (value: number) => {
+  const bytes = new Uint8Array(4);
+  new DataView(bytes.buffer).setUint32(0, Math.floor(value * 0x1_0000_0000));
+
+  return bytes;
+};
+
+const mockRandom = (...values: number[]) => {
+  const [first, ...rest] = values;
+  if (first === undefined) return;
+
+  if (rest.length === 0) {
+    randomSpy.mockReturnValue(toBytes(first));
+    return;
+  }
+
+  for (const value of values) {
+    randomSpy.mockReturnValueOnce(toBytes(value));
+  }
+};
 
 describe('random.lib', () => {
   afterEach(() => {
-    randomMock.mockReset();
+    randomSpy.mockReset();
+  });
+
+  describe('random', () => {
+    it('converts 4 random bytes into a unit interval number', () => {
+      randomSpy.mockReturnValue(Uint8Array.of(0x80, 0x00, 0x00, 0x00));
+
+      expect(random()).toBe(0.5);
+    });
+
+    it('returns values in [0, 1) across repeated calls', () => {
+      for (let index = 0; index < 100; index += 1) {
+        const value = random();
+
+        expect(Number.isFinite(value)).toBe(true);
+        expect(value).toBeGreaterThanOrEqual(0);
+        expect(value).toBeLessThan(1);
+      }
+    });
   });
 
   describe('randomInt', () => {
     it('returns an integer between the given bounds', () => {
-      randomMock.mockReturnValue(0.5);
+      mockRandom(0.5);
 
       expect(randomInt(5, 10)).toBe(8);
     });
 
     it('returns inclusive lower bound when random is 0', () => {
-      randomMock.mockReturnValue(0);
+      mockRandom(0);
 
       expect(randomInt(5, 10)).toBe(5);
     });
 
     it('returns inclusive upper bound when random is near 1', () => {
-      randomMock.mockReturnValue(0.999999999999);
+      mockRandom(0.999999999999);
 
       expect(randomInt(5, 10)).toBe(10);
     });
 
     it('supports reversed bounds by normalizing min and max', () => {
-      randomMock.mockReturnValue(0);
+      mockRandom(0);
 
       expect(randomInt(10, 5)).toBe(5);
     });
 
     it('normalizes decimal bounds to nearest integers inside range', () => {
-      randomMock.mockReturnValue(0);
+      mockRandom(0);
       expect(randomInt(1.2, 4.8)).toBe(2);
 
-      randomMock.mockReturnValue(0.999999999999);
+      mockRandom(0.999999999999);
       expect(randomInt(1.2, 4.8)).toBe(4);
     });
 
@@ -54,19 +89,19 @@ describe('random.lib', () => {
 
   describe('randomElement', () => {
     it('returns a random element from the array', () => {
-      randomMock.mockReturnValue(0.5);
+      mockRandom(0.5);
 
       expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('beta');
     });
 
     it('returns first element when random is 0', () => {
-      randomMock.mockReturnValue(0);
+      mockRandom(0);
 
       expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('alpha');
     });
 
     it('returns last element when random is near 1', () => {
-      randomMock.mockReturnValue(0.999999999999);
+      mockRandom(0.999999999999);
 
       expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('gamma');
     });
@@ -79,14 +114,14 @@ describe('random.lib', () => {
 
   describe('shuffle', () => {
     it('returns values sorted by generated random scores', () => {
-      randomMock.mockReturnValueOnce(0.8).mockReturnValueOnce(0.1).mockReturnValueOnce(0.5);
+      mockRandom(0.8, 0.1, 0.5);
 
       expect(shuffle(['alpha', 'beta', 'gamma'])).toEqual(['beta', 'gamma', 'alpha']);
     });
 
     it('returns a new array and does not mutate input', () => {
       const values = [1, 2, 3];
-      randomMock.mockReturnValueOnce(0.4).mockReturnValueOnce(0.3).mockReturnValueOnce(0.2);
+      mockRandom(0.4, 0.3, 0.2);
 
       const shuffled = shuffle(values);
 
@@ -97,7 +132,7 @@ describe('random.lib', () => {
 
     it('returns empty array when input is empty', () => {
       expect(shuffle([])).toEqual([]);
-      expect(randomMock).not.toHaveBeenCalled();
+      expect(randomSpy).not.toHaveBeenCalled();
     });
   });
 });
