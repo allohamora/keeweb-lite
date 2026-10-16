@@ -68,14 +68,6 @@ export const getRecords = async () => {
   });
 };
 
-export const setRecords = async (records: PersistedFileRecord[]) => {
-  await lock.runInLock(async () => {
-    const parsedRecords = fileRecordsSchema.parse(records);
-
-    await update(RECORDS_STORAGE_KEY, () => parsedRecords);
-  });
-};
-
 const updateRecords = async (updater: (oldRecords: PersistedFileRecord[]) => PersistedFileRecord[]) => {
   await lock.runInLock(async () => {
     await update(RECORDS_STORAGE_KEY, (oldValue) => {
@@ -105,15 +97,6 @@ export const createRecord = async (record: PersistedFileRecord) => {
   });
 
   return parsedRecord;
-};
-
-export const getRecord = async (recordId: string) => {
-  const records = await getRecords();
-
-  const record = records.find(({ id }) => id === recordId);
-  if (!record) throw new Error('Record not found.');
-
-  return record;
 };
 
 export const removeRecord = async (recordId: string) => {

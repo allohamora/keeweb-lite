@@ -4,12 +4,17 @@ import {
   RECORDS_STORAGE_KEY,
   clearRecords,
   createRecord,
-  getRecord,
   getRecords,
   removeRecord,
-  setRecords,
   updateRecord,
+  type PersistedFileRecord,
 } from '@/repositories/record.repository';
+
+const seedRecords = async (records: PersistedFileRecord[]) => {
+  for (const record of records) {
+    await createRecord(record);
+  }
+};
 
 describe('record.repository', () => {
   afterEach(async () => {
@@ -29,7 +34,7 @@ describe('record.repository', () => {
         },
       ];
 
-      await setRecords(records);
+      await seedRecords(records);
 
       expect(await getRecords()).toEqual(records);
     });
@@ -53,7 +58,7 @@ describe('record.repository', () => {
         },
       ];
 
-      await setRecords(records);
+      await seedRecords(records);
 
       expect(await getRecords()).toEqual(records);
     });
@@ -98,169 +103,9 @@ describe('record.repository', () => {
         },
       ];
 
-      await setRecords(records);
+      await seedRecords(records);
 
       expect(await getRecords()).toEqual(records);
-    });
-  });
-
-  describe('setRecords', () => {
-    it('keeps the last value when setRecords runs in parallel', async () => {
-      const firstRecords = [
-        {
-          id: 'first-google-drive-record',
-          type: 'google-drive' as const,
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-        },
-      ];
-      const secondRecords = [
-        {
-          id: 'second-google-drive-record',
-          type: 'google-drive' as const,
-          kdbx: {
-            encryptedBytes: new Uint8Array([4, 5, 6]),
-            name: 'vault.kdbx',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-        },
-      ];
-      const thirdRecords = [
-        {
-          id: 'third-google-drive-record',
-          type: 'google-drive' as const,
-          kdbx: {
-            encryptedBytes: new Uint8Array([7, 8, 9]),
-            name: 'vault.kdbx',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-        },
-      ];
-
-      await Promise.all([setRecords(firstRecords), setRecords(secondRecords), setRecords(thirdRecords)]);
-
-      expect(await getRecords()).toEqual(thirdRecords);
-    });
-
-    it('keeps encrypted bytes immutable after setRecords', async () => {
-      const encryptedBytes = new Uint8Array([1, 2, 3]);
-      const records = [
-        {
-          id: 'google-drive-record-1',
-          type: 'google-drive' as const,
-          kdbx: {
-            encryptedBytes,
-            name: 'vault.kdbx',
-          },
-          key: {
-            hash: 'hash-123',
-            name: 'unlock.keyx',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-        },
-      ];
-
-      await setRecords(records);
-      encryptedBytes[0] = 200;
-
-      expect(await getRecords()).toEqual([
-        {
-          ...records[0],
-          kdbx: {
-            ...records[0].kdbx,
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-          },
-        },
-      ]);
-    });
-
-    it('strips source field from local records', async () => {
-      const records = [
-        {
-          id: 'local-record-1',
-          type: 'local' as const,
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-        },
-      ];
-
-      await setRecords(records as unknown as never);
-
-      expect(await getRecords()).toEqual([
-        {
-          id: 'local-record-1',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-          },
-        },
-      ]);
-    });
-
-    it('strips unknown keys instead of rejecting records', async () => {
-      await setRecords([
-        {
-          id: 'google-drive-record-1',
-          type: 'google-drive',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-            unknownNested: 'ignored',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-          unknownTopLevel: 'ignored',
-        } as unknown as never,
-      ]);
-
-      expect(await getRecords()).toEqual([
-        {
-          id: 'google-drive-record-1',
-          type: 'google-drive',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-          },
-          source: {
-            id: '1AbCdEfGhIjKlMnOp',
-          },
-        },
-      ]);
-    });
-
-    it('sets an empty array and clears existing records', async () => {
-      await setRecords([
-        {
-          id: 'local-record-1',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-          },
-        },
-      ]);
-
-      await setRecords([]);
-
-      expect(await getRecords()).toEqual([]);
     });
   });
 
@@ -268,7 +113,7 @@ describe('record.repository', () => {
     it('clears only the records key and keeps unrelated default-store keys', async () => {
       const unrelatedKey = 'keeweb-lite.google-drive-oauth';
 
-      await setRecords([
+      await seedRecords([
         {
           id: 'local-record-1',
           type: 'local',
@@ -322,6 +167,61 @@ describe('record.repository', () => {
             encryptedBytes: new Uint8Array([1, 2, 3]),
             name: 'vault.kdbx',
           },
+        },
+      ]);
+    });
+
+    it('keeps encrypted bytes immutable after creating the record', async () => {
+      const encryptedBytes = new Uint8Array([1, 2, 3]);
+
+      await createRecord({
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+      });
+      encryptedBytes[0] = 200;
+
+      expect(await getRecords()).toEqual([
+        {
+          id: 'local-record-1',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        },
+      ]);
+    });
+
+    it('strips source field from local records', async () => {
+      await createRecord({
+        id: 'local-record-1',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        source: { id: '1AbCdEfGhIjKlMnOp' },
+      } as unknown as never);
+
+      expect(await getRecords()).toEqual([
+        {
+          id: 'local-record-1',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+        },
+      ]);
+    });
+
+    it('strips unknown keys instead of rejecting records', async () => {
+      await createRecord({
+        id: 'google-drive-record-1',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx', unknownNested: 'ignored' },
+        source: { id: '1AbCdEfGhIjKlMnOp' },
+        unknownTopLevel: 'ignored',
+      } as unknown as never);
+
+      expect(await getRecords()).toEqual([
+        {
+          id: 'google-drive-record-1',
+          type: 'google-drive',
+          kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+          source: { id: '1AbCdEfGhIjKlMnOp' },
         },
       ]);
     });
@@ -430,35 +330,9 @@ describe('record.repository', () => {
     });
   });
 
-  describe('getRecord', () => {
-    it('returns the record matching the given id', async () => {
-      await setRecords([
-        {
-          id: 'target-record',
-          type: 'local',
-          kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'target.kdbx' },
-        },
-        {
-          id: 'other-record',
-          type: 'local',
-          kdbx: { encryptedBytes: new Uint8Array([4, 5, 6]), name: 'other.kdbx' },
-        },
-      ]);
-
-      const record = await getRecord('target-record');
-
-      expect(record.id).toBe('target-record');
-      expect(record.kdbx.name).toBe('target.kdbx');
-    });
-
-    it('throws when no record matches the given id', async () => {
-      await expect(getRecord('nonexistent')).rejects.toThrow('Record not found.');
-    });
-  });
-
   describe('removeRecord', () => {
     it('removes a record by id', async () => {
-      await setRecords([
+      await seedRecords([
         {
           id: 'local-record-1',
           type: 'local',
@@ -502,7 +376,7 @@ describe('record.repository', () => {
     });
 
     it('removes a google-drive record and keeps local records', async () => {
-      await setRecords([
+      await seedRecords([
         {
           id: 'local-record-1',
           type: 'local',
@@ -541,7 +415,7 @@ describe('record.repository', () => {
 
   describe('updateRecord', () => {
     it('updates a record by id', async () => {
-      await setRecords([
+      await seedRecords([
         {
           id: 'local-record-1',
           type: 'local',
@@ -590,7 +464,7 @@ describe('record.repository', () => {
     });
 
     it('does not change records when updateRecord is called with a missing id', async () => {
-      await setRecords([
+      await seedRecords([
         {
           id: 'local-record-1',
           type: 'local',
@@ -622,7 +496,7 @@ describe('record.repository', () => {
     });
 
     it('updates lastOpenedAt field', async () => {
-      await setRecords([
+      await seedRecords([
         {
           id: 'local-record-1',
           type: 'local',
