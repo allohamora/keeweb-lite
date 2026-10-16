@@ -5,6 +5,7 @@ import { WorkspacePage } from '@/components/workspace/workspace.page';
 import { SafeNetProvider } from '@/hooks/use-safe-net.hook';
 import { EntryMutationProvider } from '@/hooks/use-entry-mutation.hook';
 import type { UnlockSession } from '@/services/session.service';
+import { getPageTitle } from '@/utils/page.utils';
 
 export const App = () => {
   const [session, setSession] = useState<UnlockSession | null>(null);
@@ -12,7 +13,7 @@ export const App = () => {
   useEffect(() => {
     const page = session ? 'Workspace' : 'Unlock';
 
-    document.title = `${page} - Keeweb Lite`;
+    document.title = getPageTitle(page);
   }, [session]);
 
   return (
