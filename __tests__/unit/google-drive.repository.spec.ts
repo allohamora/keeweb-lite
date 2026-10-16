@@ -182,6 +182,12 @@ describe('google-drive.repository', () => {
         'Failed to update file: 500 Internal Server Error',
       );
     });
+
+    it('throws when the API returns an unexpected response body', async () => {
+      mockServer.addHandlers(googleDriveApi.updateFile.mock(() => HttpResponse.json({ id: 'file-xyz' })));
+
+      await expect(updateFile('file-xyz', new Uint8Array([1, 2, 3]))).rejects.toThrow();
+    });
   });
 
   describe('createFile', () => {
@@ -269,6 +275,12 @@ describe('google-drive.repository', () => {
       await expect(createFile('vault.kdbx', new Uint8Array([1, 2, 3]))).rejects.toThrow(
         'Failed to create file: 500 Internal Server Error',
       );
+    });
+
+    it('throws when the API returns an unexpected response body', async () => {
+      mockServer.addHandlers(googleDriveApi.createFile.mock(() => HttpResponse.json({ id: 'drive-file-id-xyz' })));
+
+      await expect(createFile('vault.kdbx', new Uint8Array([1, 2, 3]))).rejects.toThrow();
     });
   });
 });

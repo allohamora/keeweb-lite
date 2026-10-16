@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { Lock } from '@/utils/lock.utils';
 import { PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 
@@ -64,11 +65,13 @@ class Auth {
 
 export const auth = new Auth();
 
-type File = {
-  id: string;
-  name: string;
-  modifiedTime: string;
-};
+const driveFileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  modifiedTime: z.string(),
+});
+
+type DriveFile = z.infer<typeof driveFileSchema>;
 
 export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
   const accessToken = await auth.getAccessToken();
@@ -87,7 +90,7 @@ export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> 
   return new Uint8Array(buffer);
 };
 
-export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>): Promise<File> => {
+export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>): Promise<DriveFile> => {
   const accessToken = await auth.getAccessToken();
 
   const boundary = crypto.randomUUID();
@@ -122,10 +125,10 @@ export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>
     throw new Error(`Failed to create file: ${response.status} ${response.statusText}`);
   }
 
-  return (await response.json()) as File;
+  return driveFileSchema.parse(await response.json());
 };
 
-export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<File> => {
+export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<DriveFile> => {
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime' });
@@ -143,5 +146,5 @@ export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>):
     throw new Error(`Failed to update file: ${response.status} ${response.statusText}`);
   }
 
-  return (await response.json()) as File;
+  return driveFileSchema.parse(await response.json());
 };
