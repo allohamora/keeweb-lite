@@ -7,7 +7,8 @@
     "stylelint-prettier/recommended"
   ],
   "rules": {
-    "at-rule-no-deprecated": [true, { "ignoreAtRules": ["apply"] }]
+    "at-rule-no-deprecated": [true, { "ignoreAtRules": ["apply"] }],
+    "at-rule-prelude-no-invalid": [true, { "ignoreAtRules": ["apply"] }]
   },
   "overrides": [
     {

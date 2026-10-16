@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from '@hugeicons/react';
-import { CircleSlashTwoIcon } from '@hugeicons/core-free-icons';
+import { CircleSlash2Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
 
 type ColorSwatchProps = {
@@ -15,7 +15,7 @@ export const ColorSwatch = ({ color, size = 16, className }: ColorSwatchProps) =
         className={cn('flex shrink-0 items-center justify-center rounded-none text-muted-foreground', className)}
         style={{ width: size, height: size }}
       >
-        <HugeiconsIcon icon={CircleSlashTwoIcon} size={Math.max(size - 4, 8)} strokeWidth={1.5} />
+        <HugeiconsIcon icon={CircleSlash2Icon} size={Math.max(size - 4, 8)} strokeWidth={1.5} />
       </span>
     );
   }
