@@ -90,6 +90,12 @@ export const filterGroups = (database: RecycleAwareDatabase) => {
   return { groups: items.map((item) => item.group), recycleBinGroup };
 };
 
+const getVisibleEntries = (database: RecycleAwareDatabase): kdbxweb.KdbxEntry[] => {
+  const { groups } = filterGroups(database);
+
+  return groups.flatMap((group) => group.entries);
+};
+
 export const getEntriesForList = ({
   database,
   selectFilter,
@@ -107,8 +113,7 @@ export const getEntriesForList = ({
     return group.entries;
   }
 
-  const { groups } = filterGroups(database);
-  const entries = groups.flatMap((group) => group.entries);
+  const entries = getVisibleEntries(database);
 
   if (isColorSelect(selectFilter)) {
     return entries.filter((entry) => getEntryColor(entry) === selectFilter.color);
@@ -329,24 +334,21 @@ export const restoreEntry = async ({
 };
 
 export const getAllTags = (database: RecycleAwareDatabase): string[] => {
-  const { groups } = filterGroups(database);
-  const entries = groups.flatMap((group) => group.entries);
+  const entries = getVisibleEntries(database);
   const normalizedTags = entries.flatMap((entry) => getTags(entry));
 
   return [...new Set(normalizedTags.filter((tag) => tag.length > 0))];
 };
 
 export const getAllColors = (database: RecycleAwareDatabase): string[] => {
-  const { groups } = filterGroups(database);
-  const entries = groups.flatMap((group) => group.entries);
+  const entries = getVisibleEntries(database);
   const colors = entries.map((entry) => getEntryColor(entry)).filter((color): color is string => color !== null);
 
   return [...new Set(colors)];
 };
 
 export const getAllUsernames = (database: RecycleAwareDatabase): string[] => {
-  const { groups } = filterGroups(database);
-  const entries = groups.flatMap((group) => group.entries);
+  const entries = getVisibleEntries(database);
   const usernames = entries.map((entry) => getFieldText(entry.fields.get('UserName')).trim());
 
   return [...new Set(usernames.filter((username) => username.length > 0))];
