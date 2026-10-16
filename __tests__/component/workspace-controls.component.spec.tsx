@@ -1,6 +1,6 @@
 import * as recordService from '@/services/record.service';
 import userEvent from '@testing-library/user-event';
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
@@ -11,7 +11,7 @@ import { DirtySafeNet } from '../utils/safe-net.harness';
 const record = createTestRecord();
 
 describe('workspace-controls.component', () => {
-  let database: kdbx.Kdbx;
+  let database: kdbxweb.Kdbx;
 
   beforeEach(async () => {
     database = await createTestDatabase();

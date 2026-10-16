@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import type { SelectFilter } from '@/services/workspace.service';
@@ -6,7 +6,7 @@ import type { SelectFilter } from '@/services/workspace.service';
 type WorkspaceMobileMenuProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   selectFilter: SelectFilter;
   onSelectFilter: (selectFilter: SelectFilter) => void;
 };

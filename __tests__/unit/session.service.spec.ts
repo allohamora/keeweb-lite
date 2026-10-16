@@ -1,4 +1,4 @@
-import kdbx from '@/lib/kdbx.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
@@ -16,18 +16,18 @@ describe('session.service', () => {
     password = 'test-password-123',
   } = {}) => {
     const keyFileHashBase64 = keyFileContent
-      ? kdbx.ByteUtils.bytesToBase64(
+      ? kdbxweb.ByteUtils.bytesToBase64(
           new Uint8Array(
-            await kdbx.CryptoEngine.sha256(kdbx.ByteUtils.stringToBytes(keyFileContent).buffer as ArrayBuffer),
+            await kdbxweb.CryptoEngine.sha256(kdbxweb.ByteUtils.stringToBytes(keyFileContent).buffer as ArrayBuffer),
           ),
         )
       : undefined;
 
-    const keyFileHashBytes = keyFileHashBase64 ? kdbx.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
-    const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyFileHashBytes);
+    const keyFileHashBytes = keyFileHashBase64 ? kdbxweb.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
+    const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyFileHashBytes);
     await credentials.ready;
 
-    const database = kdbx.Kdbx.create(credentials, databaseName);
+    const database = kdbxweb.Kdbx.create(credentials, databaseName);
     const encryptedBytes = new Uint8Array(await database.save());
 
     return { databaseName, encryptedBytes, keyFileHashBase64, password };
@@ -83,12 +83,12 @@ describe('session.service', () => {
     });
 
     it('returns a usable database with the correct entries', async () => {
-      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
+      const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
       await credentials.ready;
-      const database = kdbx.Kdbx.create(credentials, 'Entry Test DB');
+      const database = kdbxweb.Kdbx.create(credentials, 'Entry Test DB');
       const group = database.createGroup(database.getDefaultGroup(), 'My Group');
       const entry = database.createEntry(group);
-      entry.fields.set('Title', kdbx.ProtectedValue.fromString('My Entry'));
+      entry.fields.set('Title', kdbxweb.ProtectedValue.fromString('My Entry'));
       const encryptedBytes = new Uint8Array(await database.save());
 
       const record = await createRecord({
@@ -103,7 +103,7 @@ describe('session.service', () => {
       expect(testGroup).toBeDefined();
       if (testGroup) {
         expect(testGroup.entries).toHaveLength(1);
-        expect((testGroup.entries[0].fields.get('Title') as kdbx.ProtectedValue).getText()).toBe('My Entry');
+        expect((testGroup.entries[0].fields.get('Title') as kdbxweb.ProtectedValue).getText()).toBe('My Entry');
       }
     });
 
@@ -140,9 +140,9 @@ describe('session.service', () => {
 
   describe('syncForSession', () => {
     const createSyncableDatabase = async (password = 'sync-test-password') => {
-      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password));
+      const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password));
       await credentials.ready;
-      const database = kdbx.Kdbx.create(credentials, 'Sync DB');
+      const database = kdbxweb.Kdbx.create(credentials, 'Sync DB');
       const encryptedBytes = new Uint8Array(await database.save());
       return { database, encryptedBytes, password };
     };
@@ -222,10 +222,10 @@ describe('session.service', () => {
         keyFileContent: 'test-key-file-content',
       });
 
-      const keyFileHashBytes = keyFileHashBase64 ? kdbx.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
-      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyFileHashBytes);
+      const keyFileHashBytes = keyFileHashBase64 ? kdbxweb.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
+      const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyFileHashBytes);
       await credentials.ready;
-      const database = await kdbx.Kdbx.load(encryptedBytes.buffer as ArrayBuffer, credentials);
+      const database = await kdbxweb.Kdbx.load(encryptedBytes.buffer as ArrayBuffer, credentials);
 
       const record = await createRecord({
         id: 'gd-keyfile-record',
@@ -249,42 +249,42 @@ describe('session.service', () => {
     });
 
     it('accumulates mutations from both concurrent calls in the final merged result', async () => {
-      const creds = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
+      const creds = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
       await creds.ready;
-      const initialDb = kdbx.Kdbx.create(creds, 'Lock Test DB');
+      const initialDb = kdbxweb.Kdbx.create(creds, 'Lock Test DB');
       const group = initialDb.getDefaultGroup();
 
       const entryA = initialDb.createEntry(group);
-      entryA.fields.set('Title', kdbx.ProtectedValue.fromString('Original A'));
+      entryA.fields.set('Title', kdbxweb.ProtectedValue.fromString('Original A'));
 
       const entryB = initialDb.createEntry(group);
-      entryB.fields.set('Title', kdbx.ProtectedValue.fromString('Original B'));
+      entryB.fields.set('Title', kdbxweb.ProtectedValue.fromString('Original B'));
 
       const initialBytes = new Uint8Array(await initialDb.save());
 
       // First caller's database: only Entry A updated
-      const credsForA = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
+      const credsForA = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
       await credsForA.ready;
-      const dbWithAUpdated = await kdbx.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForA);
+      const dbWithAUpdated = await kdbxweb.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForA);
       const entryAToUpdate = dbWithAUpdated.getDefaultGroup().entries.find((entry) => {
         const title = entry.fields.get('Title');
-        return title instanceof kdbx.ProtectedValue && title.getText() === 'Original A';
+        return title instanceof kdbxweb.ProtectedValue && title.getText() === 'Original A';
       });
       if (entryAToUpdate) {
-        entryAToUpdate.fields.set('Title', kdbx.ProtectedValue.fromString('Updated A'));
+        entryAToUpdate.fields.set('Title', kdbxweb.ProtectedValue.fromString('Updated A'));
         entryAToUpdate.times.lastModTime = new Date(Date.now() + 1000);
       }
 
       // Second caller's database: only Entry B updated
-      const credsForB = new kdbx.Credentials(kdbx.ProtectedValue.fromString('test-password'));
+      const credsForB = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
       await credsForB.ready;
-      const dbWithBUpdated = await kdbx.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForB);
+      const dbWithBUpdated = await kdbxweb.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForB);
       const entryBToUpdate = dbWithBUpdated.getDefaultGroup().entries.find((entry) => {
         const title = entry.fields.get('Title');
-        return title instanceof kdbx.ProtectedValue && title.getText() === 'Original B';
+        return title instanceof kdbxweb.ProtectedValue && title.getText() === 'Original B';
       });
       if (entryBToUpdate) {
-        entryBToUpdate.fields.set('Title', kdbx.ProtectedValue.fromString('Updated B'));
+        entryBToUpdate.fields.set('Title', kdbxweb.ProtectedValue.fromString('Updated B'));
         entryBToUpdate.times.lastModTime = new Date(Date.now() + 1000);
       }
 
@@ -318,7 +318,7 @@ describe('session.service', () => {
       const entries = lastResult.database.getDefaultGroup().entries;
       const getTitle = (entry: (typeof entries)[number]) => {
         const title = entry.fields.get('Title');
-        return title instanceof kdbx.ProtectedValue ? title.getText() : String(title ?? '');
+        return title instanceof kdbxweb.ProtectedValue ? title.getText() : String(title ?? '');
       };
 
       expect(entries.find((entry) => getTitle(entry) === 'Updated A')).toBeDefined();

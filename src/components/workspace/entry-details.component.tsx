@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { cn } from '@/lib/utils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
@@ -8,10 +8,14 @@ import type { FileRecord } from '@/repositories/record.repository';
 
 type EntryDetailsProps = {
   className?: string;
-  selectedEntry: kdbx.KdbxEntry | null;
-  database: kdbx.Kdbx;
+  selectedEntry: kdbxweb.KdbxEntry | null;
+  database: kdbxweb.Kdbx;
   record: FileRecord;
-  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
+  onSave: (payload: {
+    nextDatabase: kdbxweb.Kdbx;
+    nextEntryUuid?: kdbxweb.KdbxUuid | null;
+    nextRecord: FileRecord;
+  }) => void;
   showBackButton: boolean;
   onBack: () => void;
 };

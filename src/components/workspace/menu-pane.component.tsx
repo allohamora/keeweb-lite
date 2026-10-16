@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Delete01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ import { ColorSwatch } from '@/components/workspace/color-swatch.component';
 
 type MenuPaneProps = {
   className?: string;
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   selectFilter: SelectFilter;
   onSelectFilter: (selectFilter: SelectFilter) => void;
 };

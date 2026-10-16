@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -20,10 +20,10 @@ import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type EntryRestoreProps = {
-  database: kdbx.Kdbx;
-  entry: kdbx.KdbxEntry;
+  database: kdbxweb.Kdbx;
+  entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  onRestore: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
+  onRestore: (payload: { nextDatabase: kdbxweb.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
 };
 
 export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {

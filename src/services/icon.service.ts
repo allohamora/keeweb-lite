@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import type { IconSvgElement } from '@hugeicons/react';
 import {
   Key01Icon,
@@ -151,8 +151,8 @@ const FOLDER_ICON_INDEX = 48;
 
 export const DEFAULT_ICON = STANDARD_ICON_MAP[KEY_ICON_INDEX];
 
-export const getEntryIcon = (entry: kdbx.KdbxEntry): number => entry.icon ?? KEY_ICON_INDEX;
+export const getEntryIcon = (entry: kdbxweb.KdbxEntry): number => entry.icon ?? KEY_ICON_INDEX;
 
-export const getGroupIcon = (group: kdbx.KdbxGroup): number => group.icon ?? FOLDER_ICON_INDEX;
+export const getGroupIcon = (group: kdbxweb.KdbxGroup): number => group.icon ?? FOLDER_ICON_INDEX;
 
 export const resolveStandardIcon = (index: number): IconSvgElement => STANDARD_ICON_MAP[index] ?? DEFAULT_ICON;

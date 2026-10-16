@@ -1,4 +1,4 @@
-import kdbx from '@/lib/kdbx.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { loadDemoDatabase } from '@/services/demo.service';
 import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
@@ -8,13 +8,13 @@ import { Lock } from '@/utils/lock.utils';
 import { cloneDatabase } from './workspace.service';
 
 export type UnlockSession = {
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   record: FileRecord;
   version: number;
 };
 
 type SyncSessionResult = {
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   record: FileRecord;
 };
 
@@ -25,7 +25,7 @@ export const syncForSession = async ({
   database,
 }: {
   record: FileRecord;
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
 }): Promise<SyncSessionResult> => {
   if (record.type !== 'google-drive') {
     return { database, record };
@@ -35,7 +35,7 @@ export const syncForSession = async ({
     const nextDatabase = await cloneDatabase(database);
 
     const remoteBytes = await getFile(record.source.id);
-    const remoteDatabase = await kdbx.Kdbx.load(asArrayBuffer(remoteBytes), nextDatabase.credentials);
+    const remoteDatabase = await kdbxweb.Kdbx.load(asArrayBuffer(remoteBytes), nextDatabase.credentials);
 
     nextDatabase.merge(remoteDatabase);
     await updateFile(record.source.id, asUint8Array(await nextDatabase.save()));

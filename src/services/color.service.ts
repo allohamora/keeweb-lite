@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 
 // same soft pastel family as the demo database's own entry colors (#FFFF80, #FF8080)
 export const STANDARD_COLORS: { name: string; hex: string }[] = [
@@ -12,4 +12,4 @@ export const STANDARD_COLORS: { name: string; hex: string }[] = [
 
 // kdbxweb can parse an empty <BackgroundColor/> element as '' rather than leaving it undefined,
 // so an empty string is treated the same as "no color" here
-export const getEntryColor = (entry: kdbx.KdbxEntry): string | null => entry.bgColor || null;
+export const getEntryColor = (entry: kdbxweb.KdbxEntry): string | null => entry.bgColor || null;

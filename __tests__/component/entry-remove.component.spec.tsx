@@ -1,6 +1,6 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
@@ -10,8 +10,8 @@ import { DirtySafeNet } from '../utils/safe-net.harness';
 import { MutatingEntryMutation } from '../utils/entry-mutation.harness';
 
 describe('entry-remove.component', () => {
-  let database: kdbx.Kdbx;
-  let entry: kdbx.KdbxEntry;
+  let database: kdbxweb.Kdbx;
+  let entry: kdbxweb.KdbxEntry;
   const record = createTestRecord();
 
   beforeEach(async () => {
@@ -91,11 +91,11 @@ describe('entry-remove.component', () => {
     it('disables its own trigger while the removal is in flight, then re-enables it', async () => {
       const user = userEvent.setup();
       let resolveRemove: (payload: {
-        nextDatabase: kdbx.Kdbx;
+        nextDatabase: kdbxweb.Kdbx;
         nextEntryUuid: null;
         nextRecord: typeof record;
       }) => void = () => {};
-      const removePromise = new Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: typeof record }>(
+      const removePromise = new Promise<{ nextDatabase: kdbxweb.Kdbx; nextEntryUuid: null; nextRecord: typeof record }>(
         (resolve) => {
           resolveRemove = resolve;
         },

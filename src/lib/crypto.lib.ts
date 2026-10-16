@@ -1,8 +1,8 @@
-import kdbx from './kdbx.lib';
+import kdbxweb from './kdbxweb.lib';
 
 export const random = () => {
   // Request 4 random bytes because 4 bytes = 32 bits, which exactly matches one uint32 value.
-  const randomBytes = kdbx.CryptoEngine.random(4);
+  const randomBytes = kdbxweb.CryptoEngine.random(4);
   // Wrap the byte buffer with DataView so we can read those raw bytes as a 32-bit unsigned integer.
   const view = new DataView(randomBytes.buffer, randomBytes.byteOffset, randomBytes.byteLength);
 

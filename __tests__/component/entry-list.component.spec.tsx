@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { EntryList } from '@/components/workspace/entry-list.component';
@@ -7,7 +7,7 @@ import { render } from '../utils/render.utils';
 import { MutatingEntryMutation } from '../utils/entry-mutation.harness';
 
 describe('entry-list.component', () => {
-  let database: kdbx.Kdbx;
+  let database: kdbxweb.Kdbx;
 
   beforeEach(async () => {
     database = await createTestDatabase();

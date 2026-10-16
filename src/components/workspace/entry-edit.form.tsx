@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -55,10 +55,14 @@ const entryEditSchema = z.object({
 type EntryEditValues = z.infer<typeof entryEditSchema>;
 
 type EntryEditFormProps = {
-  database: kdbx.Kdbx;
-  entry: kdbx.KdbxEntry;
+  database: kdbxweb.Kdbx;
+  entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
+  onSave: (payload: {
+    nextDatabase: kdbxweb.Kdbx;
+    nextEntryUuid?: kdbxweb.KdbxUuid | null;
+    nextRecord: FileRecord;
+  }) => void;
 };
 
 export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
@@ -108,8 +112,8 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
   });
 
   const handleSave = (payload: {
-    nextDatabase: kdbx.Kdbx;
-    nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextDatabase: kdbxweb.Kdbx;
+    nextEntryUuid?: kdbxweb.KdbxUuid | null;
     nextRecord: FileRecord;
   }) => {
     reset(); // Reset the form state after remove/restore (isDirty, touched state, etc)

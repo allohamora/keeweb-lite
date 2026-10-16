@@ -1,4 +1,4 @@
-import kdbx from '@/lib/kdbx.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { random } from '@/lib/crypto.lib';
 
@@ -9,7 +9,7 @@ describe('crypto.lib', () => {
 
   describe('random', () => {
     it('converts 4 random bytes into a unit interval number', () => {
-      vi.spyOn(kdbx.CryptoEngine, 'random').mockReturnValue(Uint8Array.of(0x80, 0x00, 0x00, 0x00));
+      vi.spyOn(kdbxweb.CryptoEngine, 'random').mockReturnValue(Uint8Array.of(0x80, 0x00, 0x00, 0x00));
 
       expect(random()).toBe(0.5);
     });

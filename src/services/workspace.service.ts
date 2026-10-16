@@ -1,42 +1,42 @@
-import kdbx from '@/lib/kdbx.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 import { updateRecord, type FileRecord } from '@/repositories/record.repository';
 import { getEntryIcon } from '@/services/icon.service';
 import { getEntryColor } from '@/services/color.service';
 
-export type SelectFilter = kdbx.KdbxUuid | { tag: string } | { color: string | null } | null;
+export type SelectFilter = kdbxweb.KdbxUuid | { tag: string } | { color: string | null } | null;
 
-export const getAllGroups = (groups: kdbx.KdbxGroup[]): kdbx.KdbxGroup[] => {
+export const getAllGroups = (groups: kdbxweb.KdbxGroup[]): kdbxweb.KdbxGroup[] => {
   return groups.flatMap((group) => [...group.allGroups()]);
 };
 
-type RecycleAwareDatabase = Pick<kdbx.Kdbx, 'groups'> & { meta: Pick<kdbx.KdbxMeta, 'recycleBinUuid'> };
+type RecycleAwareDatabase = Pick<kdbxweb.Kdbx, 'groups'> & { meta: Pick<kdbxweb.KdbxMeta, 'recycleBinUuid'> };
 
 const normalize = (tag: string): string => tag.trim().toLocaleLowerCase();
 
-export const getTags = ({ tags }: Pick<kdbx.KdbxEntry, 'tags'>): string[] => {
+export const getTags = ({ tags }: Pick<kdbxweb.KdbxEntry, 'tags'>): string[] => {
   return tags.map((tag) => normalize(tag));
 };
 
-export const getFieldText = (field?: string | kdbx.ProtectedValue): string => {
+export const getFieldText = (field?: string | kdbxweb.ProtectedValue): string => {
   if (!field) return '';
   if (typeof field === 'string') return field;
 
   return field.getText();
 };
 
-export const isGroupSelect = (selectFilter: SelectFilter): selectFilter is kdbx.KdbxUuid =>
-  selectFilter instanceof kdbx.KdbxUuid;
+export const isGroupSelect = (selectFilter: SelectFilter): selectFilter is kdbxweb.KdbxUuid =>
+  selectFilter instanceof kdbxweb.KdbxUuid;
 export const isTagSelect = (selectFilter: SelectFilter): selectFilter is { tag: string } =>
   selectFilter !== null && !isGroupSelect(selectFilter) && 'tag' in selectFilter;
 export const isColorSelect = (selectFilter: SelectFilter): selectFilter is { color: string | null } =>
   selectFilter !== null && !isGroupSelect(selectFilter) && 'color' in selectFilter;
 
 export const findEntryByUuid = (
-  database: Pick<kdbx.Kdbx, 'groups'>,
-  uuid: kdbx.KdbxUuid | string,
-): kdbx.KdbxEntry | null => {
+  database: Pick<kdbxweb.Kdbx, 'groups'>,
+  uuid: kdbxweb.KdbxUuid | string,
+): kdbxweb.KdbxEntry | null => {
   for (const group of getAllGroups(database.groups)) {
     for (const entry of group.entries) {
       if (entry.uuid.equals(uuid)) return entry;
@@ -47,9 +47,9 @@ export const findEntryByUuid = (
 };
 
 export const findGroupByUuid = (
-  database: Pick<kdbx.Kdbx, 'groups'>,
-  uuid: kdbx.KdbxUuid | string,
-): kdbx.KdbxGroup | null => {
+  database: Pick<kdbxweb.Kdbx, 'groups'>,
+  uuid: kdbxweb.KdbxUuid | string,
+): kdbxweb.KdbxGroup | null => {
   for (const group of getAllGroups(database.groups)) {
     if (group.uuid.equals(uuid)) return group;
   }
@@ -57,14 +57,14 @@ export const findGroupByUuid = (
   return null;
 };
 
-export type GroupTreeItem = { group: kdbx.KdbxGroup; depth: number };
-type GroupTree = { items: GroupTreeItem[]; recycleBinGroup: kdbx.KdbxGroup | null };
+export type GroupTreeItem = { group: kdbxweb.KdbxGroup; depth: number };
+type GroupTree = { items: GroupTreeItem[]; recycleBinGroup: kdbxweb.KdbxGroup | null };
 
 // preserves nesting depth, unlike getAllGroups, and excludes the recycle bin group's entire subtree
 export const getGroupTree = (database: RecycleAwareDatabase): GroupTree => {
   const recycleBinUuid = database.meta.recycleBinUuid;
 
-  const buildTree = (groups: kdbx.KdbxGroup[], depth: number): GroupTree => {
+  const buildTree = (groups: kdbxweb.KdbxGroup[], depth: number): GroupTree => {
     return groups.reduce<GroupTree>(
       (state, group) => {
         if (recycleBinUuid && group.uuid.equals(recycleBinUuid)) {
@@ -97,7 +97,7 @@ export const getEntriesForList = ({
 }: {
   database: RecycleAwareDatabase;
   selectFilter: SelectFilter;
-}): kdbx.KdbxEntry[] => {
+}): kdbxweb.KdbxEntry[] => {
   if (isGroupSelect(selectFilter)) {
     const group = findGroupByUuid(database, selectFilter);
     if (!group) return [];
@@ -123,7 +123,7 @@ export const getEntriesForList = ({
   return entries.filter((entry) => entry.tags.some((tag) => normalize(tag) === normalizedTag));
 };
 
-export const filterEntriesBySearch = (entries: kdbx.KdbxEntry[], query: string): kdbx.KdbxEntry[] => {
+export const filterEntriesBySearch = (entries: kdbxweb.KdbxEntry[], query: string): kdbxweb.KdbxEntry[] => {
   const normalizedQuery = normalize(query);
   if (!normalizedQuery) return entries;
 
@@ -135,7 +135,7 @@ export const filterEntriesBySearch = (entries: kdbx.KdbxEntry[], query: string):
 
 export type SortOrder = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc';
 
-export const sortEntries = (entries: kdbx.KdbxEntry[], sortOrder: SortOrder): kdbx.KdbxEntry[] => {
+export const sortEntries = (entries: kdbxweb.KdbxEntry[], sortOrder: SortOrder): kdbxweb.KdbxEntry[] => {
   return entries.toSorted((a, b) => {
     switch (sortOrder) {
       case 'name-asc':
@@ -163,19 +163,19 @@ export type EntryUpdateValues = {
 };
 
 type UpdateEntryInput = {
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   record: FileRecord;
   entryUuid: string;
   values: EntryUpdateValues;
 };
 
-export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => {
+export const cloneDatabase = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
   const databaseBytes = await database.save();
 
-  return kdbx.Kdbx.load(databaseBytes, database.credentials);
+  return kdbxweb.Kdbx.load(databaseBytes, database.credentials);
 };
 
-export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
+export const getEntryValues = (entry: kdbxweb.KdbxEntry): EntryUpdateValues => ({
   title: getFieldText(entry.fields.get('Title')),
   username: getFieldText(entry.fields.get('UserName')),
   password: getFieldText(entry.fields.get('Password')),
@@ -187,12 +187,12 @@ export const getEntryValues = (entry: kdbx.KdbxEntry): EntryUpdateValues => ({
   color: getEntryColor(entry),
 });
 
-export const updateEntry = (entry: kdbx.KdbxEntry, values: EntryUpdateValues): void => {
+export const updateEntry = (entry: kdbxweb.KdbxEntry, values: EntryUpdateValues): void => {
   entry.pushHistory();
 
   entry.fields.set('Title', values.title);
   entry.fields.set('UserName', values.username);
-  entry.fields.set('Password', kdbx.ProtectedValue.fromString(values.password));
+  entry.fields.set('Password', kdbxweb.ProtectedValue.fromString(values.password));
   entry.fields.set('URL', values.url);
   entry.fields.set('Notes', values.notes);
   entry.tags = values.tags;
@@ -210,7 +210,7 @@ export const saveDatabase = async ({
   database,
   record,
 }: {
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   record: FileRecord;
 }): Promise<{ record: FileRecord }> => {
   // demo records are never persisted, so there's nothing to write back to storage
@@ -232,8 +232,8 @@ export const saveEntry = async ({
   entryUuid,
   values,
 }: UpdateEntryInput): Promise<{
-  nextDatabase: kdbx.Kdbx;
-  nextEntryUuid: kdbx.KdbxUuid;
+  nextDatabase: kdbxweb.Kdbx;
+  nextEntryUuid: kdbxweb.KdbxUuid;
   nextRecord: FileRecord;
 }> => {
   const nextDatabase = await cloneDatabase(database);
@@ -251,7 +251,7 @@ export const saveEntry = async ({
 };
 
 type CreateEntryInput = {
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   record: FileRecord;
   selectFilter: SelectFilter;
 };
@@ -261,8 +261,8 @@ export const createEntry = async ({
   record,
   selectFilter,
 }: CreateEntryInput): Promise<{
-  nextDatabase: kdbx.Kdbx;
-  nextEntryUuid: kdbx.KdbxUuid;
+  nextDatabase: kdbxweb.Kdbx;
+  nextEntryUuid: kdbxweb.KdbxUuid;
   nextRecord: FileRecord;
 }> => {
   const nextDatabase = await cloneDatabase(database);
@@ -284,11 +284,11 @@ export const createEntry = async ({
   return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
 
-export const isEntryExpired = (entry: kdbx.KdbxEntry): boolean => {
+export const isEntryExpired = (entry: kdbxweb.KdbxEntry): boolean => {
   return !!entry.times.expires && !!entry.times.expiryTime && entry.times.expiryTime.getTime() < Date.now();
 };
 
-export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbx.KdbxEntry): boolean => {
+export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbxweb.KdbxEntry): boolean => {
   const { recycleBinGroup } = filterGroups(database);
   if (!recycleBinGroup) return false;
 
@@ -296,7 +296,7 @@ export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbx.
 };
 
 type RemoveEntryInput = {
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   record: FileRecord;
   entryUuid: string;
 };
@@ -306,7 +306,7 @@ export const removeEntry = async ({
   record,
   entryUuid,
 }: RemoveEntryInput): Promise<{
-  nextDatabase: kdbx.Kdbx;
+  nextDatabase: kdbxweb.Kdbx;
   nextEntryUuid: null;
   nextRecord: FileRecord;
 }> => {
@@ -333,7 +333,7 @@ export const restoreEntry = async ({
   record,
   entryUuid,
 }: RemoveEntryInput): Promise<{
-  nextDatabase: kdbx.Kdbx;
+  nextDatabase: kdbxweb.Kdbx;
   nextEntryUuid: null;
   nextRecord: FileRecord;
 }> => {

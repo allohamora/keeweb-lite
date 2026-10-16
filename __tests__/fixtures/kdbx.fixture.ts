@@ -1,20 +1,20 @@
-import kdbx from '@/lib/kdbx.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import type { FileRecord, PersistedFileRecord } from '@/repositories/record.repository';
 
 export const createTestDatabase = async () => {
-  const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('component-test-password'));
+  const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('component-test-password'));
   await credentials.ready;
 
-  return kdbx.Kdbx.create(credentials, 'Component Test DB');
+  return kdbxweb.Kdbx.create(credentials, 'Component Test DB');
 };
 
-export const createTestEntry = (database: kdbx.Kdbx) => {
+export const createTestEntry = (database: kdbxweb.Kdbx) => {
   const group = database.getDefaultGroup();
   const entry = database.createEntry(group);
 
   entry.fields.set('Title', 'Test Entry');
   entry.fields.set('UserName', 'test-user');
-  entry.fields.set('Password', kdbx.ProtectedValue.fromString('test-password'));
+  entry.fields.set('Password', kdbxweb.ProtectedValue.fromString('test-password'));
   entry.fields.set('URL', '');
   entry.fields.set('Notes', '');
 

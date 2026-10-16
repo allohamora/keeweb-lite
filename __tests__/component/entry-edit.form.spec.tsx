@@ -1,6 +1,6 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
@@ -12,8 +12,8 @@ import { render } from '../utils/render.utils';
 const record = createTestRecord();
 
 type ToggleableEntryEditFormProps = {
-  database: kdbx.Kdbx;
-  entry: kdbx.KdbxEntry;
+  database: kdbxweb.Kdbx;
+  entry: kdbxweb.KdbxEntry;
   onGuardedAction: () => void;
 };
 
@@ -31,8 +31,8 @@ const ToggleableEntryEditForm = ({ database, entry, onGuardedAction }: Toggleabl
 };
 
 describe('entry-edit.form', () => {
-  let database: kdbx.Kdbx;
-  let entry: kdbx.KdbxEntry;
+  let database: kdbxweb.Kdbx;
+  let entry: kdbxweb.KdbxEntry;
 
   beforeEach(async () => {
     database = await createTestDatabase();
@@ -205,13 +205,13 @@ describe('entry-edit.form', () => {
     it('blocks Remove while Save is still pending, and re-enables it once Save settles', async () => {
       const user = userEvent.setup();
       let resolveSave: (payload: {
-        nextDatabase: kdbx.Kdbx;
-        nextEntryUuid: kdbx.KdbxUuid;
+        nextDatabase: kdbxweb.Kdbx;
+        nextEntryUuid: kdbxweb.KdbxUuid;
         nextRecord: typeof record;
       }) => void = () => {};
       const savePromise = new Promise<{
-        nextDatabase: kdbx.Kdbx;
-        nextEntryUuid: kdbx.KdbxUuid;
+        nextDatabase: kdbxweb.Kdbx;
+        nextEntryUuid: kdbxweb.KdbxUuid;
         nextRecord: typeof record;
       }>((resolve) => {
         resolveSave = resolve;

@@ -1,4 +1,4 @@
-import kdbx from '@/lib/kdbx.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
@@ -38,10 +38,10 @@ describe('workspace.service', () => {
   });
 
   const createDatabase = async () => {
-    const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('workspace-test-password'));
+    const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('workspace-test-password'));
     await credentials.ready;
 
-    return kdbx.Kdbx.create(credentials, 'Workspace Test DB');
+    return kdbxweb.Kdbx.create(credentials, 'Workspace Test DB');
   };
 
   describe('getAllGroups', () => {
@@ -247,7 +247,7 @@ describe('workspace.service', () => {
     it('returns null when no entry matches the uuid', async () => {
       const database = await createDatabase();
 
-      expect(findEntryByUuid(database, kdbx.KdbxUuid.random())).toBeNull();
+      expect(findEntryByUuid(database, kdbxweb.KdbxUuid.random())).toBeNull();
     });
 
     it('searches across multiple nested groups', async () => {
@@ -281,7 +281,7 @@ describe('workspace.service', () => {
     it('returns null when no group matches the uuid', async () => {
       const database = await createDatabase();
 
-      expect(findGroupByUuid(database, kdbx.KdbxUuid.random())).toBeNull();
+      expect(findGroupByUuid(database, kdbxweb.KdbxUuid.random())).toBeNull();
     });
 
     it('finds a nested group', async () => {
@@ -412,7 +412,7 @@ describe('workspace.service', () => {
     it('returns an empty array when group uuid is not found in the database', async () => {
       const database = await createDatabase();
 
-      const result = getEntriesForList({ database, selectFilter: kdbx.KdbxUuid.random() });
+      const result = getEntriesForList({ database, selectFilter: kdbxweb.KdbxUuid.random() });
 
       expect(result).toEqual([]);
     });
@@ -750,7 +750,7 @@ describe('workspace.service', () => {
     });
 
     it('returns decrypted text from a protected value', () => {
-      const protectedValue = kdbx.ProtectedValue.fromString('secret');
+      const protectedValue = kdbxweb.ProtectedValue.fromString('secret');
 
       expect(getFieldText(protectedValue)).toBe('secret');
     });
@@ -769,7 +769,7 @@ describe('workspace.service', () => {
 
       entry.fields.set('Title', 'My Title');
       entry.fields.set('UserName', 'my-user');
-      entry.fields.set('Password', kdbx.ProtectedValue.fromString('my-password'));
+      entry.fields.set('Password', kdbxweb.ProtectedValue.fromString('my-password'));
       entry.fields.set('URL', 'https://example.com');
       entry.fields.set('Notes', 'My notes');
       entry.tags = ['work', 'shared'];
@@ -809,7 +809,7 @@ describe('workspace.service', () => {
       const group = database.createGroup(root, 'Entries');
       const entry = database.createEntry(group);
 
-      entry.fields.set('Password', kdbx.ProtectedValue.fromString('secret-pass'));
+      entry.fields.set('Password', kdbxweb.ProtectedValue.fromString('secret-pass'));
 
       const result = getEntryValues(entry);
 
@@ -866,7 +866,7 @@ describe('workspace.service', () => {
 
       entry.fields.set('Title', 'Original Title');
       entry.fields.set('UserName', 'original-user');
-      entry.fields.set('Password', kdbx.ProtectedValue.fromString('original-password'));
+      entry.fields.set('Password', kdbxweb.ProtectedValue.fromString('original-password'));
       entry.fields.set('URL', 'https://example.com');
       entry.fields.set('Notes', 'Original notes');
       entry.tags = ['first'];
@@ -1039,7 +1039,7 @@ describe('workspace.service', () => {
 
     it('leaves any preexisting custom icon reference untouched', async () => {
       const { entry } = await createEntryWithValues();
-      const uuid = kdbx.KdbxUuid.random();
+      const uuid = kdbxweb.KdbxUuid.random();
       entry.customIcon = uuid;
 
       updateEntry(entry, {
@@ -1104,7 +1104,7 @@ describe('workspace.service', () => {
 
       entry.fields.set('Title', 'Original Title');
       entry.fields.set('UserName', 'original-user');
-      entry.fields.set('Password', kdbx.ProtectedValue.fromString('original-password'));
+      entry.fields.set('Password', kdbxweb.ProtectedValue.fromString('original-password'));
       entry.fields.set('URL', 'https://example.com');
       entry.fields.set('Notes', 'Original notes');
       entry.tags = ['first'];
@@ -1350,7 +1350,7 @@ describe('workspace.service', () => {
     it('throws when group uuid is not found in the cloned database', async () => {
       const { database, record } = await createPersistedDatabase();
 
-      await expect(createEntry({ database, record, selectFilter: kdbx.KdbxUuid.random() })).rejects.toThrow(
+      await expect(createEntry({ database, record, selectFilter: kdbxweb.KdbxUuid.random() })).rejects.toThrow(
         'Group not found.',
       );
     });
@@ -1791,10 +1791,10 @@ describe('workspace.service', () => {
 
   describe('saveDatabase', () => {
     const createUnlockedDatabase = async () => {
-      const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString('persist-test-password'));
+      const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('persist-test-password'));
       await credentials.ready;
 
-      return kdbx.Kdbx.create(credentials, 'Persist Test DB');
+      return kdbxweb.Kdbx.create(credentials, 'Persist Test DB');
     };
 
     it('saves encrypted bytes back to the repository record', async () => {

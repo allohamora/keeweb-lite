@@ -1,4 +1,4 @@
-import kdbx from '@/lib/kdbx.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { createFile, getFile } from '@/repositories/google-drive.repository';
 import { createRecord, getRecords as getRepositoryRecords } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
@@ -16,14 +16,14 @@ export const unlockKdbx = async ({
   keyFileHashBase64?: string | null;
   password: string;
 }) => {
-  const keyfile = keyFileHashBase64 ? kdbx.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
-  const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyfile);
+  const keyfile = keyFileHashBase64 ? kdbxweb.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
+  const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyfile);
   await credentials.ready;
 
   try {
-    return await kdbx.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
+    return await kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
   } catch (error) {
-    if (error instanceof kdbx.KdbxError && error.code === kdbx.Consts.ErrorCodes.InvalidKey) {
+    if (error instanceof kdbxweb.KdbxError && error.code === kdbxweb.Consts.ErrorCodes.InvalidKey) {
       throw new Error('Invalid password or key file.', { cause: error });
     }
 
@@ -31,7 +31,7 @@ export const unlockKdbx = async ({
   }
 };
 
-export const toEncryptedBytes = async (db: kdbx.Kdbx) => {
+export const toEncryptedBytes = async (db: kdbxweb.Kdbx) => {
   return asUint8Array(await db.save());
 };
 
@@ -54,7 +54,7 @@ export const getRecords = async () => {
 };
 
 const readKeyFile = async (file: File) => {
-  const hash = kdbx.ByteUtils.bytesToBase64(await file.arrayBuffer());
+  const hash = kdbxweb.ByteUtils.bytesToBase64(await file.arrayBuffer());
   const name = file.name;
 
   return { hash, name };
@@ -84,8 +84,8 @@ const toKey = async (keyFile?: FileList | undefined) => {
 const generateKeyFile = async (databaseName: string) => {
   // createRandomKeyFile defaults to the legacy version 1 XML key file; pass 2 explicitly
   // to get the newer, hash-verified version that KeePass2 names with a .keyx extension.
-  const keyFileBytes = await kdbx.Credentials.createRandomKeyFile(2);
-  const key = { hash: kdbx.ByteUtils.bytesToBase64(keyFileBytes), name: `${databaseName}.keyx` };
+  const keyFileBytes = await kdbxweb.Credentials.createRandomKeyFile(2);
+  const key = { hash: kdbxweb.ByteUtils.bytesToBase64(keyFileBytes), name: `${databaseName}.keyx` };
 
   return { key, keyFileBytes };
 };
@@ -115,10 +115,10 @@ const createEmptyKdbx = async ({
 }) => {
   const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
 
-  const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
+  const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
   await credentials.ready;
 
-  const database = kdbx.Kdbx.create(credentials, name);
+  const database = kdbxweb.Kdbx.create(credentials, name);
   const encryptedBytes = await toEncryptedBytes(database);
 
   return { encryptedBytes, generatedKey };

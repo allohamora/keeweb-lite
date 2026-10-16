@@ -1,6 +1,6 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
@@ -10,8 +10,8 @@ import { DirtySafeNet } from '../utils/safe-net.harness';
 import { MutatingEntryMutation } from '../utils/entry-mutation.harness';
 
 describe('entry-restore.component', () => {
-  let database: kdbx.Kdbx;
-  let entry: kdbx.KdbxEntry;
+  let database: kdbxweb.Kdbx;
+  let entry: kdbxweb.KdbxEntry;
   const record = createTestRecord();
 
   beforeEach(async () => {
@@ -91,15 +91,17 @@ describe('entry-restore.component', () => {
     it('disables its own trigger while the restore is in flight, then re-enables it', async () => {
       const user = userEvent.setup();
       let resolveRestore: (payload: {
-        nextDatabase: kdbx.Kdbx;
+        nextDatabase: kdbxweb.Kdbx;
         nextEntryUuid: null;
         nextRecord: typeof record;
       }) => void = () => {};
-      const restorePromise = new Promise<{ nextDatabase: kdbx.Kdbx; nextEntryUuid: null; nextRecord: typeof record }>(
-        (resolve) => {
-          resolveRestore = resolve;
-        },
-      );
+      const restorePromise = new Promise<{
+        nextDatabase: kdbxweb.Kdbx;
+        nextEntryUuid: null;
+        nextRecord: typeof record;
+      }>((resolve) => {
+        resolveRestore = resolve;
+      });
       vi.spyOn(workspaceService, 'restoreEntry').mockReturnValue(restorePromise);
 
       render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />);

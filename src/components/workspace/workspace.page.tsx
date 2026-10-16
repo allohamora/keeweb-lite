@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { type UnlockSession } from '@/services/session.service';
 import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
@@ -23,7 +23,7 @@ type WorkspacePageProps = {
 
 export const WorkspacePage = ({ session: { database, record, version }, setSession }: WorkspacePageProps) => {
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
-  const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
+  const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbxweb.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useMedia('(max-width: 768px)');
   const { guardNavigation } = useSafeNet();
@@ -42,7 +42,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
-  const handleSelectEntry = (uuid: kdbx.KdbxUuid) => {
+  const handleSelectEntry = (uuid: kdbxweb.KdbxUuid) => {
     guardNavigation(() => setSelectedEntryUuid(uuid));
   };
 
@@ -61,8 +61,8 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     nextEntryUuid,
     nextRecord,
   }: {
-    nextDatabase: kdbx.Kdbx;
-    nextEntryUuid?: kdbx.KdbxUuid | null;
+    nextDatabase: kdbxweb.Kdbx;
+    nextEntryUuid?: kdbxweb.KdbxUuid | null;
     nextRecord: FileRecord;
   }) => {
     setSession((previousSession) => {

@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
@@ -7,10 +7,10 @@ import { createTestDatabase } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 
 describe('menu-pane.component', () => {
-  let database: kdbx.Kdbx;
-  let parent: kdbx.KdbxGroup;
-  let child: kdbx.KdbxGroup;
-  let grandchild: kdbx.KdbxGroup;
+  let database: kdbxweb.Kdbx;
+  let parent: kdbxweb.KdbxGroup;
+  let child: kdbxweb.KdbxGroup;
+  let grandchild: kdbxweb.KdbxGroup;
 
   beforeEach(async () => {
     database = await createTestDatabase();

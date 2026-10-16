@@ -1,10 +1,10 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { getEntryValues, type EntryUpdateValues } from '@/services/workspace.service';
 
 type EntryHistoryProps = {
-  history: kdbx.KdbxEntry[];
+  history: kdbxweb.KdbxEntry[];
   onApply: (values: EntryUpdateValues) => void;
 };
 

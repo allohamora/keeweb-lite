@@ -1,4 +1,4 @@
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { useState } from 'react';
 import { useDebounce } from 'react-use';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -30,10 +30,10 @@ import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type EntryListProps = {
   className?: string;
-  database: kdbx.Kdbx;
+  database: kdbxweb.Kdbx;
   selectFilter: SelectFilter;
-  selectedEntryUuid: kdbx.KdbxUuid | null;
-  onSelectEntry: (uuid: kdbx.KdbxUuid) => void;
+  selectedEntryUuid: kdbxweb.KdbxUuid | null;
+  onSelectEntry: (uuid: kdbxweb.KdbxUuid) => void;
   onCreateEntry: () => void;
   showMenuButton: boolean;
   onMenuOpen: () => void;

@@ -1,6 +1,6 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
-import type kdbx from '@/lib/kdbx.lib';
+import type kdbxweb from '@/lib/kdbxweb.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import type { SelectFilter } from '@/services/workspace.service';
@@ -22,16 +22,18 @@ vi.mock('@/components/workspace/entry-list.component', () => ({
     onCreateEntry,
     selectedEntryUuid,
   }: {
-    onSelectEntry: (uuid: kdbx.KdbxUuid) => void;
+    onSelectEntry: (uuid: kdbxweb.KdbxUuid) => void;
     onCreateEntry: () => void;
-    selectedEntryUuid: kdbx.KdbxUuid | null;
+    selectedEntryUuid: kdbxweb.KdbxUuid | null;
   }) => {
     const { isMutating } = useEntryMutation();
 
     return (
       <div>
         <span data-testid="selected-entry-uuid">{selectedEntryUuid?.toString() ?? 'none'}</span>
-        <button onClick={() => onSelectEntry({ toString: () => 'entry-1' } as kdbx.KdbxUuid)}>Stub select entry</button>
+        <button onClick={() => onSelectEntry({ toString: () => 'entry-1' } as kdbxweb.KdbxUuid)}>
+          Stub select entry
+        </button>
         <button disabled={isMutating} onClick={onCreateEntry}>
           Stub create entry
         </button>
@@ -61,7 +63,7 @@ vi.mock('@/components/workspace/workspace-controls.component', () => ({
 const record = createTestRecord();
 
 describe('workspace.page', () => {
-  let database: kdbx.Kdbx;
+  let database: kdbxweb.Kdbx;
 
   beforeEach(async () => {
     database = await createTestDatabase();
@@ -164,13 +166,13 @@ describe('workspace.page', () => {
     it('disables create entry while a create is pending, and re-enables it once it settles', async () => {
       const user = userEvent.setup();
       let resolveCreate: (payload: {
-        nextDatabase: kdbx.Kdbx;
-        nextEntryUuid: kdbx.KdbxUuid;
+        nextDatabase: kdbxweb.Kdbx;
+        nextEntryUuid: kdbxweb.KdbxUuid;
         nextRecord: typeof record;
       }) => void = () => {};
       const createPromise = new Promise<{
-        nextDatabase: kdbx.Kdbx;
-        nextEntryUuid: kdbx.KdbxUuid;
+        nextDatabase: kdbxweb.Kdbx;
+        nextEntryUuid: kdbxweb.KdbxUuid;
         nextRecord: typeof record;
       }>((resolve) => {
         resolveCreate = resolve;
@@ -184,7 +186,7 @@ describe('workspace.page', () => {
 
       resolveCreate({
         nextDatabase: database,
-        nextEntryUuid: { toString: () => 'entry-1' } as kdbx.KdbxUuid,
+        nextEntryUuid: { toString: () => 'entry-1' } as kdbxweb.KdbxUuid,
         nextRecord: record,
       });
       await waitFor(() => expect(screen.getByRole('button', { name: 'Stub create entry' })).toBeEnabled());
