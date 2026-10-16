@@ -5,7 +5,7 @@ import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
-import { createDemoSession, syncForSession, unlockForSession } from '@/services/session.service';
+import { createDemoSession, syncSession, unlockSession } from '@/services/session.service';
 import { demoFile } from '../utils/demo-file.utils';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 
@@ -38,7 +38,7 @@ describe('session.service', () => {
     await auth.clearAccessToken();
   });
 
-  describe('unlockForSession', () => {
+  describe('unlockSession', () => {
     it('returns session data with record metadata', async () => {
       const { encryptedBytes, password } = await createDatabase();
       const record = await createRecord({
@@ -47,7 +47,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const result = await unlockForSession({ password, record });
+      const result = await unlockSession({ password, record });
 
       expect(result.record.id).toBe('test-record');
       expect(result.record.kdbx.name).toBe('vault.kdbx');
@@ -64,7 +64,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const result = await unlockForSession({ password, record });
+      const result = await unlockSession({ password, record });
 
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'test-record');
@@ -79,7 +79,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      await expect(unlockForSession({ password: 'wrong-password', record })).rejects.toThrow();
+      await expect(unlockSession({ password: 'wrong-password', record })).rejects.toThrow();
     });
 
     it('returns a usable database with the correct entries', async () => {
@@ -97,7 +97,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const result = await unlockForSession({ password: 'test-password', record });
+      const result = await unlockSession({ password: 'test-password', record });
 
       const testGroup = result.database.getDefaultGroup().groups.find((storedGroup) => storedGroup.name === 'My Group');
       expect(testGroup).toBeDefined();
@@ -118,7 +118,7 @@ describe('session.service', () => {
         key: keyFileHashBase64 ? { hash: keyFileHashBase64, name: 'key.keyx' } : undefined,
       });
 
-      const result = await unlockForSession({ password, record });
+      const result = await unlockSession({ password, record });
 
       expect(result.database).toBeDefined();
       expect(result.record.id).toBe('test-record');
@@ -138,7 +138,7 @@ describe('session.service', () => {
     });
   });
 
-  describe('syncForSession', () => {
+  describe('syncSession', () => {
     const createSyncableDatabase = async (password = 'sync-test-password') => {
       const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password));
       await credentials.ready;
@@ -156,7 +156,7 @@ describe('session.service', () => {
         kdbx: { encryptedBytes, name: 'vault.kdbx' },
       });
 
-      const result = await syncForSession({ database, record });
+      const result = await syncSession({ database, record });
       const records = await getRecords();
 
       expect(result.database).toBe(database);
@@ -176,7 +176,7 @@ describe('session.service', () => {
 
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
 
-      const result = await syncForSession({ database, record });
+      const result = await syncSession({ database, record });
 
       expect(result.database).not.toBe(database);
       expect(result.record.id).toBe(record.id);
@@ -194,7 +194,7 @@ describe('session.service', () => {
 
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
 
-      const result = await syncForSession({ database, record });
+      const result = await syncSession({ database, record });
 
       const records = await getRecords();
       const updated = records.find(({ id }) => id === 'gd-record');
@@ -214,7 +214,7 @@ describe('session.service', () => {
 
       mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
 
-      await expect(syncForSession({ database, record })).rejects.toThrow();
+      await expect(syncSession({ database, record })).rejects.toThrow();
     });
 
     it('syncs a key-file-protected Google Drive record successfully', async () => {
@@ -237,7 +237,7 @@ describe('session.service', () => {
 
       mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
 
-      const result = await syncForSession({ database, record });
+      const result = await syncSession({ database, record });
 
       expect(result.database).toBeDefined();
       expect(result.record.id).toBe('gd-keyfile-record');
@@ -311,8 +311,8 @@ describe('session.service', () => {
       );
 
       const [, lastResult] = await Promise.all([
-        syncForSession({ database: dbWithAUpdated, record }),
-        syncForSession({ database: dbWithBUpdated, record }),
+        syncSession({ database: dbWithAUpdated, record }),
+        syncSession({ database: dbWithBUpdated, record }),
       ]);
 
       const entries = lastResult.database.getDefaultGroup().entries;

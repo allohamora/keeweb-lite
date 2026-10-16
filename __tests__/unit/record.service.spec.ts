@@ -9,12 +9,12 @@ import { clearRecords, createRecord } from '@/repositories/record.repository';
 import {
   createGoogleDriveRecord,
   createLocalRecord,
-  getRecords,
+  getRecordsByLastOpened,
   importGoogleDriveRecord,
   importLocalRecord,
 } from '@/services/record.service';
 import { unlockKdbx } from '@/services/kdbx.service';
-import { unlockForSession } from '@/services/session.service';
+import { unlockSession } from '@/services/session.service';
 
 type DatabaseRecordInput = {
   name: string;
@@ -107,13 +107,13 @@ describe('record.service', () => {
     return record;
   };
 
-  describe('getRecords', () => {
+  describe('getRecordsByLastOpened', () => {
     afterEach(async () => {
       await clearRecords();
     });
 
     it('returns an empty array when there are no records', async () => {
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('sorts records by lastOpenedAt in descending order', async () => {
@@ -130,7 +130,7 @@ describe('record.service', () => {
         lastOpenedAt: '2026-02-01T00:00:00.000Z',
       });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
 
       expect(records[0].id).toBe('newer-record');
       expect(records[1].id).toBe('older-record');
@@ -149,7 +149,7 @@ describe('record.service', () => {
         lastOpenedAt: '2026-01-01T00:00:00.000Z',
       });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
 
       expect(records[0].id).toBe('with-timestamp-record');
       expect(records[1].id).toBe('no-timestamp-record');
@@ -173,7 +173,7 @@ describe('record.service', () => {
         kdbx: { encryptedBytes: new Uint8Array([7, 8, 9]), name: 'vault-3.kdbx' },
       });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
 
       expect(records[0].id).toBe('with-timestamp');
       const tailIds = records.slice(1).map(({ id }) => id);
@@ -195,7 +195,7 @@ describe('record.service', () => {
 
       await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
       expect(records[0].type).toBe('local');
       expect(records[0].kdbx.name).toBe('vault.kdbx');
@@ -207,7 +207,7 @@ describe('record.service', () => {
 
       await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeUndefined();
     });
 
@@ -220,7 +220,7 @@ describe('record.service', () => {
         keyFile: createFileList(keyFile),
       });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeDefined();
       expect(records[0].key?.name).toBe('vault.keyx');
       expect(typeof records[0].key?.hash).toBe('string');
@@ -231,7 +231,7 @@ describe('record.service', () => {
 
       await importLocalRecord({ databaseFile: createFileList(dbFile) });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].lastOpenedAt).toBeUndefined();
     });
 
@@ -242,7 +242,7 @@ describe('record.service', () => {
       await importLocalRecord({ databaseFile: createFileList(dbFile1) });
       await importLocalRecord({ databaseFile: createFileList(dbFile2) });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(2);
       expect(records[0].id).not.toBe(records[1].id);
     });
@@ -271,7 +271,7 @@ describe('record.service', () => {
       const duplicate = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
       await importLocalRecord({ databaseFile: createFileList(duplicate) }).catch(() => undefined);
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
     });
 
@@ -287,7 +287,7 @@ describe('record.service', () => {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
       expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
     });
 
@@ -298,7 +298,7 @@ describe('record.service', () => {
       await importLocalRecord({ databaseFile: createFileList(dbFile1) });
       await importLocalRecord({ databaseFile: createFileList(dbFile2) });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(2);
     });
 
@@ -313,7 +313,7 @@ describe('record.service', () => {
       const dbFile = new File([new Uint8Array([4, 5, 6])], 'vault.kdbx');
       await expect(importLocalRecord({ databaseFile: createFileList(dbFile) })).resolves.toBeUndefined();
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(2);
     });
 
@@ -325,8 +325,8 @@ describe('record.service', () => {
 
       await importLocalRecord({ databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')) });
 
-      const [record] = await getRecords();
-      const { database } = await unlockForSession({ password, record });
+      const [record] = await getRecordsByLastOpened();
+      const { database } = await unlockSession({ password, record });
 
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');
@@ -347,8 +347,8 @@ describe('record.service', () => {
         keyFile: createFileList(new File([new Uint8Array(keyFileBytes)], 'vault.keyx')),
       });
 
-      const [record] = await getRecords();
-      const { database } = await unlockForSession({ password, record });
+      const [record] = await getRecordsByLastOpened();
+      const { database } = await unlockSession({ password, record });
 
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');
@@ -364,7 +364,7 @@ describe('record.service', () => {
     it('creates a local record and appends .kdbx when the name does not already end with it', async () => {
       await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
       expect(records[0].type).toBe('local');
       expect(records[0].kdbx.name).toBe('My Vault.kdbx');
@@ -373,14 +373,14 @@ describe('record.service', () => {
     it('keeps the name unchanged when it already ends with .kdbx', async () => {
       await createLocalRecord({ databaseName: 'My Vault.kdbx', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].kdbx.name).toBe('My Vault.kdbx');
     });
 
     it('trims surrounding whitespace from the database name', async () => {
       await createLocalRecord({ databaseName: '  My Vault  ', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].kdbx.name).toBe('My Vault.kdbx');
     });
 
@@ -389,7 +389,7 @@ describe('record.service', () => {
         'Database name is required.',
       );
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('throws when the database name is whitespace-only', async () => {
@@ -397,7 +397,7 @@ describe('record.service', () => {
         'Database name is required.',
       );
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('throws when the password is empty', async () => {
@@ -405,7 +405,7 @@ describe('record.service', () => {
         'Master password is required.',
       );
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('throws when a local record with the resulting name already exists', async () => {
@@ -421,7 +421,7 @@ describe('record.service', () => {
 
       await createLocalRecord({ databaseName: 'My Vault', password: 'another-password' }).catch(() => undefined);
 
-      expect(await getRecords()).toHaveLength(1);
+      expect(await getRecordsByLastOpened()).toHaveLength(1);
     });
 
     it('rejects one of two concurrent creates with the same name and persists only one record', async () => {
@@ -433,7 +433,7 @@ describe('record.service', () => {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
       expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
     });
 
@@ -449,7 +449,7 @@ describe('record.service', () => {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
       expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
     });
 
@@ -465,14 +465,14 @@ describe('record.service', () => {
         createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
       ).resolves.toBeDefined();
 
-      expect(await getRecords()).toHaveLength(2);
+      expect(await getRecordsByLastOpened()).toHaveLength(2);
     });
 
     it('generates a unique id per record and does not set lastOpenedAt', async () => {
       await createLocalRecord({ databaseName: 'Vault One', password: 'test-password-123' });
       await createLocalRecord({ databaseName: 'Vault Two', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(2);
       expect(records[0].id).not.toBe(records[1].id);
       expect(records[0].lastOpenedAt).toBeUndefined();
@@ -482,7 +482,7 @@ describe('record.service', () => {
     it('stores no key and returns no keyFileBytes when useKeyFile is not set', async () => {
       const result = await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeUndefined();
       expect(result.keyFileBytes).toBeUndefined();
       expect(result.keyFileName).toBeUndefined();
@@ -495,7 +495,7 @@ describe('record.service', () => {
         useKeyFile: true,
       });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeDefined();
       expect(records[0].key?.name).toBe('My Vault.keyx');
       expect(typeof records[0].key?.hash).toBe('string');
@@ -506,7 +506,7 @@ describe('record.service', () => {
     it('creates a database that unlocks with the given password and starts with an empty default group', async () => {
       await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const [record] = await getRecords();
+      const [record] = await getRecordsByLastOpened();
       const unlockedDatabase = await unlockKdbx({
         encryptedBytes: record.kdbx.encryptedBytes,
         password: 'test-password-123',
@@ -524,7 +524,7 @@ describe('record.service', () => {
       });
       expect(keyFileBytes).toBeDefined();
 
-      const [record] = await getRecords();
+      const [record] = await getRecordsByLastOpened();
       const unlockedDatabase = await unlockKdbx({
         encryptedBytes: record.kdbx.encryptedBytes,
         keyFileHashBase64: record.key?.hash,
@@ -537,7 +537,7 @@ describe('record.service', () => {
     it('rejects unlocking a created database with the wrong password', async () => {
       await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const [record] = await getRecords();
+      const [record] = await getRecordsByLastOpened();
 
       await expect(
         unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password: 'wrong-password' }),
@@ -547,7 +547,7 @@ describe('record.service', () => {
     it('rejects unlocking a key-protected created database without the key', async () => {
       await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123', useKeyFile: true });
 
-      const [record] = await getRecords();
+      const [record] = await getRecordsByLastOpened();
 
       await expect(
         unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password: 'test-password-123' }),
@@ -566,7 +566,7 @@ describe('record.service', () => {
 
       await createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
       expect(records[0].type).toBe('google-drive');
       expect(records[0].kdbx.name).toBe('My Vault.kdbx');
@@ -577,7 +577,7 @@ describe('record.service', () => {
 
       await createGoogleDriveRecord({ databaseName: 'My Vault.kdbx', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].kdbx.name).toBe('My Vault.kdbx');
     });
 
@@ -586,7 +586,7 @@ describe('record.service', () => {
 
       await createGoogleDriveRecord({ databaseName: '  My Vault  ', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].kdbx.name).toBe('My Vault.kdbx');
     });
 
@@ -595,7 +595,7 @@ describe('record.service', () => {
         'Database name is required.',
       );
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('throws when the database name is whitespace-only', async () => {
@@ -603,7 +603,7 @@ describe('record.service', () => {
         'Database name is required.',
       );
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('throws when the password is empty', async () => {
@@ -611,7 +611,7 @@ describe('record.service', () => {
         'Master password is required.',
       );
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('sets source.id to the id returned by the Drive API', async () => {
@@ -619,7 +619,7 @@ describe('record.service', () => {
 
       await createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       const record = records[0];
       expect(record.type).toBe('google-drive');
       if (record.type === 'google-drive') {
@@ -639,7 +639,7 @@ describe('record.service', () => {
 
       await createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       const context = resolver.mock.calls[0]?.[0];
       expect(context?.fileBytes).toEqual(records[0].kdbx.encryptedBytes);
     });
@@ -653,7 +653,7 @@ describe('record.service', () => {
         createGoogleDriveRecord({ databaseName: 'My Vault', password: 'another-password' }),
       ).resolves.toBeDefined();
 
-      expect(await getRecords()).toHaveLength(2);
+      expect(await getRecordsByLastOpened()).toHaveLength(2);
     });
 
     it('persists both records when creating two google-drive records concurrently', async () => {
@@ -673,7 +673,7 @@ describe('record.service', () => {
 
       expect(results.every((result) => result.status === 'fulfilled')).toBe(true);
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(2);
       expect(records[0].id).not.toBe(records[1].id);
     });
@@ -685,7 +685,7 @@ describe('record.service', () => {
         createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
       ).rejects.toThrow();
 
-      expect(await getRecords()).toEqual([]);
+      expect(await getRecordsByLastOpened()).toEqual([]);
     });
 
     it('throws an error naming the uploaded file and pointing to Import when the local write fails after Drive upload succeeds', async () => {
@@ -706,7 +706,7 @@ describe('record.service', () => {
       mockServer.addHandlers(googleDriveApi.createFile.ok({ file: { id: 'drive-file-id-2' } }));
       await createGoogleDriveRecord({ databaseName: 'Vault Two', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(2);
       expect(records[0].id).not.toBe(records[1].id);
       expect(records[0].lastOpenedAt).toBeUndefined();
@@ -718,7 +718,7 @@ describe('record.service', () => {
 
       const result = await createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeUndefined();
       expect(result.keyFileBytes).toBeUndefined();
       expect(result.keyFileName).toBeUndefined();
@@ -733,7 +733,7 @@ describe('record.service', () => {
         useKeyFile: true,
       });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeDefined();
       expect(records[0].key?.name).toBe('My Vault.keyx');
       expect(typeof records[0].key?.hash).toBe('string');
@@ -746,7 +746,7 @@ describe('record.service', () => {
 
       await createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
-      const [record] = await getRecords();
+      const [record] = await getRecordsByLastOpened();
       const unlockedDatabase = await unlockKdbx({
         encryptedBytes: record.kdbx.encryptedBytes,
         password: 'test-password-123',
@@ -766,7 +766,7 @@ describe('record.service', () => {
       });
       expect(keyFileBytes).toBeDefined();
 
-      const [record] = await getRecords();
+      const [record] = await getRecordsByLastOpened();
       const unlockedDatabase = await unlockKdbx({
         encryptedBytes: record.kdbx.encryptedBytes,
         keyFileHashBase64: record.key?.hash,
@@ -794,7 +794,7 @@ describe('record.service', () => {
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
       expect(records[0].type).toBe('google-drive');
       expect(records[0].kdbx.name).toBe(testFileName);
@@ -806,7 +806,7 @@ describe('record.service', () => {
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].type).toBe('google-drive');
       const record = records[0];
       if (record.type === 'google-drive') {
@@ -819,7 +819,7 @@ describe('record.service', () => {
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeUndefined();
     });
 
@@ -833,7 +833,7 @@ describe('record.service', () => {
         keyFile: createFileList(keyFile),
       });
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records[0].key).toBeDefined();
       expect(records[0].key?.name).toBe('vault.keyx');
       expect(typeof records[0].key?.hash).toBe('string');
@@ -862,7 +862,7 @@ describe('record.service', () => {
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }).catch(() => undefined);
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
     });
 
@@ -877,7 +877,7 @@ describe('record.service', () => {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
       expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
 
-      const records = await getRecords();
+      const records = await getRecordsByLastOpened();
       expect(records).toHaveLength(1);
     });
   });

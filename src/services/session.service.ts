@@ -17,9 +17,9 @@ type SyncSessionResult = {
   record: FileRecord;
 };
 
-const syncForSessionLock = new Lock('session.service.syncForSession');
+const syncSessionLock = new Lock('session.service.syncSession');
 
-export const syncForSession = async ({
+export const syncSession = async ({
   record,
   database,
 }: {
@@ -30,7 +30,7 @@ export const syncForSession = async ({
     return { database, record };
   }
 
-  return syncForSessionLock.runInLock(async () => {
+  return syncSessionLock.runInLock(async () => {
     const nextDatabase = await cloneDatabase(database);
 
     const remoteBytes = await getFile(record.source.id);
@@ -48,7 +48,7 @@ export const syncForSession = async ({
   });
 };
 
-export const unlockForSession = async ({
+export const unlockSession = async ({
   record,
   password,
 }: {

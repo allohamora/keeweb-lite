@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { unlockForSession, type UnlockSession } from '@/services/session.service';
+import { unlockSession, type UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getRecords } from '@/services/record.service';
+import { getRecordsByLastOpened } from '@/services/record.service';
 import { toast } from 'sonner';
 import { RecordRemove } from './record-remove.component';
 
@@ -27,7 +27,7 @@ export type UnlockFormProps = {
   recordsReloadToken: number;
   runUnlockAction: (fn: () => Promise<void>) => Promise<void>;
   setSession: (session: UnlockSession) => void;
-  update: () => void;
+  onRecordRemoved: () => void;
 };
 
 export const UnlockForm = ({
@@ -35,7 +35,7 @@ export const UnlockForm = ({
   recordsReloadToken,
   runUnlockAction,
   setSession,
-  update,
+  onRecordRemoved,
 }: UnlockFormProps) => {
   const {
     control,
@@ -57,7 +57,7 @@ export const UnlockForm = ({
     error: recordsLoadError,
     loading: isLoadingRecords,
     value: records = [],
-  } = useAsync(async () => await getRecords(), [recordsReloadToken]);
+  } = useAsync(async () => await getRecordsByLastOpened(), [recordsReloadToken]);
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -69,7 +69,7 @@ export const UnlockForm = ({
           throw new Error('Selected record not found.');
         }
 
-        const session = await unlockForSession({
+        const session = await unlockSession({
           record,
           password,
         });
@@ -87,7 +87,7 @@ export const UnlockForm = ({
   });
 
   const handleRemove = () => {
-    update();
+    onRecordRemoved();
     setShowPassword(false);
     reset();
   };

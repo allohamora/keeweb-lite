@@ -1,6 +1,6 @@
 import { useMountedState } from 'react-use';
 import { useEffect, useEffectEvent, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { syncForSession, type UnlockSession } from '@/services/session.service';
+import { syncSession, type UnlockSession } from '@/services/session.service';
 
 type UseSyncProps = UnlockSession & {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
@@ -17,7 +17,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   const [state, set] = useState<State>({ loading: false });
 
   const sync = async () => {
-    const syncedSession = await syncForSession({ record, database });
+    const syncedSession = await syncSession({ record, database });
 
     setSession((previousSession) => {
       if (!previousSession) {

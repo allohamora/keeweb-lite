@@ -6,16 +6,16 @@ import { getEntryColor } from '@/services/color.service';
 
 export type SelectFilter = kdbxweb.KdbxUuid | { tag: string } | { color: string | null } | null;
 
-export const getAllGroups = (groups: kdbxweb.KdbxGroup[]): kdbxweb.KdbxGroup[] => {
+export const flattenGroups = (groups: kdbxweb.KdbxGroup[]): kdbxweb.KdbxGroup[] => {
   return groups.flatMap((group) => [...group.allGroups()]);
 };
 
 type RecycleAwareDatabase = Pick<kdbxweb.Kdbx, 'groups'> & { meta: Pick<kdbxweb.KdbxMeta, 'recycleBinUuid'> };
 
-const normalize = (tag: string): string => tag.trim().toLocaleLowerCase();
+const normalizeText = (tag: string): string => tag.trim().toLocaleLowerCase();
 
 export const getTags = ({ tags }: Pick<kdbxweb.KdbxEntry, 'tags'>): string[] => {
-  return tags.map((tag) => normalize(tag));
+  return tags.map((tag) => normalizeText(tag));
 };
 
 export const getFieldText = (field?: string | kdbxweb.ProtectedValue): string => {
@@ -36,7 +36,7 @@ export const findEntryByUuid = (
   database: Pick<kdbxweb.Kdbx, 'groups'>,
   uuid: kdbxweb.KdbxUuid | string,
 ): kdbxweb.KdbxEntry | null => {
-  for (const group of getAllGroups(database.groups)) {
+  for (const group of flattenGroups(database.groups)) {
     for (const entry of group.entries) {
       if (entry.uuid.equals(uuid)) return entry;
     }
@@ -49,7 +49,7 @@ export const findGroupByUuid = (
   database: Pick<kdbxweb.Kdbx, 'groups'>,
   uuid: kdbxweb.KdbxUuid | string,
 ): kdbxweb.KdbxGroup | null => {
-  for (const group of getAllGroups(database.groups)) {
+  for (const group of flattenGroups(database.groups)) {
     if (group.uuid.equals(uuid)) return group;
   }
 
@@ -59,7 +59,7 @@ export const findGroupByUuid = (
 export type GroupTreeItem = { group: kdbxweb.KdbxGroup; depth: number };
 type GroupTree = { items: GroupTreeItem[]; recycleBinGroup: kdbxweb.KdbxGroup | null };
 
-// preserves nesting depth, unlike getAllGroups, and excludes the recycle bin group's entire subtree
+// preserves nesting depth, unlike flattenGroups, and excludes the recycle bin group's entire subtree
 export const getGroupTree = (database: RecycleAwareDatabase): GroupTree => {
   const recycleBinUuid = database.meta.recycleBinUuid;
 
@@ -84,14 +84,14 @@ export const getGroupTree = (database: RecycleAwareDatabase): GroupTree => {
   return buildTree(database.groups, 0);
 };
 
-export const filterGroups = (database: RecycleAwareDatabase) => {
+export const getVisibleGroups = (database: RecycleAwareDatabase) => {
   const { items, recycleBinGroup } = getGroupTree(database);
 
   return { groups: items.map((item) => item.group), recycleBinGroup };
 };
 
 const getVisibleEntries = (database: RecycleAwareDatabase): kdbxweb.KdbxEntry[] => {
-  const { groups } = filterGroups(database);
+  const { groups } = getVisibleGroups(database);
 
   return groups.flatMap((group) => group.entries);
 };
@@ -121,19 +121,19 @@ export const getEntriesForList = ({
 
   if (!isTagSelect(selectFilter)) return entries;
 
-  const normalizedTag = normalize(selectFilter.tag);
+  const normalizedTag = normalizeText(selectFilter.tag);
   if (!normalizedTag) return entries;
 
-  return entries.filter((entry) => entry.tags.some((tag) => normalize(tag) === normalizedTag));
+  return entries.filter((entry) => entry.tags.some((tag) => normalizeText(tag) === normalizedTag));
 };
 
 export const filterEntriesBySearch = (entries: kdbxweb.KdbxEntry[], query: string): kdbxweb.KdbxEntry[] => {
-  const normalizedQuery = normalize(query);
+  const normalizedQuery = normalizeText(query);
   if (!normalizedQuery) return entries;
 
   return entries.filter((entry) => {
     const title = getFieldText(entry.fields.get('Title'));
-    return normalize(title).includes(normalizedQuery);
+    return normalizeText(title).includes(normalizedQuery);
   });
 };
 
@@ -189,7 +189,7 @@ export const getEntryValues = (entry: kdbxweb.KdbxEntry): EntryUpdateValues => (
   color: getEntryColor(entry),
 });
 
-export const updateEntry = (entry: kdbxweb.KdbxEntry, values: EntryUpdateValues): void => {
+export const applyEntryValues = (entry: kdbxweb.KdbxEntry, values: EntryUpdateValues): void => {
   entry.pushHistory();
 
   entry.fields.set('Title', values.title);
@@ -244,7 +244,7 @@ export const saveEntry = async ({
     database,
     record,
     entryUuid,
-    mutate: (_, entry) => updateEntry(entry, values),
+    mutate: (_, entry) => applyEntryValues(entry, values),
   });
 
   return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
@@ -285,7 +285,7 @@ export const isEntryExpired = (entry: kdbxweb.KdbxEntry): boolean => {
 };
 
 export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbxweb.KdbxEntry): boolean => {
-  const { recycleBinGroup } = filterGroups(database);
+  const { recycleBinGroup } = getVisibleGroups(database);
   if (!recycleBinGroup) return false;
 
   return [...recycleBinGroup.allGroups()].some((group) => group.entries.some((item) => item.uuid.equals(entry.uuid)));

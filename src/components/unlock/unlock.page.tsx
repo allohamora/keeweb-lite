@@ -16,7 +16,7 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
   const [recordsReloadToken, setRecordsReloadToken] = useState(0);
   const [isUnlocking, runUnlockAction] = useAsyncLock();
 
-  const update = useCallback(() => {
+  const reloadRecords = useCallback(() => {
     setRecordsReloadToken((currentValue) => currentValue + 1);
   }, []);
 
@@ -47,8 +47,8 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
                 >
                   Demo
                 </Button>
-                <ImportMenu onRecordImported={update} />
-                <CreateMenu onRecordCreated={update} />
+                <ImportMenu onRecordImported={reloadRecords} />
+                <CreateMenu onRecordCreated={reloadRecords} />
               </div>
             </div>
 
@@ -57,7 +57,7 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
               recordsReloadToken={recordsReloadToken}
               runUnlockAction={runUnlockAction}
               setSession={setSession}
-              update={update}
+              onRecordRemoved={reloadRecords}
             />
           </div>
         </div>

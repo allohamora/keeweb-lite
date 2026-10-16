@@ -35,7 +35,7 @@ describe('unlock.page', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    vi.spyOn(recordService, 'getRecords').mockResolvedValue([
+    vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([
       { id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never,
     ]);
 
@@ -73,12 +73,12 @@ describe('unlock.page', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    vi.spyOn(recordService, 'getRecords').mockResolvedValue([
+    vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([
       { id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never,
     ]);
 
     let resolveUnlock!: (session: sessionService.UnlockSession) => void;
-    vi.spyOn(sessionService, 'unlockForSession').mockReturnValue(
+    vi.spyOn(sessionService, 'unlockSession').mockReturnValue(
       new Promise((resolve) => {
         resolveUnlock = resolve;
       }),

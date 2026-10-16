@@ -1,10 +1,6 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
 import { createFile, getFile } from '@/repositories/google-drive.repository';
-import {
-  createRecord,
-  getRecords as getRepositoryRecords,
-  removeRecord as removeRepositoryRecord,
-} from '@/repositories/record.repository';
+import { createRecord, getRecords, removeRecord as removeRepositoryRecord } from '@/repositories/record.repository';
 import { createEmptyKdbx } from '@/services/kdbx.service';
 import { asUint8Array } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
@@ -24,8 +20,8 @@ const sortRecordsByLastOpened = <RecordType extends { lastOpenedAt?: string }>(r
     .map(({ record }) => record);
 };
 
-export const getRecords = async () => {
-  const records = await getRepositoryRecords();
+export const getRecordsByLastOpened = async () => {
+  const records = await getRecords();
 
   return sortRecordsByLastOpened(records);
 };
@@ -86,7 +82,7 @@ export const importGoogleDriveRecord = async ({
   keyFile?: FileList;
 }) => {
   return createImportLock.runInLock(async () => {
-    const records = await getRepositoryRecords();
+    const records = await getRecords();
     if (records.some((record) => record.type === 'google-drive' && record.source.id === fileId)) {
       throw new Error('A record for this file already exists.');
     }
@@ -107,7 +103,7 @@ export const importGoogleDriveRecord = async ({
 export const importLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {
   return createImportLock.runInLock(async () => {
     const database = await toKdbx(databaseFile);
-    const records = await getRepositoryRecords();
+    const records = await getRecords();
     if (records.some((record) => record.type === 'local' && record.kdbx.name === database.name)) {
       throw new Error(`A record named "${database.name}" already exists.`);
     }
@@ -135,7 +131,7 @@ export const createLocalRecord = async ({
   return createImportLock.runInLock(async () => {
     const { name, kdbxFileName } = validateNewDatabaseInput(databaseName, password);
 
-    const records = await getRepositoryRecords();
+    const records = await getRecords();
     if (records.some((record) => record.type === 'local' && record.kdbx.name === kdbxFileName)) {
       throw new Error(`A record named "${kdbxFileName}" already exists.`);
     }

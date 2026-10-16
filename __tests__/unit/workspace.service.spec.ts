@@ -5,11 +5,11 @@ import { expectPersisted } from '../fixtures/kdbx.fixture';
 import {
   createEntry,
   filterEntriesBySearch,
-  filterGroups,
+  getVisibleGroups,
   findEntryByUuid,
   findGroupByUuid,
   getAllColors,
-  getAllGroups,
+  flattenGroups,
   getGroupTree,
   isColorSelect,
   isGroupSelect,
@@ -26,7 +26,7 @@ import {
   restoreEntry,
   saveEntry,
   sortEntries,
-  updateEntry,
+  applyEntryValues,
 } from '@/services/workspace.service';
 
 describe('workspace.service', () => {
@@ -41,7 +41,7 @@ describe('workspace.service', () => {
     return kdbxweb.Kdbx.create(credentials, 'Workspace Test DB');
   };
 
-  describe('getAllGroups', () => {
+  describe('flattenGroups', () => {
     it('returns groups with nested descendants in depth-first order', async () => {
       const database = await createDatabase();
       const root = database.getDefaultGroup();
@@ -49,17 +49,17 @@ describe('workspace.service', () => {
       const nested = database.createGroup(primary, 'Nested');
       const secondary = database.createGroup(root, 'Secondary');
 
-      const result = getAllGroups([primary, secondary]);
+      const result = flattenGroups([primary, secondary]);
 
       expect(result).toEqual([primary, nested, secondary]);
     });
 
     it('returns an empty array when no groups are provided', () => {
-      expect(getAllGroups([])).toEqual([]);
+      expect(flattenGroups([])).toEqual([]);
     });
   });
 
-  describe('filterGroups', () => {
+  describe('getVisibleGroups', () => {
     it('returns visible groups and recycle bin group when recycle bin exists', async () => {
       const database = await createDatabase();
       const root = database.getDefaultGroup();
@@ -67,7 +67,7 @@ describe('workspace.service', () => {
       const recycleBin = database.createGroup(root, 'Trash');
       const second = database.createGroup(root, 'Second');
 
-      const result = filterGroups({
+      const result = getVisibleGroups({
         groups: [first, recycleBin, second],
         meta: { recycleBinUuid: recycleBin.uuid },
       });
@@ -82,7 +82,7 @@ describe('workspace.service', () => {
       const first = database.createGroup(root, 'First');
       const second = database.createGroup(root, 'Second');
 
-      const result = filterGroups({
+      const result = getVisibleGroups({
         groups: [first, second],
         meta: { recycleBinUuid: undefined },
       });
@@ -98,7 +98,7 @@ describe('workspace.service', () => {
       const recycleBin = database.createGroup(root, 'Trash');
       const recycleBinChild = database.createGroup(recycleBin, 'Deleted Folder');
 
-      const result = filterGroups({
+      const result = getVisibleGroups({
         groups: [first, recycleBin],
         meta: { recycleBinUuid: recycleBin.uuid },
       });
@@ -854,7 +854,7 @@ describe('workspace.service', () => {
     });
   });
 
-  describe('updateEntry', () => {
+  describe('applyEntryValues', () => {
     const createEntryWithValues = async () => {
       const database = await createDatabase();
       const root = database.getDefaultGroup();
@@ -874,7 +874,7 @@ describe('workspace.service', () => {
     it('updates entry fields in place', async () => {
       const { entry } = await createEntryWithValues();
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Updated Title',
         username: 'updated-user',
         password: 'updated-password',
@@ -897,7 +897,7 @@ describe('workspace.service', () => {
     it('stores updated password as protected value text-equivalent', async () => {
       const { entry } = await createEntryWithValues();
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'new-password',
@@ -916,7 +916,7 @@ describe('workspace.service', () => {
       const { entry } = await createEntryWithValues();
       const expiryTime = new Date(2027, 5, 15, 14, 30);
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -932,11 +932,11 @@ describe('workspace.service', () => {
       expect(entry.times.expiryTime).toEqual(expiryTime);
     });
 
-    it('round-trips expiryTime through updateEntry and getEntryValues unchanged', async () => {
+    it('round-trips expiryTime through applyEntryValues and getEntryValues unchanged', async () => {
       const { entry } = await createEntryWithValues();
       const expiryTime = new Date(2027, 5, 15, 14, 30).toISOString();
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -956,7 +956,7 @@ describe('workspace.service', () => {
       entry.times.expires = true;
       entry.times.expiryTime = new Date(2027, 5, 15, 14, 30);
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -977,7 +977,7 @@ describe('workspace.service', () => {
       const initialHistoryLength = entry.history.length;
       const initialLastModTime = entry.times.lastModTime?.getTime() ?? 0;
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -1000,7 +1000,7 @@ describe('workspace.service', () => {
       const initialHistoryLength = entry.history.length;
       const initialLastModTime = entry.times.lastModTime?.getTime() ?? 0;
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -1019,7 +1019,7 @@ describe('workspace.service', () => {
     it('sets the standard icon index on the entry', async () => {
       const { entry } = await createEntryWithValues();
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -1039,7 +1039,7 @@ describe('workspace.service', () => {
       const uuid = kdbxweb.KdbxUuid.random();
       entry.customIcon = uuid;
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -1057,7 +1057,7 @@ describe('workspace.service', () => {
     it('sets the entry background color', async () => {
       const { entry } = await createEntryWithValues();
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
@@ -1076,7 +1076,7 @@ describe('workspace.service', () => {
       const { entry } = await createEntryWithValues();
       entry.bgColor = '#FF0000';
 
-      updateEntry(entry, {
+      applyEntryValues(entry, {
         title: 'Original Title',
         username: 'original-user',
         password: 'original-password',
