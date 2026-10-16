@@ -197,16 +197,14 @@ export const updateEntry = (entry: kdbxweb.KdbxEntry, values: EntryUpdateValues)
   entry.times.update();
 };
 
-export const saveEntry = async ({
-  database,
-  record,
-  entryUuid,
-  values,
-}: UpdateEntryInput): Promise<{
-  nextDatabase: kdbxweb.Kdbx;
-  nextEntryUuid: kdbxweb.KdbxUuid;
-  nextRecord: FileRecord;
-}> => {
+type MutateEntryInput = {
+  database: kdbxweb.Kdbx;
+  record: FileRecord;
+  entryUuid: string;
+  mutate: (nextDatabase: kdbxweb.Kdbx, nextEntry: kdbxweb.KdbxEntry) => void;
+};
+
+const mutateEntry = async ({ database, record, entryUuid, mutate }: MutateEntryInput) => {
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
@@ -214,9 +212,31 @@ export const saveEntry = async ({
     throw new Error('Entry not found.');
   }
 
-  updateEntry(nextEntry, values);
+  mutate(nextDatabase, nextEntry);
 
   const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
+
+  return { nextDatabase, nextEntry, nextRecord };
+};
+
+type EntryMutationResult<EntryUuid extends kdbxweb.KdbxUuid | null> = {
+  nextDatabase: kdbxweb.Kdbx;
+  nextEntryUuid: EntryUuid;
+  nextRecord: FileRecord;
+};
+
+export const saveEntry = async ({
+  database,
+  record,
+  entryUuid,
+  values,
+}: UpdateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
+  const { nextDatabase, nextEntry, nextRecord } = await mutateEntry({
+    database,
+    record,
+    entryUuid,
+    mutate: (_, entry) => updateEntry(entry, values),
+  });
 
   return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
@@ -231,11 +251,7 @@ export const createEntry = async ({
   database,
   record,
   selectFilter,
-}: CreateEntryInput): Promise<{
-  nextDatabase: kdbxweb.Kdbx;
-  nextEntryUuid: kdbxweb.KdbxUuid;
-  nextRecord: FileRecord;
-}> => {
+}: CreateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
   const nextDatabase = await cloneDatabase(database);
 
   const group = isGroupSelect(selectFilter)
@@ -276,25 +292,19 @@ export const removeEntry = async ({
   database,
   record,
   entryUuid,
-}: RemoveEntryInput): Promise<{
-  nextDatabase: kdbxweb.Kdbx;
-  nextEntryUuid: null;
-  nextRecord: FileRecord;
-}> => {
-  const nextDatabase = await cloneDatabase(database);
-  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
-
-  if (!nextEntry) {
-    throw new Error('Entry not found.');
-  }
-
-  if (isEntryInRecycleBin(nextDatabase, nextEntry)) {
-    nextDatabase.move(nextEntry, null);
-  } else {
-    nextDatabase.remove(nextEntry);
-  }
-
-  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
+}: RemoveEntryInput): Promise<EntryMutationResult<null>> => {
+  const { nextDatabase, nextRecord } = await mutateEntry({
+    database,
+    record,
+    entryUuid,
+    mutate: (nextDatabase, nextEntry) => {
+      if (isEntryInRecycleBin(nextDatabase, nextEntry)) {
+        nextDatabase.move(nextEntry, null);
+      } else {
+        nextDatabase.remove(nextEntry);
+      }
+    },
+  });
 
   return { nextDatabase, nextEntryUuid: null, nextRecord };
 };
@@ -303,21 +313,13 @@ export const restoreEntry = async ({
   database,
   record,
   entryUuid,
-}: RemoveEntryInput): Promise<{
-  nextDatabase: kdbxweb.Kdbx;
-  nextEntryUuid: null;
-  nextRecord: FileRecord;
-}> => {
-  const nextDatabase = await cloneDatabase(database);
-  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
-
-  if (!nextEntry) {
-    throw new Error('Entry not found.');
-  }
-
-  nextDatabase.move(nextEntry, nextDatabase.getDefaultGroup());
-
-  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
+}: RemoveEntryInput): Promise<EntryMutationResult<null>> => {
+  const { nextDatabase, nextRecord } = await mutateEntry({
+    database,
+    record,
+    entryUuid,
+    mutate: (nextDatabase, nextEntry) => nextDatabase.move(nextEntry, nextDatabase.getDefaultGroup()),
+  });
 
   return { nextDatabase, nextEntryUuid: null, nextRecord };
 };
