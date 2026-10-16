@@ -4,14 +4,14 @@ import { Lock } from '@/utils/lock.utils';
 describe('lock.utils.ts', () => {
   describe('runInLock', () => {
     it('returns sync callback results', async () => {
-      const lock = new Lock('keeweb-lite.test.lock.sync');
+      const lock = new Lock('lock.utils.sync');
       const result = await lock.runInLock(() => 'ok');
 
       expect(result).toBe('ok');
     });
 
     it('returns async callback results', async () => {
-      const lock = new Lock('keeweb-lite.test.lock.async');
+      const lock = new Lock('lock.utils.async');
       const result = await lock.runInLock(async () => {
         return Promise.resolve(42);
       });
@@ -20,7 +20,7 @@ describe('lock.utils.ts', () => {
     });
 
     it('propagates callback errors', async () => {
-      const lock = new Lock('keeweb-lite.test.lock.error');
+      const lock = new Lock('lock.utils.error');
       const error = new Error('callback failed');
 
       await expect(

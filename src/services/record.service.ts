@@ -6,7 +6,7 @@ import { asUint8Array } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
 
 // makes the duplicate-name/source.id check and the write atomic across concurrent calls
-const createImportLock = new Lock('keeweb-lite.record.service.create-import');
+const createImportLock = new Lock('record.service.createImport');
 
 const sortRecordsByLastOpened = <RecordType extends { lastOpenedAt?: string }>(records: RecordType[]) => {
   return records
