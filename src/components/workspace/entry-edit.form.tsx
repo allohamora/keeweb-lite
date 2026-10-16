@@ -121,8 +121,8 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
   };
 
   const handleApplyHistory = (values: EntryEditValues) => {
-    for (const [field, value] of Object.entries(values)) {
-      setValue(field as keyof EntryEditValues, value, { shouldDirty: true });
+    for (const field of entryEditSchema.keyof().options) {
+      setValue(field, values[field], { shouldDirty: true });
     }
   };
 

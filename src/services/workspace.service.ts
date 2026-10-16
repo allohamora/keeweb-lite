@@ -132,7 +132,11 @@ export const filterEntriesBySearch = (entries: kdbxweb.KdbxEntry[], query: strin
   });
 };
 
-export type SortOrder = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc';
+const SORT_ORDERS = ['name-asc', 'name-desc', 'date-asc', 'date-desc'] as const;
+
+export type SortOrder = (typeof SORT_ORDERS)[number];
+
+export const isSortOrder = (value: unknown): value is SortOrder => SORT_ORDERS.some((order) => order === value);
 
 export const sortEntries = (entries: kdbxweb.KdbxEntry[], sortOrder: SortOrder): kdbxweb.KdbxEntry[] => {
   return entries.toSorted((a, b) => {

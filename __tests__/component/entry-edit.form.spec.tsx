@@ -79,6 +79,21 @@ describe('entry-edit.form', () => {
       expect(screen.getByLabelText('Title')).toHaveValue('Test Entry');
     });
 
+    it('fills the form from a history revision and marks it dirty', async () => {
+      const user = userEvent.setup();
+      entry.pushHistory();
+      entry.fields.set('Title', 'Changed Title');
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      expect(screen.getByLabelText('Title')).toHaveValue('Changed Title');
+
+      await user.click(screen.getByRole('button', { name: /History \(1\)/ }));
+      await user.click(screen.getByRole('button', { name: 'Apply' }));
+
+      expect(screen.getByLabelText('Title')).toHaveValue('Test Entry');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
     it('saves the entry and resets dirty state on submit', async () => {
       const user = userEvent.setup();
       const onSave = vi.fn();

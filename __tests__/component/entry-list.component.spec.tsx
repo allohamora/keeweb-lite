@@ -1,4 +1,5 @@
 import type kdbxweb from '@/lib/kdbxweb.lib';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { EntryList } from '@/components/workspace/entry-list.component';
@@ -28,6 +29,30 @@ describe('entry-list.component', () => {
       );
 
       expect(screen.getByRole('button', { name: 'Create entry' })).toBeEnabled();
+    });
+
+    it('reorders the entries when another sort order is picked', async () => {
+      const user = userEvent.setup();
+      createTestEntry(database).fields.set('Title', 'Alpha');
+      createTestEntry(database).fields.set('Title', 'Beta');
+
+      render(
+        <EntryList
+          database={database}
+          selectFilter={null}
+          selectedEntryUuid={null}
+          onSelectEntry={vi.fn()}
+          onCreateEntry={vi.fn()}
+          showMenuButton={false}
+          onMenuOpen={vi.fn()}
+        />,
+      );
+      expect(screen.getAllByText(/^(Alpha|Beta)$/).map((title) => title.textContent)).toEqual(['Alpha', 'Beta']);
+
+      await user.click(screen.getByRole('button', { name: 'Sort entries' }));
+      await user.click(screen.getByRole('menuitemradio', { name: 'Name Z→A' }));
+
+      expect(screen.getAllByText(/^(Alpha|Beta)$/).map((title) => title.textContent)).toEqual(['Beta', 'Alpha']);
     });
 
     it('disables the create entry trigger while an entry mutation is in progress', () => {

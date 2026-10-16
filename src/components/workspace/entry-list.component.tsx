@@ -21,6 +21,7 @@ import {
   isEntryExpired,
   sortEntries,
   type SelectFilter,
+  isSortOrder,
   type SortOrder,
 } from '@/services/workspace.service';
 import { getEntryIcon } from '@/services/icon.service';
@@ -107,7 +108,12 @@ export const EntryList = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-sm">
             <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-            <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as SortOrder)}>
+            <DropdownMenuRadioGroup
+              value={sortOrder}
+              onValueChange={(value) => {
+                if (isSortOrder(value)) setSortOrder(value);
+              }}
+            >
               <DropdownMenuRadioItem value="name-asc">Name A→Z</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="name-desc">Name Z→A</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="date-asc">Date oldest</DropdownMenuRadioItem>
