@@ -5,7 +5,7 @@ import { asArrayBuffer } from '@/utils/buffer.utils';
 // matches the fixed password KeeWeb itself uses for its bundled demo file
 const DEMO_PASSWORD = 'demo';
 
-export const loadDemoDatabase = async (): Promise<kdbxweb.Kdbx> => {
+export const loadDemoKdbx = async (): Promise<kdbxweb.Kdbx> => {
   const response = await fetch(demoKdbxUrl);
   if (!response.ok) {
     throw new Error(`Failed to load demo database: ${response.status}`);

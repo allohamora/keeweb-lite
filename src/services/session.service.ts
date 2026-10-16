@@ -1,9 +1,9 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
-import { loadDemoDatabase } from '@/services/demo.service';
+import { loadDemoKdbx } from '@/services/demo.service';
 import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
-import { cloneDatabase, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
+import { cloneKdbx, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
 import { Lock } from '@/utils/lock.utils';
 
 export type UnlockSession = {
@@ -31,7 +31,7 @@ export const syncSession = async ({
   }
 
   return syncSessionLock.runInLock(async () => {
-    const nextDatabase = await cloneDatabase(database);
+    const nextDatabase = await cloneKdbx(database);
 
     const remoteBytes = await getFile(record.source.id);
     const remoteDatabase = await kdbxweb.Kdbx.load(asArrayBuffer(remoteBytes), nextDatabase.credentials);
@@ -70,7 +70,7 @@ export const unlockSession = async ({
 };
 
 export const createDemoSession = async (): Promise<UnlockSession> => {
-  const database = await loadDemoDatabase();
+  const database = await loadDemoKdbx();
 
   return {
     database,

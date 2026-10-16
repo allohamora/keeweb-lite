@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadDemoDatabase } from '@/services/demo.service';
+import { loadDemoKdbx } from '@/services/demo.service';
 import { demoFile } from '../utils/demo-file.utils';
 import { mockServer } from '../setup-unit-context';
 
@@ -7,7 +7,7 @@ describe('demo.service', () => {
   it('loads the bundled demo database with the fixed demo password', async () => {
     mockServer.addHandlers(demoFile.ok());
 
-    const database = await loadDemoDatabase();
+    const database = await loadDemoKdbx();
 
     expect(database.meta.name).toBe('Demo');
   });
@@ -15,7 +15,7 @@ describe('demo.service', () => {
   it('preserves the upstream groups', async () => {
     mockServer.addHandlers(demoFile.ok());
 
-    const database = await loadDemoDatabase();
+    const database = await loadDemoKdbx();
     const rootGroupNames = database.getDefaultGroup().groups.map((group) => group.name);
 
     expect(rootGroupNames).toEqual(expect.arrayContaining(['Computer', 'Internet', 'Finance', 'Recycle Bin']));
@@ -24,7 +24,7 @@ describe('demo.service', () => {
   it('preserves upstream tags, history and the recycle bin', async () => {
     mockServer.addHandlers(demoFile.ok());
 
-    const database = await loadDemoDatabase();
+    const database = await loadDemoKdbx();
     const workGroup = database
       .getDefaultGroup()
       .groups.find((group) => group.name === 'Computer')
@@ -41,16 +41,16 @@ describe('demo.service', () => {
   it('throws when the demo asset fails to load', async () => {
     mockServer.addHandlers(demoFile.error());
 
-    await expect(loadDemoDatabase()).rejects.toThrow();
+    await expect(loadDemoKdbx()).rejects.toThrow();
   });
 
   it('returns a fresh database on every call instead of a shared mutable template', async () => {
     mockServer.addHandlers(demoFile.ok());
 
-    const first = await loadDemoDatabase();
+    const first = await loadDemoKdbx();
     first.createEntry(first.getDefaultGroup()).fields.set('Title', 'Mutated');
 
-    const second = await loadDemoDatabase();
+    const second = await loadDemoKdbx();
 
     const titles = second.getDefaultGroup().entries.map((entry) => entry.fields.get('Title'));
     expect(titles).not.toContain('Mutated');

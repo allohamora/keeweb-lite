@@ -1,5 +1,5 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
-import { cloneDatabase, saveDatabase } from '@/services/kdbx.service';
+import { cloneKdbx, saveKdbx } from '@/services/kdbx.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { getEntryIcon } from '@/services/icon.service';
 import { getEntryColor } from '@/services/color.service';
@@ -214,7 +214,7 @@ type MutateEntryInput = {
 };
 
 const mutateEntry = async ({ database, record, entryUuid, mutate }: MutateEntryInput) => {
-  const nextDatabase = await cloneDatabase(database);
+  const nextDatabase = await cloneKdbx(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
   if (!nextEntry) {
@@ -223,7 +223,7 @@ const mutateEntry = async ({ database, record, entryUuid, mutate }: MutateEntryI
 
   mutate(nextDatabase, nextEntry);
 
-  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
+  const { record: nextRecord } = await saveKdbx({ database: nextDatabase, record });
 
   return { nextDatabase, nextEntry, nextRecord };
 };
@@ -261,7 +261,7 @@ export const createEntry = async ({
   record,
   selectFilter,
 }: CreateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
-  const nextDatabase = await cloneDatabase(database);
+  const nextDatabase = await cloneKdbx(database);
 
   const group = isGroupSelect(selectFilter)
     ? findGroupByUuid(nextDatabase, selectFilter)
@@ -275,7 +275,7 @@ export const createEntry = async ({
     nextEntry.tags = [selectFilter.tag];
   }
 
-  const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
+  const { record: nextRecord } = await saveKdbx({ database: nextDatabase, record });
 
   return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };

@@ -27,8 +27,8 @@ export const unlockKdbx = async ({
   }
 };
 
-export const toEncryptedBytes = async (db: kdbxweb.Kdbx) => {
-  return asUint8Array(await db.save());
+export const toEncryptedBytes = async (database: kdbxweb.Kdbx) => {
+  return asUint8Array(await database.save());
 };
 
 const generateKeyFile = async (databaseName: string) => {
@@ -60,15 +60,15 @@ export const createEmptyKdbx = async ({
   return { encryptedBytes, generatedKey };
 };
 
-export const cloneDatabase = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
+export const cloneKdbx = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
   const databaseBytes = await database.save();
 
   return kdbxweb.Kdbx.load(databaseBytes, database.credentials);
 };
 
-const saveDatabaseLock = new Lock('kdbx.service.saveDatabase');
+const saveKdbxLock = new Lock('kdbx.service.saveKdbx');
 
-export const saveDatabase = async ({
+export const saveKdbx = async ({
   database,
   record,
 }: {
@@ -80,7 +80,7 @@ export const saveDatabase = async ({
     return { record };
   }
 
-  return saveDatabaseLock.runInLock(async () => {
+  return saveKdbxLock.runInLock(async () => {
     const encryptedBytes = await toEncryptedBytes(database);
     const savedRecord = await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
 
