@@ -47,8 +47,6 @@ npm run format:fix   # Prettier write
 
 ## Resources
 
-- Feature specs: [docs/features](docs/features/)
-- Screen specs: [docs/screens](docs/screens/)
 - Screenshots: [workspace](images/workspace.png), [unlock](images/unlock.png), [workspace mobile](images/workspace-mobile.png), [unlock mobile](images/unlock-mobile.png)
 
 ## Docker
