@@ -1,39 +1,12 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
 import { createFile, getFile } from '@/repositories/google-drive.repository';
 import { createRecord, getRecords as getRepositoryRecords } from '@/repositories/record.repository';
-import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
+import { createEmptyKdbx } from '@/services/kdbx.service';
+import { asUint8Array } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
 
 // makes the duplicate-name/source.id check and the write atomic across concurrent calls
 const createImportLock = new Lock('keeweb-lite.record.service.create-import');
-
-export const unlockKdbx = async ({
-  encryptedBytes,
-  keyFileHashBase64,
-  password,
-}: {
-  encryptedBytes: Uint8Array;
-  keyFileHashBase64?: string | null;
-  password: string;
-}) => {
-  const keyfile = keyFileHashBase64 ? kdbxweb.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
-  const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyfile);
-  await credentials.ready;
-
-  try {
-    return await kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
-  } catch (error) {
-    if (error instanceof kdbxweb.KdbxError && error.code === kdbxweb.Consts.ErrorCodes.InvalidKey) {
-      throw new Error('Invalid password or key file.', { cause: error });
-    }
-
-    throw error;
-  }
-};
-
-export const toEncryptedBytes = async (db: kdbxweb.Kdbx) => {
-  return asUint8Array(await db.save());
-};
 
 const sortRecordsByLastOpened = <RecordType extends { lastOpenedAt?: string }>(records: RecordType[]) => {
   return records
@@ -81,15 +54,6 @@ const toKey = async (keyFile?: FileList | undefined) => {
   return await readKeyFile(selectedKeyFile);
 };
 
-const generateKeyFile = async (databaseName: string) => {
-  // createRandomKeyFile defaults to the legacy version 1 XML key file; pass 2 explicitly
-  // to get the newer, hash-verified version that KeePass2 names with a .keyx extension.
-  const keyFileBytes = await kdbxweb.Credentials.createRandomKeyFile(2);
-  const key = { hash: kdbxweb.ByteUtils.bytesToBase64(keyFileBytes), name: `${databaseName}.keyx` };
-
-  return { key, keyFileBytes };
-};
-
 const validateNewDatabaseInput = (databaseName: string, password: string) => {
   const name = databaseName.trim();
   if (!name) {
@@ -102,26 +66,6 @@ const validateNewDatabaseInput = (databaseName: string, password: string) => {
   const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
 
   return { name, kdbxFileName };
-};
-
-const createEmptyKdbx = async ({
-  name,
-  password,
-  useKeyFile,
-}: {
-  name: string;
-  password: string;
-  useKeyFile?: boolean;
-}) => {
-  const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
-
-  const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
-  await credentials.ready;
-
-  const database = kdbxweb.Kdbx.create(credentials, name);
-  const encryptedBytes = await toEncryptedBytes(database);
-
-  return { encryptedBytes, generatedKey };
 };
 
 export const importGoogleDriveRecord = async ({

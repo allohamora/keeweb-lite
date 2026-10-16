@@ -1,4 +1,4 @@
-import * as recordService from '@/services/record.service';
+import * as kdbxService from '@/services/kdbx.service';
 import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/lib/kdbxweb.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,7 +20,7 @@ describe('workspace-controls.component', () => {
   describe('WorkspaceControls', () => {
     it('downloads the database directly when there are no unsaved changes', async () => {
       const user = userEvent.setup();
-      const toEncryptedBytes = vi.spyOn(recordService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      const toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
       const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
       const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
       const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -48,7 +48,7 @@ describe('workspace-controls.component', () => {
 
     it('defers download behind the discard prompt when there are unsaved changes', async () => {
       const user = userEvent.setup();
-      const toEncryptedBytes = vi.spyOn(recordService, 'toEncryptedBytes');
+      const toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes');
 
       render(
         <DirtySafeNet>

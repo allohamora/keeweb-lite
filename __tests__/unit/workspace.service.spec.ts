@@ -2,9 +2,7 @@ import kdbxweb from '@/lib/kdbxweb.lib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
-import { unlockKdbx } from '@/services/record.service';
 import {
-  cloneDatabase,
   createEntry,
   filterEntriesBySearch,
   filterGroups,
@@ -27,7 +25,6 @@ import {
   removeEntry,
   restoreEntry,
   saveEntry,
-  saveDatabase,
   sortEntries,
   updateEntry,
 } from '@/services/workspace.service';
@@ -1786,157 +1783,6 @@ describe('workspace.service', () => {
       const { database, record } = await createPersistedDatabaseWithEntryInTrash();
 
       await expect(restoreEntry({ database, record, entryUuid: 'missing-uuid' })).rejects.toThrow('Entry not found.');
-    });
-  });
-
-  describe('saveDatabase', () => {
-    const createUnlockedDatabase = async () => {
-      const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('persist-test-password'));
-      await credentials.ready;
-
-      return kdbxweb.Kdbx.create(credentials, 'Persist Test DB');
-    };
-
-    it('saves encrypted bytes back to the repository record', async () => {
-      const database = await createUnlockedDatabase();
-      const initialBytes = new Uint8Array(await database.save());
-      const persistRecord = await createRecord({
-        id: 'persist-record',
-        type: 'local',
-        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
-      });
-
-      const group = database.getDefaultGroup();
-      database.createEntry(group).fields.set('Title', 'New Entry');
-
-      await saveDatabase({ database, record: persistRecord });
-
-      const records = await getRecords();
-      const updated = records.find(({ id }) => id === 'persist-record');
-      expect(updated).toBeDefined();
-      expect(updated?.kdbx.encryptedBytes).not.toEqual(initialBytes);
-    });
-
-    it('preserves existing record metadata when updating', async () => {
-      const database = await createUnlockedDatabase();
-      const encryptedBytes = new Uint8Array(await database.save());
-      const persistRecord = await createRecord({
-        id: 'persist-record',
-        type: 'local',
-        kdbx: { encryptedBytes, name: 'persist.kdbx' },
-        lastOpenedAt: '2026-01-01T00:00:00.000Z',
-      });
-
-      await saveDatabase({ database, record: persistRecord });
-
-      const records = await getRecords();
-      const updated = records.find(({ id }) => id === 'persist-record');
-      expect(updated?.lastOpenedAt).toBe('2026-01-01T00:00:00.000Z');
-      expect(updated?.kdbx.name).toBe('persist.kdbx');
-    });
-
-    it('returns the updated FileRecord', async () => {
-      const database = await createUnlockedDatabase();
-      const initialBytes = new Uint8Array(await database.save());
-      const persistRecord = await createRecord({
-        id: 'persist-record',
-        type: 'local',
-        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
-      });
-
-      database.createEntry(database.getDefaultGroup()).fields.set('Title', 'New Entry');
-
-      const { record: nextRecord } = await saveDatabase({ database, record: persistRecord });
-
-      expect(nextRecord.id).toBe('persist-record');
-      expect(expectPersisted(nextRecord).kdbx.encryptedBytes).not.toEqual(initialBytes);
-    });
-
-    it('does not persist demo records to the repository', async () => {
-      const database = await createUnlockedDatabase();
-      database.createEntry(database.getDefaultGroup()).fields.set('Title', 'New Entry');
-
-      const demoRecord = { id: 'demo', type: 'demo' as const, kdbx: { name: 'Demo' } };
-
-      const { record: nextRecord } = await saveDatabase({ database, record: demoRecord });
-
-      expect(nextRecord).toBe(demoRecord);
-      await expect(getRecords()).resolves.toEqual([]);
-    });
-
-    it('handles concurrent saves without persisting partial state', async () => {
-      const database = await createUnlockedDatabase();
-      const initialBytes = new Uint8Array(await database.save());
-      const persistRecord = await createRecord({
-        id: 'persist-record',
-        type: 'local',
-        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
-      });
-
-      const firstUpdate = await cloneDatabase(database);
-      const secondUpdate = await cloneDatabase(database);
-
-      firstUpdate.createEntry(firstUpdate.getDefaultGroup()).fields.set('Title', 'First Concurrent Save');
-      secondUpdate.createEntry(secondUpdate.getDefaultGroup()).fields.set('Title', 'Second Concurrent Save');
-
-      const save1 = saveDatabase({ database: firstUpdate, record: persistRecord });
-      const save2 = saveDatabase({ database: secondUpdate, record: persistRecord });
-
-      await Promise.all([save1, save2]);
-
-      const persistedRecord = (await getRecords()).find(({ id }) => id === 'persist-record');
-      expect(persistedRecord).toBeDefined();
-      if (!persistedRecord) {
-        throw new Error('Record not found.');
-      }
-
-      const reloadedDatabase = await unlockKdbx({
-        encryptedBytes: persistedRecord.kdbx.encryptedBytes,
-        password: 'persist-test-password',
-      });
-      const persistedTitles = reloadedDatabase
-        .getDefaultGroup()
-        .entries.map((entry) => getFieldText(entry.fields.get('Title')));
-
-      expect([['First Concurrent Save'], ['Second Concurrent Save']]).toContainEqual(persistedTitles);
-    });
-
-    it('applies the last save when two concurrent saves target the same record', async () => {
-      const database = await createUnlockedDatabase();
-      const initialBytes = new Uint8Array(await database.save());
-      const persistRecord = await createRecord({
-        id: 'persist-record',
-        type: 'local',
-        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
-      });
-
-      const firstSaveDatabase = await cloneDatabase(database);
-      const secondSaveDatabase = await cloneDatabase(database);
-
-      firstSaveDatabase.createEntry(firstSaveDatabase.getDefaultGroup()).fields.set('Title', 'First Save');
-      secondSaveDatabase.createEntry(secondSaveDatabase.getDefaultGroup()).fields.set('Title', 'Second Save');
-
-      const save1 = saveDatabase({ database: firstSaveDatabase, record: persistRecord });
-      const save2 = saveDatabase({ database: secondSaveDatabase, record: persistRecord });
-
-      await Promise.all([save1, save2]);
-
-      const persistedRecord = (await getRecords()).find(({ id }) => id === 'persist-record');
-      expect(persistedRecord).toBeDefined();
-      if (!persistedRecord) {
-        throw new Error('Record not found.');
-      }
-
-      const reloadedDatabase = await unlockKdbx({
-        encryptedBytes: persistedRecord.kdbx.encryptedBytes,
-        password: 'persist-test-password',
-      });
-
-      const persistedTitles = reloadedDatabase
-        .getDefaultGroup()
-        .entries.map((entry) => getFieldText(entry.fields.get('Title')));
-
-      expect(persistedTitles).toEqual(['Second Save']);
     });
   });
 });

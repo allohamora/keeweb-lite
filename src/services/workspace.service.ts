@@ -1,7 +1,6 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
-import { toEncryptedBytes } from '@/services/record.service';
-import { Lock } from '@/utils/lock.utils';
-import { updateRecord, type FileRecord } from '@/repositories/record.repository';
+import { cloneDatabase, saveDatabase } from '@/services/kdbx.service';
+import type { FileRecord } from '@/repositories/record.repository';
 import { getEntryIcon } from '@/services/icon.service';
 import { getEntryColor } from '@/services/color.service';
 
@@ -169,12 +168,6 @@ type UpdateEntryInput = {
   values: EntryUpdateValues;
 };
 
-export const cloneDatabase = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
-  const databaseBytes = await database.save();
-
-  return kdbxweb.Kdbx.load(databaseBytes, database.credentials);
-};
-
 export const getEntryValues = (entry: kdbxweb.KdbxEntry): EntryUpdateValues => ({
   title: getFieldText(entry.fields.get('Title')),
   username: getFieldText(entry.fields.get('UserName')),
@@ -202,28 +195,6 @@ export const updateEntry = (entry: kdbxweb.KdbxEntry, values: EntryUpdateValues)
   entry.bgColor = values.color ?? undefined;
 
   entry.times.update();
-};
-
-const saveDatabaseLock = new Lock('workspace.service.saveDatabase');
-
-export const saveDatabase = async ({
-  database,
-  record,
-}: {
-  database: kdbxweb.Kdbx;
-  record: FileRecord;
-}): Promise<{ record: FileRecord }> => {
-  // demo records are never persisted, so there's nothing to write back to storage
-  if (record.type === 'demo') {
-    return { record };
-  }
-
-  return saveDatabaseLock.runInLock(async () => {
-    const encryptedBytes = await toEncryptedBytes(database);
-    const savedRecord = await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
-
-    return { record: savedRecord };
-  });
 };
 
 export const saveEntry = async ({

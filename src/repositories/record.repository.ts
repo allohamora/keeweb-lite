@@ -11,14 +11,14 @@ const keySchema = z.object({
   name: z.string(),
 });
 
-const kdbxSchema = z.object({
+const recordKdbxSchema = z.object({
   encryptedBytes: z.instanceof(Uint8Array),
   name: z.string(),
 });
 
 const localFileRecordSchema = z.object({
   id: z.string(),
-  kdbx: kdbxSchema,
+  kdbx: recordKdbxSchema,
   key: keySchema.optional(),
   lastOpenedAt: z.string().optional(),
   type: z.literal('local'),
@@ -26,7 +26,7 @@ const localFileRecordSchema = z.object({
 
 const googleDriveFileRecordSchema = z.object({
   id: z.string(),
-  kdbx: kdbxSchema,
+  kdbx: recordKdbxSchema,
   key: keySchema.optional(),
   lastOpenedAt: z.string().optional(),
   source: z.object({
@@ -38,6 +38,7 @@ const googleDriveFileRecordSchema = z.object({
 const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, googleDriveFileRecordSchema]);
 const fileRecordsSchema = z.array(fileRecordSchema);
 
+export type RecordKdbx = z.infer<typeof recordKdbxSchema>;
 export type PersistedFileRecord = z.infer<typeof fileRecordSchema>;
 
 // never persisted: intentionally excluded from fileRecordSchema so it can never pass
@@ -45,7 +46,7 @@ export type PersistedFileRecord = z.infer<typeof fileRecordSchema>;
 export type DemoFileRecord = {
   id: string;
   type: 'demo';
-  kdbx: { name: string };
+  kdbx: Pick<RecordKdbx, 'name'>;
 };
 
 export type FileRecord = PersistedFileRecord | DemoFileRecord;

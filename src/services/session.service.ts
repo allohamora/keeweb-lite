@@ -3,9 +3,8 @@ import { loadDemoDatabase } from '@/services/demo.service';
 import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
-import { toEncryptedBytes, unlockKdbx } from '@/services/record.service';
+import { cloneDatabase, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
 import { Lock } from '@/utils/lock.utils';
-import { cloneDatabase } from './workspace.service';
 
 export type UnlockSession = {
   database: kdbxweb.Kdbx;
