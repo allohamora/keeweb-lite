@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { fileListSchema } from '@/utils/zod.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 import { importLocalRecord } from '@/services/record.service';
 
@@ -23,15 +24,14 @@ export type ImportLocalModalProps = {
 };
 
 const importLocalModalSchema = z.object({
-  databaseFile: z
-    .instanceof(FileList, { message: 'Select a .kdbx file to import.' })
+  databaseFile: fileListSchema('Select a .kdbx file to import.')
     .refine((files) => files.length > 0, {
       message: 'Select a .kdbx file to import.',
     })
     .refine((files) => files.length === 0 || files[0]?.name.toLowerCase().endsWith('.kdbx'), {
       message: 'Only .kdbx files are supported.',
     }),
-  keyFile: z.instanceof(FileList, { message: 'Select a key file.' }).optional(),
+  keyFile: fileListSchema('Select a key file.').optional(),
 });
 
 type ImportLocalModalFormValues = z.infer<typeof importLocalModalSchema>;

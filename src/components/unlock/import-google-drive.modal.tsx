@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { fileListSchema } from '@/utils/zod.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 import { importGoogleDriveRecord } from '@/services/record.service';
 import { GoogleDriveFilePicker } from './google-drive.file-picker';
@@ -32,7 +33,7 @@ const importGoogleDriveModalSchema = z.object({
   driveFile: driveFileSchema.refine((file) => file.name.toLowerCase().endsWith('.kdbx'), {
     message: 'Only .kdbx files are supported.',
   }),
-  keyFile: z.instanceof(FileList, { message: 'Select a key file.' }).optional(),
+  keyFile: fileListSchema('Select a key file.').optional(),
 });
 
 type ImportGoogleDriveModalFormValues = z.infer<typeof importGoogleDriveModalSchema>;
