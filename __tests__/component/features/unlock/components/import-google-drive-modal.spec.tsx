@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { ImportGoogleDriveModal } from '@/features/unlock/components/import-google-drive-modal';
 import { createRecord, getRecords } from '@/features/unlock/repositories/record';
-import { googleDriveApi } from '@tests/mocks/google-drive.mock';
-import { mockGooglePicker } from '@tests/mocks/google-picker.mock';
+import { googleDriveApi } from '@tests/mocks/google-drive';
+import { mockGooglePicker } from '@tests/mocks/google-picker';
 import { mockServer } from '@tests/setup-component-context';
 import { render } from '@tests/utils/render';
 

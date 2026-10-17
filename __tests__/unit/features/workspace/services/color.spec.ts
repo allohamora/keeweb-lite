@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTestDatabase, createTestEntry } from '@tests/fixtures/kdbx.fixture';
+import { createTestDatabase, createTestEntry } from '@tests/fixtures/kdbx';
 import { getEntryColor } from '@/features/workspace/services/color';
 
 describe('color', () => {

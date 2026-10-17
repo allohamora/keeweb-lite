@@ -1,7 +1,7 @@
 import kdbxweb from '@/utils/kdbxweb';
 import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
-import { googleDriveApi } from '@tests/mocks/google-drive.mock';
+import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
 import { auth } from '@/features/unlock/repositories/google-drive';
 import { createRecord, getRecords } from '@/features/unlock/repositories/record';
@@ -10,7 +10,7 @@ import { updateRecordKdbx } from '@/features/unlock/services/record';
 import { createDemoSession, syncSession, unlockSession } from '@/features/unlock/services/session';
 import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/workspace';
 import { demoFile } from '@tests/utils/demo-file';
-import { expectPersisted } from '@tests/fixtures/kdbx.fixture';
+import { expectPersisted } from '@tests/fixtures/kdbx';
 
 describe('session', () => {
   const createDatabase = async ({

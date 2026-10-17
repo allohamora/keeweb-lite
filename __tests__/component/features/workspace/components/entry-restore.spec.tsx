@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryRestore } from '@/features/workspace/components/entry-restore';
-import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/fixtures/kdbx.fixture';
+import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/fixtures/kdbx';
 import { render } from '@tests/utils/render';
-import { DirtySafeNet } from '@tests/utils/safe-net.harness';
-import { MutatingEntryMutation } from '@tests/utils/entry-mutation.harness';
+import { DirtySafeNet } from '@tests/utils/safe-net-harness';
+import { MutatingEntryMutation } from '@tests/utils/entry-mutation-harness';
 
 describe('entry-restore', () => {
   const record = createTestRecord();

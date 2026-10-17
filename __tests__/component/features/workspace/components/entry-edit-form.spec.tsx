@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryEditForm } from '@/features/workspace/components/entry-edit-form';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
-import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/fixtures/kdbx.fixture';
+import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/fixtures/kdbx';
 import { render } from '@tests/utils/render';
 
 const record = createTestRecord();

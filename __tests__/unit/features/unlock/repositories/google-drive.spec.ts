@@ -5,8 +5,8 @@ import {
   type GetFileRequestContext,
   type UpdateFileRequestContext,
   googleDriveApi,
-} from '@tests/mocks/google-drive.mock';
-import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '@tests/mocks/google-identity.mock';
+} from '@tests/mocks/google-drive';
+import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '@tests/mocks/google-identity';
 import { mockServer } from '@tests/setup-unit-context';
 import { auth, createFile, getFile, updateFile } from '@/features/unlock/repositories/google-drive';
 

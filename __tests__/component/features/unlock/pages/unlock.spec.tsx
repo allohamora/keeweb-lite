@@ -3,14 +3,14 @@ import * as sessionService from '@/features/unlock/services/session';
 import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { UnlockPage } from '@/features/unlock/pages/unlock-page';
+import { UnlockPage } from '@/features/unlock/pages/unlock';
 import { mockServer } from '@tests/setup-component-context';
 import { demoFile } from '@tests/utils/demo-file';
 import { render } from '@tests/utils/render';
 import type { PersistedFileRecord } from '@/features/unlock/repositories/record';
-import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx.fixture';
+import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx';
 
-describe('unlock-page', () => {
+describe('unlock', () => {
   const vaultRecord: PersistedFileRecord = {
     ...createTestRecord(),
     id: 'local-1',

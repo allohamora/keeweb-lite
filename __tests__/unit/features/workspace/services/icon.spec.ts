@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTestDatabase, createTestEntry } from '@tests/fixtures/kdbx.fixture';
+import { createTestDatabase, createTestEntry } from '@tests/fixtures/kdbx';
 import {
   DEFAULT_ICON,
   STANDARD_ICON_MAP,

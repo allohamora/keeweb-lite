@@ -4,10 +4,10 @@ import kdbxweb from '@/utils/kdbxweb';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import type { SelectFilter } from '@/features/workspace/services/workspace';
-import { WorkspacePage } from '@/features/workspace/pages/workspace-page';
+import { WorkspacePage } from '@/features/workspace/pages/workspace';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
 import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation';
-import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx.fixture';
+import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx';
 import { render } from '@tests/utils/render';
 
 const entryUuid = kdbxweb.KdbxUuid.random();
@@ -62,7 +62,7 @@ vi.mock('@/features/workspace/components/workspace-controls', () => ({
 
 const record = createTestRecord();
 
-describe('workspace-page', () => {
+describe('workspace', () => {
   describe('WorkspacePage', () => {
     it('navigates immediately when there are no unsaved changes', async () => {
       const database = await createTestDatabase();

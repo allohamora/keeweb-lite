@@ -8,7 +8,7 @@ import { createRecord } from '@/features/unlock/repositories/record';
 import { createEmptyKdbx, toEncryptedBytes, unlockKdbx } from '@/features/unlock/services/kdbx';
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session';
 import { getFieldText } from '@/features/workspace/services/workspace';
-import { googleDriveApi } from '@tests/mocks/google-drive.mock';
+import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-component-context';
 import { render } from '@tests/utils/render';
 

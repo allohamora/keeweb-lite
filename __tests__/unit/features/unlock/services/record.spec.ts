@@ -2,7 +2,7 @@ import * as recordRepository from '@/features/unlock/repositories/record';
 import kdbxweb from '@/utils/kdbxweb';
 import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
-import { type CreateFileRequestContext, googleDriveApi } from '@tests/mocks/google-drive.mock';
+import { type CreateFileRequestContext, googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
 import { clearRecords, createRecord } from '@/features/unlock/repositories/record';
 import {
@@ -13,7 +13,7 @@ import {
   importLocalRecord,
   updateRecordKdbx,
 } from '@/features/unlock/services/record';
-import { expectPersisted } from '@tests/fixtures/kdbx.fixture';
+import { expectPersisted } from '@tests/fixtures/kdbx';
 import { unlockKdbx } from '@/features/unlock/services/kdbx';
 import { getFieldText as getTextFromField } from '@/features/workspace/services/workspace';
 import { createFileList } from '@tests/utils/file-list';

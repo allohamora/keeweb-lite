@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { WorkspaceControls } from '@/features/workspace/components/workspace-controls';
-import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx.fixture';
+import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx';
 import { render } from '@tests/utils/render';
-import { DirtySafeNet } from '@tests/utils/safe-net.harness';
+import { DirtySafeNet } from '@tests/utils/safe-net-harness';
 
 const record = createTestRecord();
 

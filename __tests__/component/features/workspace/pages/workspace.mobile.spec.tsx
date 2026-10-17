@@ -1,8 +1,8 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { WorkspacePage } from '@/features/workspace/pages/workspace-page';
-import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/fixtures/kdbx.fixture';
+import { WorkspacePage } from '@/features/workspace/pages/workspace';
+import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/fixtures/kdbx';
 import { render } from '@tests/utils/render';
 
 // `using _viewport = useMobileViewport()` restores the desktop width when the test ends, even if it fails
@@ -15,7 +15,7 @@ const useMobileViewport = () => {
 
 const record = createTestRecord();
 
-describe('workspace-page', () => {
+describe('workspace', () => {
   describe('mobile layout', () => {
     it('shows the entry details instead of the list and goes back to the list', async () => {
       using _viewport = useMobileViewport();
