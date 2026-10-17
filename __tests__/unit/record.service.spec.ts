@@ -1225,7 +1225,8 @@ describe('record.service', () => {
       const session = await unlockForSession({ record, password });
       expect(session.providerSession).toBeDefined();
       expect(authorizationHeaders).toHaveLength(1);
-      await session.providerSession?.read();
+      if (session.providerSession?.read.kind !== 'remote') throw new Error('Expected a WebDAV read operation.');
+      await session.providerSession.read.read();
       expect(authorizationHeaders).toHaveLength(2);
       session.providerSession?.dispose();
     });

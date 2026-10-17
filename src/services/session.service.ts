@@ -1,7 +1,7 @@
 import kdbx from '@/lib/kdbx.lib';
 import { loadDemoDatabase } from '@/services/demo.service';
 import {
-  updateRecord,
+  updateRecordWith,
   updateRecordIfGeneration,
   getRecord,
   type FileRecord,
@@ -12,18 +12,18 @@ import { toEncryptedBytes, unlockKdbx } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 import { cloneDatabase } from './workspace.service';
 import { getDatabaseProvider } from '@/providers/registry';
-import {
-  ProviderError,
-  type ProviderRecord,
-  type ProviderSession,
-  type RemoteSnapshot,
-} from '@/providers/database-provider';
+import { ProviderError, type ProviderSession, type RemoteSnapshot } from '@/providers/database-provider';
+import type { ProviderSynchronization } from '@/providers/database-provider';
+import type { RemoteProviderRecord } from '@/providers/database-provider';
 import { mergeWithConflictCopies } from '@/services/conflict-copy.service';
+import { createSessionLifecycle, type SessionLifecycle } from '@/services/session-lifecycle.service';
 
 export type UnlockSession = {
   database: kdbx.Kdbx;
   record: FileRecord;
   version: number;
+  sessionId?: string;
+  lifecycle?: SessionLifecycle;
   providerSession?: ProviderSession;
   providerSessionError?: Error;
 };
@@ -34,6 +34,16 @@ type SyncSessionResult = {
 };
 
 const syncForSessionLock = new Lock('session.service.syncForSession');
+
+const updateRemoteRecordIfGeneration = (
+  recordId: string,
+  generation: number,
+  updater: (record: RemoteProviderRecord) => RemoteProviderRecord,
+) =>
+  updateRecordIfGeneration(recordId, generation, (record) => {
+    if (record.type === 'local') throw new Error('This database is no longer connected to a remote provider.');
+    return updater(record);
+  });
 
 const equalBytes = (left: Uint8Array, right: Uint8Array) => {
   return left.length === right.length && left.every((value, index) => value === right[index]);
@@ -54,16 +64,19 @@ export const syncForSession = async ({
     return { database, record };
   }
 
+  if (record.type === 'local') return { database, record };
+
   const provider = getDatabaseProvider(record.type);
-  if (!provider?.capabilities.remote) {
+  if (!provider || provider.capabilities.kind !== 'remote') {
     return { database, record };
   }
 
   return syncForSessionLock.runInLock(async () => {
     signal?.throwIfAborted();
     const persistedRecord = await getRecord(record.id);
-    const persistedSync = (persistedRecord as ProviderRecord).synchronization;
-    const inputSynchronization = (record as ProviderRecord).synchronization;
+    if (persistedRecord.type === 'local') throw new Error('This database is no longer connected to a remote provider.');
+    const persistedSync = persistedRecord.synchronization;
+    const inputSynchronization = record.synchronization;
     const callerHasUnpersistedChanges = Boolean(inputSynchronization?.pending);
     const databaseSnapshot = callerHasUnpersistedChanges
       ? await toEncryptedBytes(database)
@@ -75,19 +88,18 @@ export const syncForSession = async ({
         : undefined);
 
     if (callerHasUnpersistedChanges && !callerCommonVersion) {
-      const saved = await updateRecordIfGeneration(
+      const saved = await updateRemoteRecordIfGeneration(
         persistedRecord.id,
         persistedSync?.generation ?? 0,
-        (currentRecord) =>
-          ({
-            ...currentRecord,
-            kdbx: { ...currentRecord.kdbx, encryptedBytes: databaseSnapshot },
-            synchronization: {
-              generation: (persistedSync?.generation ?? 0) + 1,
-              pending: true,
-              localEditState: inputSynchronization?.localEditState ?? database.getLocalEditState(),
-            },
-          }) as PersistedFileRecord,
+        (currentRecord) => ({
+          ...currentRecord,
+          kdbx: { ...currentRecord.kdbx, encryptedBytes: databaseSnapshot },
+          synchronization: {
+            generation: (persistedSync?.generation ?? 0) + 1,
+            pending: true,
+            localEditState: inputSynchronization?.localEditState ?? database.getLocalEditState(),
+          },
+        }),
       );
       if (!saved.updated)
         throw new Error('The saved database changed again while preserving your local edits. Retry synchronization.');
@@ -113,29 +125,36 @@ export const syncForSession = async ({
     }
 
     const ownsProviderSession = !existingProviderSession;
-    const providerSession =
-      existingProviderSession ?? (await provider.createSession(persistedRecord as ProviderRecord));
-    if (!providerSession) return { database, record };
+    if (!('unlockSavedConnection' in provider)) {
+      throw new ProviderError('unsupported', `${provider.label} cannot unlock saved connections.`);
+    }
+    const providerSession = existingProviderSession ?? (await provider.unlockSavedConnection(persistedRecord));
+    const readRemote = async () => {
+      if (providerSession.read.kind !== 'remote') {
+        throw new ProviderError('unsupported', `${provider.label} does not support reading this database.`);
+      }
+      return providerSession.read.read(signal);
+    };
 
     try {
       let remoteSnapshot: RemoteSnapshot;
       let createdOrAlreadyPresent = false;
 
       if (synchronization?.createPending) {
-        if (provider.capabilities.create !== 'conditional' || !providerSession.create) {
+        if (providerSession.create.kind !== 'conditional') {
           throw new ProviderError('unsupported', `${provider.label} cannot safely recover this database creation.`);
         }
 
         try {
-          const created = await providerSession.create(
+          const created = await providerSession.create.create(
             persistedRecord.kdbx.name,
             persistedRecord.kdbx.encryptedBytes,
             signal,
           );
-          remoteSnapshot = created.snapshot ?? (await providerSession.read(signal));
+          remoteSnapshot = created.snapshot ?? (await readRemote());
         } catch (error) {
           if (!(error instanceof ProviderError) || error.kind !== 'precondition') throw error;
-          remoteSnapshot = await providerSession.read(signal);
+          remoteSnapshot = await readRemote();
         }
 
         signal?.throwIfAborted();
@@ -159,19 +178,18 @@ export const syncForSession = async ({
         };
 
         if (equalBytes(persistedRecord.kdbx.encryptedBytes, remoteSnapshot.bytes)) {
-          const established = await updateRecordIfGeneration(
+          const established = await updateRemoteRecordIfGeneration(
             persistedRecord.id,
             synchronization?.generation ?? 0,
-            (currentRecord) =>
-              ({
-                ...currentRecord,
-                synchronization: {
-                  generation: synchronization?.generation ?? 0,
-                  pending: false,
-                  createPending: false,
-                  commonVersion: remoteSnapshot,
-                },
-              }) as PersistedFileRecord,
+            (currentRecord) => ({
+              ...currentRecord,
+              synchronization: {
+                generation: synchronization?.generation ?? 0,
+                pending: false,
+                createPending: false,
+                commonVersion: remoteSnapshot,
+              },
+            }),
           );
           const resultDatabase = established.updated
             ? remoteCreatedDatabase
@@ -179,7 +197,7 @@ export const syncForSession = async ({
           return { database: resultDatabase, record: established.record };
         }
       } else {
-        remoteSnapshot = await providerSession.read(signal);
+        remoteSnapshot = await readRemote();
       }
       signal?.throwIfAborted();
 
@@ -190,7 +208,7 @@ export const syncForSession = async ({
           );
         }
 
-        const established = await updateRecordIfGeneration(
+        const established = await updateRemoteRecordIfGeneration(
           persistedRecord.id,
           synchronization?.generation ?? 0,
           (currentRecord) => {
@@ -202,7 +220,7 @@ export const syncForSession = async ({
                 pending: false,
                 commonVersion: { bytes: remoteSnapshot.bytes, revision: remoteSnapshot.revision },
               },
-            } as PersistedFileRecord;
+            };
           },
         );
 
@@ -225,19 +243,18 @@ export const syncForSession = async ({
             'The WebDAV file is a different KeePass database. Download your local copy before recovering it.',
           );
         }
-        const refreshed = await updateRecordIfGeneration(
+        const refreshed = await updateRemoteRecordIfGeneration(
           persistedRecord.id,
           synchronization?.generation ?? 0,
-          (currentRecord) =>
-            ({
-              ...currentRecord,
-              kdbx: { ...currentRecord.kdbx, encryptedBytes: remoteSnapshot.bytes },
-              synchronization: {
-                generation: synchronization?.generation ?? 0,
-                pending: false,
-                commonVersion: remoteSnapshot,
-              },
-            }) as PersistedFileRecord,
+          (currentRecord) => ({
+            ...currentRecord,
+            kdbx: { ...currentRecord.kdbx, encryptedBytes: remoteSnapshot.bytes },
+            synchronization: {
+              generation: synchronization?.generation ?? 0,
+              pending: false,
+              commonVersion: remoteSnapshot,
+            },
+          }),
         );
         const resultDatabase = refreshed.updated
           ? remoteDatabase
@@ -247,7 +264,7 @@ export const syncForSession = async ({
 
       const generation = synchronization.generation ?? 0;
       let workingDatabase = activeDatabase;
-      let workingSynchronization: NonNullable<ProviderRecord['synchronization']> = synchronization;
+      let workingSynchronization: ProviderSynchronization = synchronization;
       let workingCommonBytes = synchronization.commonVersion.bytes;
       let synchronizedDatabase: kdbx.Kdbx | undefined;
       let synchronizedBytes: Uint8Array | undefined;
@@ -274,20 +291,14 @@ export const syncForSession = async ({
         mergeWithConflictCopies({ baseDatabase, localDatabase: nextDatabase, remoteDatabase });
         const nextBytes = await toEncryptedBytes(nextDatabase);
 
-        if (provider.capabilities.replace === 'none') {
+        if (providerSession.replace.kind === 'none') {
           synchronizedDatabase = nextDatabase;
           synchronizedBytes = nextBytes;
           commonVersion = remoteSnapshot;
           break;
         }
 
-        if (!providerSession.replace) {
-          throw new ProviderError(
-            'unsupported',
-            `${provider.label} does not support its advertised replace operation.`,
-          );
-        }
-        if (provider.capabilities.replace === 'conditional' && !remoteSnapshot.revision) {
+        if (providerSession.replace.kind === 'conditional' && !remoteSnapshot.revision) {
           throw new ProviderError(
             'unsupported',
             `${provider.label} did not return a strong revision required for a safe update.`,
@@ -296,9 +307,11 @@ export const syncForSession = async ({
 
         try {
           signal?.throwIfAborted();
-          const writtenSnapshot = (await providerSession.replace(nextBytes, remoteSnapshot.revision, signal)) ?? {
-            bytes: nextBytes,
-          };
+          const writeResult =
+            providerSession.replace.kind === 'conditional'
+              ? await providerSession.replace.write(nextBytes, remoteSnapshot.revision!, signal)
+              : await providerSession.replace.write(nextBytes, signal);
+          const writtenSnapshot = writeResult ?? { bytes: nextBytes };
 
           if (!equalBytes(writtenSnapshot.bytes, nextBytes)) {
             if (attempt === 2) {
@@ -331,7 +344,7 @@ export const syncForSession = async ({
           break;
         } catch (error) {
           if (!(error instanceof ProviderError) || error.kind !== 'precondition' || attempt === 2) throw error;
-          remoteSnapshot = await providerSession.read(signal);
+          remoteSnapshot = await readRemote();
         }
       }
 
@@ -340,7 +353,7 @@ export const syncForSession = async ({
       }
 
       signal?.throwIfAborted();
-      const persisted = await updateRecordIfGeneration(persistedRecord.id, generation, (currentRecord) => {
+      const persisted = await updateRemoteRecordIfGeneration(persistedRecord.id, generation, (currentRecord) => {
         signal?.throwIfAborted();
         return {
           ...currentRecord,
@@ -352,7 +365,7 @@ export const syncForSession = async ({
             localEditState: pending ? synchronizedDatabase.getLocalEditState() : undefined,
             commonVersion,
           },
-        } as PersistedFileRecord;
+        };
       });
 
       const latestDatabase = persisted.updated
@@ -369,49 +382,107 @@ export const syncForSession = async ({
 export const unlockForSession = async ({
   record,
   password,
+  signal,
 }: {
   record: PersistedFileRecord;
   password: string;
+  signal?: AbortSignal;
 }): Promise<UnlockSession> => {
-  const database = await unlockKdbx({
-    encryptedBytes: record.kdbx.encryptedBytes,
-    keyFileHashBase64: record.key?.hash,
-    password,
-  });
-  const synchronization = (record as ProviderRecord).synchronization;
-  if (synchronization?.localEditState) {
-    database.setLocalEditState(synchronization.localEditState as Parameters<kdbx.Kdbx['setLocalEditState']>[0]);
-  }
+  const lifecycle = createSessionLifecycle(signal);
+  try {
+    lifecycle.signal.throwIfAborted();
+    let latestRecord = await getRecord(record.id);
+    let loadedBytes = latestRecord.kdbx.encryptedBytes;
+    let database = await unlockKdbx({
+      encryptedBytes: loadedBytes,
+      keyFileHashBase64: latestRecord.key?.hash,
+      password,
+    });
+    lifecycle.signal.throwIfAborted();
+    const openedAt = new Date().toISOString();
+    let updatedRecord: PersistedFileRecord | undefined;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      updatedRecord = await updateRecordWith(record.id, (currentRecord) => {
+        lifecycle.signal.throwIfAborted();
+        return { ...currentRecord, lastOpenedAt: openedAt };
+      });
+      lifecycle.signal.throwIfAborted();
+      if (!equalBytes(loadedBytes, updatedRecord.kdbx.encryptedBytes)) {
+        database = await kdbx.Kdbx.load(asArrayBuffer(updatedRecord.kdbx.encryptedBytes), database.credentials);
+        lifecycle.signal.throwIfAborted();
+      }
 
-  const updatedRecord = await updateRecord({
-    ...record,
-    lastOpenedAt: new Date().toISOString(),
-  });
-
-  const provider = getDatabaseProvider(record.type);
-  let providerSession: ProviderSession | undefined;
-  let providerSessionError: Error | undefined;
-  if (provider?.capabilities.remote) {
-    try {
-      providerSession =
-        (await provider.createSession(updatedRecord as ProviderRecord, {
-          password,
-          keyFileHashBase64: record.key?.hash,
-        })) ?? undefined;
-    } catch (error) {
-      providerSessionError = error instanceof Error ? error : new Error('Could not unlock the provider connection.');
+      const confirmedRecord = await getRecord(record.id);
+      lifecycle.signal.throwIfAborted();
+      const sameRecordVersion =
+        confirmedRecord.type === updatedRecord.type &&
+        equalBytes(confirmedRecord.kdbx.encryptedBytes, updatedRecord.kdbx.encryptedBytes) &&
+        JSON.stringify(confirmedRecord.source) === JSON.stringify(updatedRecord.source) &&
+        (confirmedRecord.type === 'local' ||
+          (updatedRecord.type !== 'local' &&
+            confirmedRecord.synchronization?.generation === updatedRecord.synchronization?.generation));
+      if (sameRecordVersion) break;
+      if (attempt === 2) throw new Error('The saved database kept changing while it was unlocking. Retry.');
+      latestRecord = confirmedRecord;
+      database = await kdbx.Kdbx.load(asArrayBuffer(latestRecord.kdbx.encryptedBytes), database.credentials);
+      lifecycle.signal.throwIfAborted();
+      loadedBytes = latestRecord.kdbx.encryptedBytes;
     }
-  }
+    if (!updatedRecord) throw new Error('The saved database could not be unlocked.');
 
-  return { database, record: updatedRecord, version: 0, providerSession, providerSessionError };
+    const synchronization = updatedRecord.type === 'local' ? undefined : updatedRecord.synchronization;
+    if (synchronization?.localEditState) {
+      database.setLocalEditState(synchronization.localEditState as Parameters<kdbx.Kdbx['setLocalEditState']>[0]);
+    }
+
+    const provider = getDatabaseProvider(updatedRecord.type);
+    let providerSession: ProviderSession | undefined;
+    let providerSessionError: Error | undefined;
+    if (
+      updatedRecord.type !== 'local' &&
+      provider?.capabilities.kind === 'remote' &&
+      'unlockSavedConnection' in provider
+    ) {
+      try {
+        lifecycle.signal.throwIfAborted();
+        providerSession = await provider.unlockSavedConnection(
+          updatedRecord,
+          { password, keyFileHashBase64: updatedRecord.key?.hash },
+          lifecycle.signal,
+        );
+        lifecycle.ownProviderSession(providerSession);
+        lifecycle.signal.throwIfAborted();
+      } catch (error) {
+        if (lifecycle.signal.aborted) throw lifecycle.signal.reason;
+        providerSessionError = error instanceof Error ? error : new Error('Could not unlock the provider connection.');
+      }
+    }
+
+    lifecycle.signal.throwIfAborted();
+    return {
+      database,
+      record: updatedRecord,
+      version: 0,
+      sessionId: lifecycle.sessionId,
+      lifecycle,
+      providerSession,
+      providerSessionError,
+    };
+  } catch (error) {
+    lifecycle.dispose();
+    throw error;
+  }
 };
 
 export const createDemoSession = async (): Promise<UnlockSession> => {
   const database = await loadDemoDatabase();
+  const lifecycle = createSessionLifecycle();
 
   return {
     database,
     record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
     version: 0,
+    sessionId: lifecycle.sessionId,
+    lifecycle,
   };
 };

@@ -26,7 +26,7 @@ export const ImportMenu = ({ onRecordImported }: ImportMenuProps) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {providers.map((provider) => (
+          {providers.map(({ provider }) => (
             <DropdownMenuItem key={provider.id} onSelect={() => setOpenProviderId(provider.id)}>
               {provider.label}
             </DropdownMenuItem>
@@ -34,14 +34,10 @@ export const ImportMenu = ({ onRecordImported }: ImportMenuProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {providers.map((provider) => {
-        const action = provider.setupActions.import;
-        if (!action) return null;
-
+      {providers.map(({ provider, action }) => {
         return (
           <ProviderSetupModal
             key={provider.id}
-            action="import"
             definition={action}
             onComplete={onRecordImported}
             onOpenChange={(open) => {

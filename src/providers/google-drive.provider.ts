@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import { createFile, getFile, updateFile } from '@/repositories/google-drive.repository';
+import { googleDriveEnabled } from './google-drive.config';
 import { encryptedBytesSchema, synchronizationSchema } from './record.schema';
-import type { DatabaseProvider, ProviderImportResult, ProviderRecord } from './database-provider';
+import type {
+  DatabaseProvider,
+  ProviderImportPreparation,
+  ProviderSession,
+  RemoteProviderRecord,
+} from './database-provider';
 
 const sourceSchema = z.object({ id: z.string().min(1) });
 const importInputSchema = z.object({ fileId: z.string().min(1), fileName: z.string().min(1) });
@@ -11,6 +17,7 @@ const recordSchema = z.object({
   kdbx: z.object({ encryptedBytes: encryptedBytesSchema, name: z.string() }),
   key: z.object({ hash: z.string(), name: z.string() }).optional(),
   lastOpenedAt: z.string().optional(),
+  sourceVersion: z.literal(1).optional(),
   source: sourceSchema,
   synchronization: synchronizationSchema.optional(),
   type: z.literal('google-drive'),
@@ -18,70 +25,66 @@ const recordSchema = z.object({
 
 export type GoogleDriveFileRecord = z.infer<typeof recordSchema>;
 
-export const googleDriveProvider: DatabaseProvider = {
+const createSetupSession = async (): Promise<ProviderSession> => ({
+  read: { kind: 'none' },
+  replace: { kind: 'none' },
+  create: {
+    kind: 'unconditional',
+    create: async (name, bytes, signal) => {
+      const file = await createFile(name, bytes as Uint8Array<ArrayBuffer>, signal);
+      return { source: { id: file.id } };
+    },
+  },
+  dispose: () => undefined,
+});
+
+export const googleDriveProvider = {
   id: 'google-drive',
   label: 'Google Drive',
   sourceVersion: 1,
   sourceSchema,
   recordSchema,
-  capabilities: { remote: true, read: true, replace: 'unconditional', create: 'unconditional' },
-  setupActions: {
-    import: {
-      label: 'Import',
-      load: async () => {
-        const { ImportGoogleDriveModal } = await import('@/components/unlock/import-google-drive.modal');
-        return { default: ImportGoogleDriveModal };
-      },
-    },
-    create: {
-      label: 'Create',
-      load: async () => {
-        const { CreateGoogleDriveModal } = await import('@/components/unlock/create-google-drive.modal');
-        return { default: CreateGoogleDriveModal };
-      },
-    },
-  },
-  importSource: async (input: unknown): Promise<ProviderImportResult> => {
+  capabilities: { kind: 'remote', read: true, replace: 'unconditional', create: 'unconditional' },
+  isAvailable: () => googleDriveEnabled,
+  prepareImport: (input: unknown): ProviderImportPreparation => {
     const parsedInput = importInputSchema.parse(input);
-
     return {
-      bytes: await getFile(parsedInput.fileId),
-      name: parsedInput.fileName,
-      source: { id: parsedInput.fileId },
+      displayName: parsedInput.fileName,
+      duplicateIdentity: parsedInput.fileId,
+      import: async () => ({
+        bytes: await getFile(parsedInput.fileId),
+        name: parsedInput.fileName,
+        source: { id: parsedInput.fileId },
+      }),
     };
   },
-  getImportIdentityFromInput: (input) => importInputSchema.parse(input).fileId,
-  getImportNameFromInput: (input) => importInputSchema.parse(input).fileName,
+  prepareCreate: (_input, databaseName) => ({
+    displayName: databaseName,
+    duplicateIdentity: null,
+    connectForSetup: createSetupSession,
+  }),
   getRecordIdentity: (record) => {
     if (record.type !== 'google-drive') return null;
 
     return sourceSchema.parse(record.source).id;
   },
-  getImportIdentity: ({ source }) => sourceSchema.parse(source).id,
-  getCreateIdentity: () => null,
   getDuplicateMessage: () => 'A record for this file already exists.',
   getCreateFailureMessage: (databaseName) =>
     `"${databaseName}" was created on Google Drive, but couldn't be saved locally. Use "Import from Google Drive" to add it.`,
-  createSession: async (record?: ProviderRecord, _setupInput?: unknown) => {
-    const source = record ? sourceSchema.parse(record.source) : undefined;
+  connectForSetup: createSetupSession,
+  unlockSavedConnection: async (record: RemoteProviderRecord) => {
+    const source = sourceSchema.parse(record.source);
 
     return {
-      read: async (signal) => {
-        if (!source) throw new Error('Google Drive source is required to read a database.');
-
-        return { bytes: await getFile(source.id, signal) };
+      read: { kind: 'remote', read: async (signal) => ({ bytes: await getFile(source.id, signal) }) },
+      replace: {
+        kind: 'unconditional',
+        write: async (bytes, signal) => {
+          await updateFile(source.id, bytes as Uint8Array<ArrayBuffer>, signal);
+        },
       },
-      replace: async (bytes, _revision, signal) => {
-        if (!source) throw new Error('Google Drive source is required to replace a database.');
-
-        await updateFile(source.id, bytes as Uint8Array<ArrayBuffer>, signal);
-      },
-      create: async (name, bytes, signal) => {
-        const file = await createFile(name, bytes as Uint8Array<ArrayBuffer>, signal);
-
-        return { source: { id: file.id } };
-      },
+      create: { kind: 'none' },
       dispose: () => undefined,
     };
   },
-};
+} satisfies DatabaseProvider;

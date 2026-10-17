@@ -26,7 +26,7 @@ export const CreateMenu = ({ onRecordCreated }: CreateMenuProps) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {providers.map((provider) => (
+          {providers.map(({ provider }) => (
             <DropdownMenuItem key={provider.id} onSelect={() => setOpenProviderId(provider.id)}>
               {provider.label}
             </DropdownMenuItem>
@@ -34,14 +34,10 @@ export const CreateMenu = ({ onRecordCreated }: CreateMenuProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {providers.map((provider) => {
-        const action = provider.setupActions.create;
-        if (!action) return null;
-
+      {providers.map(({ provider, action }) => {
         return (
           <ProviderSetupModal
             key={provider.id}
-            action="create"
             definition={action}
             onComplete={onRecordCreated}
             onOpenChange={(open) => {

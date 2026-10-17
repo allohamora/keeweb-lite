@@ -1,8 +1,9 @@
 import { useEffect, useEffectEvent, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { syncForSession, type UnlockSession } from '@/services/session.service';
 import { getDatabaseProvider } from '@/providers/registry';
-import { ProviderError, type ProviderRecord } from '@/providers/database-provider';
+import { ProviderError } from '@/providers/database-provider';
 import { onRecordForgotten } from '@/repositories/record.repository';
+import { createSessionLifecycle } from '@/services/session-lifecycle.service';
 
 type UseSyncProps = UnlockSession & {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
@@ -17,20 +18,33 @@ export const useSync = ({
   record,
   database,
   version,
+  sessionId: suppliedSessionId,
+  lifecycle: suppliedLifecycle,
   setSession,
   providerSession,
   providerSessionError,
 }: UseSyncProps) => {
+  const [fallbackLifecycle] = useState(() => createSessionLifecycle());
+  const lifecycle = suppliedLifecycle ?? fallbackLifecycle;
+  const sessionId = suppliedSessionId ?? lifecycle.sessionId;
+  const generation = record.type === 'local' || record.type === 'demo' ? 0 : (record.synchronization?.generation ?? 0);
   const lastCallId = useRef(0);
   const activeController = useRef<AbortController | null>(null);
   const [state, set] = useState<State>(() => ({ loading: false, error: providerSessionError }));
 
   const sync = async (signal: AbortSignal) => {
-    const syncedSession = await syncForSession({ record, database, providerSession, signal });
-    signal.throwIfAborted();
+    const capture = lifecycle.capture(record.id, generation);
+    const operationSignal = AbortSignal.any([signal, lifecycle.signal]);
+    const syncedSession = await syncForSession({ record, database, providerSession, signal: operationSignal });
+    lifecycle.assertCurrent(capture);
 
     setSession((previousSession) => {
-      if (signal.aborted || !previousSession || previousSession.record.id !== record.id) {
+      if (
+        signal.aborted ||
+        !previousSession ||
+        (previousSession.sessionId ?? sessionId) !== sessionId ||
+        previousSession.record.id !== record.id
+      ) {
         return previousSession;
       }
 
@@ -42,6 +56,8 @@ export const useSync = ({
         ...previousSession,
         ...syncedSession,
         version,
+        sessionId,
+        lifecycle,
       };
     });
   };
@@ -49,7 +65,7 @@ export const useSync = ({
   const triggerSync = () => {
     if (
       record.type === 'demo' ||
-      !getDatabaseProvider(record.type)?.capabilities.remote ||
+      getDatabaseProvider(record.type)?.capabilities.kind !== 'remote' ||
       (!providerSession && providerSessionError)
     ) {
       return;
@@ -76,7 +92,8 @@ export const useSync = ({
   };
 
   const retrySync = () => {
-    const hasPendingChanges = record.type !== 'demo' && Boolean((record as ProviderRecord).synchronization?.pending);
+    const hasPendingChanges =
+      record.type !== 'demo' && record.type !== 'local' && Boolean(record.synchronization?.pending);
     if (state.error instanceof ProviderError && state.error.kind === 'authentication') return;
     if (providerSessionError) return;
     if (!state.error && !hasPendingChanges) {
@@ -140,18 +157,25 @@ export const useSync = ({
   }, []);
 
   useEffect(() => {
-    return () => providerSession?.dispose();
-  }, [providerSession]);
+    return () => lifecycle.dispose();
+  }, [lifecycle]);
+
+  useEffect(() => {
+    if (!providerSession) return;
+    return lifecycle.ownProviderSession(providerSession);
+  }, [lifecycle, providerSession]);
 
   useEffect(() => {
     return onRecordForgotten((forgottenRecordId) => {
       if (forgottenRecordId !== record.id) return;
 
+      lifecycle.dispose();
       activeController.current?.abort();
-      providerSession?.dispose();
-      setSession(null);
+      setSession((previousSession) =>
+        previousSession && (previousSession.sessionId ?? sessionId) === sessionId ? null : previousSession,
+      );
     });
-  }, [record.id, providerSession, setSession]);
+  }, [lifecycle, record.id, sessionId, setSession]);
 
   return {
     ...state,

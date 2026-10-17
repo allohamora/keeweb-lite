@@ -1,9 +1,8 @@
 import kdbx from '@/lib/kdbx.lib';
 import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
-import { updateRecordWith, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
+import { updateRecordWith, type FileRecord } from '@/repositories/record.repository';
 import { getDatabaseProvider } from '@/providers/registry';
-import type { ProviderRecord } from '@/providers/database-provider';
 import { getEntryIcon } from '@/services/icon.service';
 import { getEntryColor } from '@/services/color.service';
 
@@ -224,17 +223,15 @@ export const saveDatabase = async ({
   }
 
   return saveDatabaseLock.runInLock(async () => {
-    const localEditState = getDatabaseProvider(record.type)?.capabilities.remote
-      ? database.getLocalEditState()
-      : undefined;
+    const localEditState = record.type !== 'local' ? database.getLocalEditState() : undefined;
     const encryptedBytes = await toEncryptedBytes(database);
     const savedRecord = await updateRecordWith(record.id, (currentRecord) => {
       const provider = getDatabaseProvider(currentRecord.type);
-      if (!provider?.capabilities.remote) {
+      if (!provider || provider.capabilities.kind === 'local' || currentRecord.type === 'local') {
         return { ...currentRecord, kdbx: { ...currentRecord.kdbx, encryptedBytes } };
       }
 
-      const currentSync = (currentRecord as ProviderRecord).synchronization;
+      const currentSync = currentRecord.synchronization;
 
       return {
         ...currentRecord,
@@ -245,7 +242,7 @@ export const saveDatabase = async ({
           localEditState,
           pending: true,
         },
-      } as PersistedFileRecord;
+      };
     });
 
     return { record: savedRecord };

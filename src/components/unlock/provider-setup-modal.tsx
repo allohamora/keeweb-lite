@@ -1,23 +1,16 @@
 import { createElement, useEffect, useState, type ComponentType } from 'react';
-import type { ProviderSetupActionId, SetupActionDefinition } from '@/providers/database-provider';
-
-type SetupModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onRecordImported?: () => void;
-  onRecordCreated?: () => void;
-};
+import type { ProviderSetupAction } from '@/providers/registry';
+import type { ProviderSetupModalViewProps } from '@/providers/registry';
 
 type ProviderSetupModalProps = {
-  action: ProviderSetupActionId;
-  definition: SetupActionDefinition;
+  definition: ProviderSetupAction;
   onComplete: () => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 };
 
-export const ProviderSetupModal = ({ action, definition, onComplete, onOpenChange, open }: ProviderSetupModalProps) => {
-  const [SetupModal, setSetupModal] = useState<ComponentType<SetupModalProps> | null>(null);
+export const ProviderSetupModal = ({ definition, onComplete, onOpenChange, open }: ProviderSetupModalProps) => {
+  const [SetupModal, setSetupModal] = useState<ComponentType<ProviderSetupModalViewProps> | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
@@ -26,10 +19,8 @@ export const ProviderSetupModal = ({ action, definition, onComplete, onOpenChang
 
     void definition
       .load()
-      .then((module) => {
-        const loaded = module as { default?: ComponentType<SetupModalProps> };
-        if (typeof loaded.default !== 'function') throw new Error('The provider setup action has no modal component.');
-        if (!disposed) setSetupModal(() => loaded.default as ComponentType<SetupModalProps>);
+      .then(({ default: Modal }) => {
+        if (!disposed) setSetupModal(() => Modal);
       })
       .catch(() => {
         if (!disposed) setLoadError(true);
@@ -42,12 +33,5 @@ export const ProviderSetupModal = ({ action, definition, onComplete, onOpenChang
 
   if (loadError) return <p role="alert">This setup option could not be loaded.</p>;
 
-  return SetupModal
-    ? createElement(SetupModal, {
-        open,
-        onOpenChange,
-        onRecordImported: action === 'import' ? onComplete : undefined,
-        onRecordCreated: action === 'create' ? onComplete : undefined,
-      })
-    : null;
+  return SetupModal ? createElement(SetupModal, { open, onOpenChange, onComplete }) : null;
 };

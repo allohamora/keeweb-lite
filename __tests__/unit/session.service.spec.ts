@@ -1,3 +1,4 @@
+import * as recordService from '@/services/record.service';
 import kdbx from '@/lib/kdbx.lib';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -70,6 +71,44 @@ describe('session.service', () => {
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'test-record');
       expect(updatedRecord?.lastOpenedAt).toBe(expectPersisted(result.record).lastOpenedAt);
+    });
+
+    it('updates only metadata on the latest record when its bytes change during unlock', async () => {
+      const { encryptedBytes, password } = await createDatabase({ databaseName: 'Original Database' });
+      const newer = await createDatabase({ databaseName: 'Newer Database', password });
+      const record = await createRecord({
+        id: 'test-record',
+        type: 'local',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+      });
+      let enteredUnlock: () => void = () => {};
+      let continueUnlock: () => void = () => {};
+      const unlockEntered = new Promise<void>((resolve) => {
+        enteredUnlock = resolve;
+      });
+      const unlockMayContinue = new Promise<void>((resolve) => {
+        continueUnlock = resolve;
+      });
+      const originalUnlock = recordService.unlockKdbx;
+      const unlockSpy = vi.spyOn(recordService, 'unlockKdbx').mockImplementation(async (input) => {
+        enteredUnlock();
+        await unlockMayContinue;
+        return originalUnlock(input);
+      });
+
+      try {
+        const unlockPromise = unlockForSession({ password, record });
+        await unlockEntered;
+        await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes: newer.encryptedBytes } });
+        continueUnlock();
+
+        const result = await unlockPromise;
+        if (result.record.type !== 'local') throw new Error('Expected the local database record.');
+        expect(result.record.kdbx.encryptedBytes).toEqual(newer.encryptedBytes);
+        expect(result.database.meta.name).toBe('Newer Database');
+      } finally {
+        unlockSpy.mockRestore();
+      }
     });
 
     it('throws on incorrect password', async () => {

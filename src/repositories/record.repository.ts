@@ -8,9 +8,6 @@ import {
   removeCredentialRecord,
   setCredentialRecord,
 } from '@/repositories/credential.repository';
-import type { GoogleDriveFileRecord } from '@/providers/google-drive.provider';
-import type { LocalFileRecord } from '@/providers/local.provider';
-import type { WebDavFileRecord } from '@/providers/webdav.provider';
 import type { ProviderRecord } from '@/providers/database-provider';
 
 export const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
@@ -30,10 +27,7 @@ const recordStoreSchema = z.object({
   forgottenRecordIds: z.array(z.string()).optional(),
 });
 
-export type PersistedFileRecord = (LocalFileRecord | GoogleDriveFileRecord | WebDavFileRecord) & {
-  source?: unknown;
-  synchronization?: ProviderRecord['synchronization'];
-};
+export type PersistedFileRecord = ProviderRecord;
 export type RecordIssue = {
   recordId: string | null;
   message: string;
@@ -66,7 +60,7 @@ const parseRows = (rows: unknown[], savedIssues: z.infer<typeof invalidRecordSch
     const record = parseProviderRecord(value);
     if (record) {
       if (allowRecovery && !recordIds.has(record.id)) {
-        records.push(record as PersistedFileRecord);
+        records.push(record);
         recordIds.add(record.id);
       } else {
         invalidRecords.push({ recordId: record.id, value });
@@ -81,7 +75,7 @@ const parseRows = (rows: unknown[], savedIssues: z.infer<typeof invalidRecordSch
     if (!record) append(value, recordIdFromUnknown(value), false);
     else if (recordIds.has(record.id)) invalidRecords.push({ recordId: record.id, value });
     else {
-      records.push(record as PersistedFileRecord);
+      records.push(record);
       recordIds.add(record.id);
     }
   }
@@ -243,8 +237,19 @@ const validateRecordList = (records: PersistedFileRecord[]) => {
     if (!parsed) throw new Error('Unsupported or invalid database provider record.');
     if (ids.has(parsed.id)) throw new Error(`Record with id ${parsed.id} already exists`);
     ids.add(parsed.id);
-    return parsed as PersistedFileRecord;
+    return parsed;
   });
+};
+
+const withSourceVersion = (record: PersistedFileRecord): PersistedFileRecord => {
+  switch (record.type) {
+    case 'local':
+      return { ...record, sourceVersion: record.sourceVersion ?? 1 };
+    case 'google-drive':
+      return { ...record, sourceVersion: record.sourceVersion ?? 1 };
+    case 'webdav':
+      return { ...record, sourceVersion: record.sourceVersion ?? 1 };
+  }
 };
 
 export const getRecords = async () => {
@@ -328,7 +333,7 @@ export const clearRecords = async () => {
 export const createRecord = async (record: PersistedFileRecord) => {
   const parsedRecord = parseProviderRecord(record);
   if (!parsedRecord) throw new Error('Unsupported or invalid database provider record.');
-  const persistedRecord = parsedRecord as PersistedFileRecord;
+  const persistedRecord = withSourceVersion(parsedRecord);
 
   await updateRecords((oldRecords, forgottenRecordIds) => {
     if (forgottenRecordIds.includes(persistedRecord.id)) throw new Error('A forgotten database cannot be restored.');
@@ -465,7 +470,7 @@ export async function mutateRecord(
         if (candidate.id !== recordId) throw new Error('A database update cannot change its record ID.');
         const parsed = parseProviderRecord(candidate);
         if (!parsed) throw new Error('Unsupported or invalid database provider record.');
-        updatedRecord = parsed as PersistedFileRecord;
+        updatedRecord = withSourceVersion(parsed);
         return updatedRecord;
       }),
       forgottenRecordIds,
@@ -480,7 +485,7 @@ export async function mutateRecord(
 export const updateRecord = async (record: PersistedFileRecord) => {
   const parsedRecord = parseProviderRecord(record);
   if (!parsedRecord) throw new Error('Unsupported or invalid database provider record.');
-  const persistedRecord = parsedRecord as PersistedFileRecord;
+  const persistedRecord = parsedRecord;
 
   return mutateRecord(persistedRecord.id, () => persistedRecord);
 };
@@ -493,7 +498,7 @@ export type RecordCommitResult =
   | { status: 'forgotten' };
 
 const recordGeneration = (record: PersistedFileRecord) =>
-  (record as PersistedFileRecord & { synchronization?: { generation: number } }).synchronization?.generation ?? 0;
+  record.type === 'local' ? 0 : (record.synchronization?.generation ?? 0);
 
 const replaceRecord = (current: ReturnType<typeof toMutableStore>, recordId: string, record: PersistedFileRecord) => ({
   ...current,
@@ -521,7 +526,7 @@ export const commitSynchronizedRecord = async (
       if (candidate.id !== recordId) throw new Error('A database update cannot change its record ID.');
       const parsed = parseProviderRecord(candidate);
       if (!parsed) throw new Error('Unsupported or invalid database provider record.');
-      const updatedRecord = parsed as PersistedFileRecord;
+      const updatedRecord = withSourceVersion(parsed);
       const next = replaceRecord(current, recordId, updatedRecord);
 
       return {
@@ -549,18 +554,17 @@ export const commitConnection = async (
         return { value, result: { status: 'superseded', record }, write: false };
       }
 
-      const candidate = {
+      const candidate: unknown = {
         ...record,
         source: preparedConnection.source,
         synchronization: {
           ...record.synchronization,
           generation: expectedGeneration + 1,
-          pending: true,
         },
-      } as PersistedFileRecord;
+      };
       const parsed = parseProviderRecord(candidate);
       if (!parsed) throw new Error('The replacement connection is invalid.');
-      const updatedRecord = parsed as PersistedFileRecord;
+      const updatedRecord = withSourceVersion(parsed);
       const previousCredentialId = credentialRecordIdFromValue(record);
       const credentialDeletes =
         previousCredentialId && previousCredentialId !== preparedConnection.credentialRecordId

@@ -2,7 +2,7 @@ import type kdbx from '@/lib/kdbx.lib';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { type UnlockSession } from '@/services/session.service';
 import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
-import type { FileRecord, PersistedFileRecord } from '@/repositories/record.repository';
+import type { FileRecord } from '@/repositories/record.repository';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
@@ -16,7 +16,7 @@ import { useSync } from '@/hooks/use-sync.hook';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 import { getDatabaseProvider } from '@/providers/registry';
-import { ProviderError, type ProviderRecord } from '@/providers/database-provider';
+import { ProviderError } from '@/providers/database-provider';
 import { replaceDatabaseCredentials } from '@/services/record.service';
 import { WebDavCredentialsModal } from '@/components/workspace/webdav-credentials.modal';
 
@@ -31,6 +31,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+  useEffect(() => () => session.lifecycle?.dispose(), [session.lifecycle]);
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -74,7 +75,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
     nextRecord: FileRecord;
   }) => {
     const previousSession = sessionRef.current;
-    if (previousSession) {
+    if (previousSession && !previousSession.lifecycle?.signal.aborted) {
       const updatedSession = {
         ...previousSession,
         database: nextDatabase,
@@ -91,6 +92,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   };
 
   const onLock = () => {
+    sessionRef.current?.lifecycle?.dispose();
     sessionRef.current = null;
     setSession(null);
     setSelectedEntryUuid(null);
@@ -106,7 +108,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
     if (record.type !== 'webdav') return;
 
     const result = await replaceDatabaseCredentials({
-      record: record as PersistedFileRecord,
+      record,
       database,
       setupInput: values,
     });
@@ -142,8 +144,9 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
     guardNavigation(() => void createNewEntry());
   };
 
-  const canSync = record.type !== 'demo' && getDatabaseProvider(record.type)?.capabilities.remote === true;
-  const hasPendingChanges = record.type !== 'demo' && Boolean((record as ProviderRecord).synchronization?.pending);
+  const canSync = record.type !== 'demo' && record.type !== 'local';
+  const hasPendingChanges =
+    record.type !== 'demo' && record.type !== 'local' && Boolean(record.synchronization?.pending);
   const canUpdateWebDavUrl =
     record.type === 'webdav' &&
     syncError instanceof ProviderError &&

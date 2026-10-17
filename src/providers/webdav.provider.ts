@@ -4,9 +4,12 @@ import { readCredentialContainer } from '@/services/kdbx.service';
 import {
   ProviderError,
   type DatabaseProvider,
-  type ProviderImportResult,
-  type ProviderRecord,
+  type DatabaseUnlockFactors,
+  type ProviderCreatePreparation,
+  type ProviderImportPreparation,
+  type ProviderReplacementPreparation,
   type ProviderSession,
+  type RemoteProviderRecord,
 } from './database-provider';
 import { encryptedBytesSchema, synchronizationSchema } from './record.schema';
 
@@ -57,6 +60,7 @@ const recordSchema = z.object({
   kdbx: z.object({ encryptedBytes: encryptedBytesSchema, name: z.string() }),
   key: z.object({ hash: z.string(), name: z.string() }).optional(),
   lastOpenedAt: z.string().optional(),
+  sourceVersion: z.literal(1).optional(),
   source: sourceSchema,
   synchronization: synchronizationSchema.extend({ createPending: z.boolean().optional() }).optional(),
   type: z.literal('webdav'),
@@ -151,6 +155,11 @@ const readSnapshot = async (url: string, authorization: string, signal?: AbortSi
 
 const fileNameFromUrl = (url: string) => decodeURIComponent(new URL(url).pathname.split('/').at(-1) || 'webdav.kdbx');
 
+const credentialsForSetup = (setup: ReturnType<typeof validatedSetup>) => ({
+  values: { Username: setup.username, Password: setup.password },
+  bindRecordId: (credentialRecordId: string) => ({ url: setup.url, credentialRecordId }),
+});
+
 const createSessionForCredentials = (url: string, username: string, password: string): ProviderSession => {
   let authorization: string | null = basicAuthorization(username, password);
   let disposed = false;
@@ -160,43 +169,49 @@ const createSessionForCredentials = (url: string, username: string, password: st
   };
 
   return {
-    read: async (signal) => readSnapshot(url, ensureAuthorization(), signal),
-    replace: async (bytes, revision, signal) => {
-      const exactRevision = strongEtag(revision ?? null);
-      if (!exactRevision) {
-        throw new ProviderError(
-          'unsupported',
-          'This WebDAV server did not provide a strong ETag. Automatic updates are disabled.',
-        );
-      }
+    read: { kind: 'remote', read: async (signal) => readSnapshot(url, ensureAuthorization(), signal) },
+    replace: {
+      kind: 'conditional',
+      write: async (bytes, revision, signal) => {
+        const exactRevision = strongEtag(revision);
+        if (!exactRevision) {
+          throw new ProviderError(
+            'unsupported',
+            'This WebDAV server did not provide a strong ETag. Automatic updates are disabled.',
+          );
+        }
 
-      const response = await request({
-        url,
-        authorization: ensureAuthorization(),
-        method: 'PUT',
-        signal,
-        headers: { 'Content-Type': 'application/octet-stream', 'If-Match': exactRevision },
-        body: bytes,
-      });
+        const response = await request({
+          url,
+          authorization: ensureAuthorization(),
+          method: 'PUT',
+          signal,
+          headers: { 'Content-Type': 'application/octet-stream', 'If-Match': exactRevision },
+          body: bytes,
+        });
 
-      const revisionFromWrite = strongEtag(response.headers.get('ETag'));
-      return revisionFromWrite
-        ? { bytes, revision: revisionFromWrite }
-        : await readSnapshot(url, ensureAuthorization(), signal);
+        const revisionFromWrite = strongEtag(response.headers.get('ETag'));
+        return revisionFromWrite
+          ? { bytes, revision: revisionFromWrite }
+          : await readSnapshot(url, ensureAuthorization(), signal);
+      },
     },
-    create: async (_name, bytes, signal) => {
-      const response = await request({
-        url,
-        authorization: ensureAuthorization(),
-        method: 'PUT',
-        signal,
-        headers: { 'Content-Type': 'application/octet-stream', 'If-None-Match': '*' },
-        body: bytes,
-      });
+    create: {
+      kind: 'conditional',
+      create: async (_name, bytes, signal) => {
+        const response = await request({
+          url,
+          authorization: ensureAuthorization(),
+          method: 'PUT',
+          signal,
+          headers: { 'Content-Type': 'application/octet-stream', 'If-None-Match': '*' },
+          body: bytes,
+        });
 
-      const revision = strongEtag(response.headers.get('ETag'));
-      const snapshot = revision ? { bytes, revision } : await readSnapshot(url, ensureAuthorization(), signal);
-      return { source: { url }, snapshot };
+        const revision = strongEtag(response.headers.get('ETag'));
+        const snapshot = revision ? { bytes, revision } : await readSnapshot(url, ensureAuthorization(), signal);
+        return { source: { url }, snapshot };
+      },
     },
     dispose: () => {
       disposed = true;
@@ -205,95 +220,83 @@ const createSessionForCredentials = (url: string, username: string, password: st
   };
 };
 
-const webdavProvider: DatabaseProvider = {
+const webdavProvider = {
   id: 'webdav',
   label: 'WebDAV',
   sourceVersion: 1,
   sourceSchema,
   recordSchema,
-  capabilities: { remote: true, read: true, replace: 'conditional', create: 'conditional' },
-  requiresUnlockOnImport: true,
-  storeCredentials: {
-    getValuesFromSetup: (input) => {
-      const { username, password } = validatedSetup(input);
-      return { Username: username, Password: password };
-    },
-    attachRecordId: (source, credentialRecordId) => {
-      const parsedSource = sourceSchema.pick({ url: true }).parse(source);
-      return { ...parsedSource, credentialRecordId };
-    },
-    getCreateSource: (input) => ({ url: validatedSetup(input).url }),
-    retainLocalRecordBeforeCreate: true,
+  capabilities: { kind: 'remote', read: true, replace: 'conditional', create: 'conditional' },
+  prepareImport: (input: unknown): ProviderImportPreparation => {
+    const setup = validatedSetup(input);
+    const displayName = fileNameFromUrl(setup.url);
+    return {
+      displayName,
+      duplicateIdentity: setup.url,
+      import: async () => {
+        const snapshot = await readSnapshot(setup.url, basicAuthorization(setup.username, setup.password));
+        return {
+          name: displayName,
+          bytes: snapshot.bytes,
+          revision: snapshot.revision,
+          source: { url: setup.url },
+        };
+      },
+      credentials: credentialsForSetup(setup),
+    };
   },
-  getCredentialReplacementInput: (record, input) => {
+  prepareCreate: (input: unknown, databaseName: string): ProviderCreatePreparation => {
+    const setup = validatedSetup(input);
+    return {
+      displayName: databaseName,
+      duplicateIdentity: setup.url,
+      connectForSetup: async () => createSessionForCredentials(setup.url, setup.username, setup.password),
+      credentials: credentialsForSetup(setup),
+    };
+  },
+  prepareCredentialReplacement: (record, input): ProviderReplacementPreparation => {
+    if (record.type !== 'webdav') throw new Error('A WebDAV record is required to replace this connection.');
     const { url } = sourceSchema.parse(record.source);
     const replacement = z
       .object({ url: z.string().optional(), username: z.string().min(1), password: z.string().min(1) })
       .parse(input);
-    return validatedSetup({ ...replacement, url: replacement.url || url });
-  },
-  setupActions: {
-    import: {
-      label: 'Import',
-      load: async () => {
-        const { ImportWebDavModal } = await import('@/components/unlock/import-webdav.modal');
-        return { default: ImportWebDavModal };
-      },
-    },
-    create: {
-      label: 'Create',
-      load: async () => {
-        const { CreateWebDavModal } = await import('@/components/unlock/create-webdav.modal');
-        return { default: CreateWebDavModal };
-      },
-    },
-  },
-  importSource: async (input: unknown): Promise<ProviderImportResult> => {
-    const setup = validatedSetup(input);
-    const snapshot = await readSnapshot(setup.url, basicAuthorization(setup.username, setup.password));
+    const setup = validatedSetup({ ...replacement, url: replacement.url || url });
     return {
-      name: fileNameFromUrl(setup.url),
-      bytes: snapshot.bytes,
-      revision: snapshot.revision,
-      source: { url: setup.url },
+      duplicateIdentity: setup.url,
+      connectForSetup: async () => createSessionForCredentials(setup.url, setup.username, setup.password),
+      credentials: credentialsForSetup(setup),
     };
   },
-  getImportIdentityFromInput: (input) => validatedSetup(input).url,
-  getImportNameFromInput: (input) => fileNameFromUrl(validatedSetup(input).url),
   getRecordIdentity: (record) => (record.type === 'webdav' ? sourceSchema.parse(record.source).url : null),
-  getImportIdentity: ({ source }) => sourceSchema.pick({ url: true }).parse(source).url,
-  getCreateIdentity: (input) => validatedSetup(input).url,
   getDuplicateMessage: (_purpose, databaseName) => `A record for this WebDAV file already exists: ${databaseName}.`,
-  createSession: async (record?: ProviderRecord, setupInput?: unknown) => {
-    if (record) {
-      const source = sourceSchema.parse(record.source);
-      const replacementSetup = setupInputSchema.safeParse(setupInput);
-      if (replacementSetup.success) {
-        const setup = validatedSetup(replacementSetup.data);
-        return createSessionForCredentials(setup.url, setup.username, setup.password);
-      }
-
-      const factorsSchema = z.object({ password: z.string(), keyFileHashBase64: z.string().optional() });
-      const factors = factorsSchema.safeParse(setupInput);
-      if (!factors.success) return null;
-
-      const credentialBytes = await getCredentialRecord(source.credentialRecordId);
-      if (!credentialBytes)
-        throw new Error('The encrypted WebDAV credentials are missing. Replace the connection credentials.');
-
-      const values = await readCredentialContainer({
-        encryptedBytes: credentialBytes,
-        password: factors.data.password,
-        keyFileHashBase64: factors.data.keyFileHashBase64,
-      });
-      const credentialsSchema = z.object({ Username: z.string().min(1), Password: z.string().min(1) });
-      const credentials = credentialsSchema.parse(values);
-      return createSessionForCredentials(source.url, credentials.Username, credentials.Password);
-    }
-
+  connectForSetup: async (setupInput: unknown) => {
     const setup = validatedSetup(setupInput);
     return createSessionForCredentials(setup.url, setup.username, setup.password);
   },
-};
+  unlockSavedConnection: async (
+    record: RemoteProviderRecord,
+    factors?: DatabaseUnlockFactors,
+    signal?: AbortSignal,
+  ) => {
+    signal?.throwIfAborted();
+    if (record.type !== 'webdav') throw new Error('A WebDAV record is required to unlock this connection.');
+    if (!factors) throw new Error('Unlock the database before reconnecting to WebDAV.');
+    const source = sourceSchema.parse(record.source);
+    const credentialBytes = await getCredentialRecord(source.credentialRecordId);
+    signal?.throwIfAborted();
+    if (!credentialBytes)
+      throw new Error('The encrypted WebDAV credentials are missing. Replace the connection credentials.');
+
+    const values = await readCredentialContainer({
+      encryptedBytes: credentialBytes,
+      password: factors.password,
+      keyFileHashBase64: factors.keyFileHashBase64,
+    });
+    signal?.throwIfAborted();
+    const credentialsSchema = z.object({ Username: z.string().min(1), Password: z.string().min(1) });
+    const credentials = credentialsSchema.parse(values);
+    return createSessionForCredentials(source.url, credentials.Username, credentials.Password);
+  },
+} satisfies DatabaseProvider;
 
 export { webdavProvider };

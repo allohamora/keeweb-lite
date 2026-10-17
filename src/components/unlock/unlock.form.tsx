@@ -14,7 +14,6 @@ import { getErrorMessage } from '@/utils/error.utils';
 import { getRecords } from '@/services/record.service';
 import { getRecordIssues } from '@/repositories/record.repository';
 import { getDatabaseProvider } from '@/providers/registry';
-import type { ProviderRecord } from '@/providers/database-provider';
 import { toast } from 'sonner';
 import { RecordRemove } from './record-remove.component';
 
@@ -65,7 +64,9 @@ export const UnlockForm = ({
   const records = recordStore?.records ?? [];
   const recordIssues = recordStore?.issues ?? [];
   const selectedRecord = records.find(({ id }) => id === selectedRecordId);
-  const hasPendingSelectedChanges = Boolean((selectedRecord as ProviderRecord | undefined)?.synchronization?.pending);
+  const hasPendingSelectedChanges = Boolean(
+    selectedRecord && selectedRecord.type !== 'local' && selectedRecord.synchronization?.pending,
+  );
 
   const [showPassword, setShowPassword] = useState(false);
 

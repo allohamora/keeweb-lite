@@ -6,7 +6,7 @@ import { webdavProvider } from '@/providers/webdav.provider';
 const endpoint = 'https://dav.example.test/files/vault.kdbx';
 
 const createSession = async () => {
-  const session = await webdavProvider.createSession(undefined, {
+  const session = await webdavProvider.connectForSetup({
     url: endpoint,
     username: 'alice',
     password: 'app-password',
@@ -26,11 +26,13 @@ describe('webdav.provider', () => {
       }),
     );
 
-    const imported = await webdavProvider.importSource?.({
-      url: `https://dav.example.test/files/vault.kdbx`,
-      username: 'alice',
-      password: 'app-password',
-    });
+    const imported = await webdavProvider
+      .prepareImport({
+        url: `https://dav.example.test/files/vault.kdbx`,
+        username: 'alice',
+        password: 'app-password',
+      })
+      .import();
 
     expect(imported).toEqual({
       bytes,
@@ -52,9 +54,10 @@ describe('webdav.provider', () => {
       }),
     );
 
-    if (!session.replace || !session.create) throw new Error('Expected conditional WebDAV writes.');
-    await session.replace(new Uint8Array([2, 4, 6]), '"revision-1"');
-    await session.create('vault.kdbx', new Uint8Array([9, 8, 7]));
+    if (session.replace.kind !== 'conditional' || session.create.kind !== 'conditional')
+      throw new Error('Expected conditional WebDAV writes.');
+    await session.replace.write(new Uint8Array([2, 4, 6]), '"revision-1"');
+    await session.create.create('vault.kdbx', new Uint8Array([9, 8, 7]));
 
     expect(headersSeen[0]?.get('If-Match')).toBe('"revision-1"');
     expect(headersSeen[0]?.get('If-None-Match')).toBeNull();
@@ -68,11 +71,12 @@ describe('webdav.provider', () => {
     mockServer.addHandlers(
       http.get(endpoint, () => new HttpResponse(new Uint8Array([1]), { headers: { ETag: 'W/"weak"' } })),
     );
-    const snapshot = await session.read();
+    if (session.read.kind !== 'remote') throw new Error('Expected a WebDAV read operation.');
+    const snapshot = await session.read.read();
 
     expect(snapshot.revision).toBeUndefined();
-    if (!session.replace) throw new Error('Expected conditional WebDAV replacement.');
-    await expect(session.replace(new Uint8Array([2]), snapshot.revision)).rejects.toMatchObject({
+    if (session.replace.kind !== 'conditional') throw new Error('Expected conditional WebDAV replacement.');
+    await expect(session.replace.write(new Uint8Array([2]), snapshot.revision!)).rejects.toMatchObject({
       kind: 'unsupported',
     });
     session.dispose();
@@ -82,14 +86,15 @@ describe('webdav.provider', () => {
     const session = await createSession();
     mockServer.addHandlers(http.get(endpoint, () => new HttpResponse(null, { status: 401 })));
 
-    await expect(session.read()).rejects.toMatchObject({ kind: 'authentication' });
-    await expect(
-      webdavProvider.importSource?.({
+    if (session.read.kind !== 'remote') throw new Error('Expected a WebDAV read operation.');
+    await expect(session.read.read()).rejects.toMatchObject({ kind: 'authentication' });
+    expect(() =>
+      webdavProvider.prepareImport({
         url: 'http://dav.example.test/files/vault.kdbx',
         username: 'alice',
         password: 'secret',
       }),
-    ).rejects.toThrow('full HTTPS WebDAV file URL');
+    ).toThrow('full HTTPS WebDAV file URL');
     session.dispose();
   });
 
@@ -97,6 +102,7 @@ describe('webdav.provider', () => {
     const session = await createSession();
     session.dispose();
 
-    await expect(session.read()).rejects.toThrow('session is locked');
+    if (session.read.kind !== 'remote') throw new Error('Expected a WebDAV read operation.');
+    await expect(session.read.read()).rejects.toThrow('session is locked');
   });
 });

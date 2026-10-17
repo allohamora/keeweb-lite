@@ -1,6 +1,7 @@
 import type { ZodType } from 'zod';
 
 export type DatabaseProviderId = 'local' | 'google-drive' | 'webdav';
+export type RemoteDatabaseProviderId = Exclude<DatabaseProviderId, 'local'>;
 export type ProviderSetupActionId = 'import' | 'create';
 export type ProviderDuplicatePurpose = 'import' | 'create';
 export type ProviderErrorKind =
@@ -25,23 +26,53 @@ export class ProviderError extends Error {
   }
 }
 
-export type ProviderRecord = {
+export type ProviderSourceMap = {
+  local: undefined;
+  'google-drive': { id: string };
+  webdav: { url: string; credentialRecordId: string };
+};
+
+export type ProviderImportSourceMap = {
+  local: undefined;
+  'google-drive': ProviderSourceMap['google-drive'];
+  webdav: { url: string };
+};
+
+export type ProviderSynchronization = {
+  generation: number;
+  pending: boolean;
+  createPending?: boolean;
+  commonVersion?: RemoteSnapshot;
+  localEditState?: unknown;
+};
+
+type ProviderRecordEnvelope<TType extends DatabaseProviderId> = {
   id: string;
-  type: DatabaseProviderId;
+  type: TType;
+  sourceVersion?: 1;
   kdbx: { encryptedBytes: Uint8Array; name: string };
   key?: { hash: string; name: string };
   lastOpenedAt?: string;
-  source?: unknown;
-  synchronization?: {
-    generation: number;
-    pending: boolean;
-    createPending?: boolean;
-    commonVersion?: { bytes: Uint8Array; revision?: string };
-    localEditState?: unknown;
-  };
 };
 
-export type ProviderSource = unknown;
+export type LocalProviderRecord = ProviderRecordEnvelope<'local'> & {
+  source?: never;
+  synchronization?: never;
+};
+
+export type GoogleDriveProviderRecord = ProviderRecordEnvelope<'google-drive'> & {
+  source: ProviderSourceMap['google-drive'];
+  synchronization?: ProviderSynchronization;
+};
+
+export type WebDavProviderRecord = ProviderRecordEnvelope<'webdav'> & {
+  source: ProviderSourceMap['webdav'];
+  synchronization?: ProviderSynchronization;
+};
+
+export type RemoteProviderRecord = GoogleDriveProviderRecord | WebDavProviderRecord;
+export type ProviderRecord = LocalProviderRecord | RemoteProviderRecord;
+export type ProviderSource = ProviderSourceMap[DatabaseProviderId];
 
 export type RemoteSnapshot = {
   bytes: Uint8Array;
@@ -49,66 +80,119 @@ export type RemoteSnapshot = {
 };
 
 export type ProviderWriteResult = {
-  source?: ProviderSource;
+  source?: ProviderImportSourceMap[DatabaseProviderId];
   snapshot?: RemoteSnapshot;
 };
 
 export type ProviderImportResult = {
   name: string;
   bytes: Uint8Array;
-  source?: ProviderSource;
+  source?: ProviderImportSourceMap[DatabaseProviderId];
   revision?: string;
 };
 
+export type ProviderCredentialsPreparation = {
+  values: Record<string, string>;
+  bindRecordId: (credentialRecordId: string) => ProviderSource;
+};
+
+export type ProviderImportPreparation = {
+  displayName: string;
+  duplicateIdentity: string | null;
+  import: () => Promise<ProviderImportResult>;
+  credentials?: ProviderCredentialsPreparation;
+};
+
+export type ProviderCreatePreparation = {
+  displayName: string;
+  duplicateIdentity: string | null;
+  connectForSetup?: () => Promise<ProviderSession>;
+  credentials?: ProviderCredentialsPreparation;
+};
+
+export type ProviderReplacementPreparation = {
+  duplicateIdentity: string | null;
+  connectForSetup: () => Promise<ProviderSession>;
+  credentials: ProviderCredentialsPreparation;
+};
+
+export type ProviderReadOperation =
+  { kind: 'none' } | { kind: 'remote'; read: (signal?: AbortSignal) => Promise<RemoteSnapshot> };
+
+export type ProviderReplaceOperation =
+  | { kind: 'none' }
+  | {
+      kind: 'unconditional';
+      write: (bytes: Uint8Array, signal?: AbortSignal) => Promise<RemoteSnapshot | void>;
+    }
+  | {
+      kind: 'conditional';
+      write: (bytes: Uint8Array, revision: string, signal?: AbortSignal) => Promise<RemoteSnapshot | void>;
+    };
+
+export type ProviderCreateOperation =
+  | { kind: 'none' }
+  | {
+      kind: 'unconditional';
+      create: (name: string, bytes: Uint8Array, signal?: AbortSignal) => Promise<ProviderWriteResult>;
+    }
+  | {
+      kind: 'conditional';
+      create: (name: string, bytes: Uint8Array, signal?: AbortSignal) => Promise<ProviderWriteResult>;
+    };
+
 export type ProviderSession = {
-  read: (signal?: AbortSignal) => Promise<RemoteSnapshot>;
-  replace?: (bytes: Uint8Array, revision?: string, signal?: AbortSignal) => Promise<RemoteSnapshot | void>;
-  create?: (name: string, bytes: Uint8Array, signal?: AbortSignal) => Promise<ProviderWriteResult>;
+  read: ProviderReadOperation;
+  replace: ProviderReplaceOperation;
+  create: ProviderCreateOperation;
   dispose: () => void;
 };
 
 export type ProviderCapabilities =
+  | { kind: 'local'; create: 'local' }
   | {
-      remote: false;
-      read: false;
-      replace: 'none';
-      create: 'local';
-    }
-  | {
-      remote: true;
+      kind: 'remote';
       read: true;
       replace: 'conditional' | 'unconditional' | 'none';
-      create: 'conditional' | 'unconditional' | 'local' | 'none';
+      create: 'conditional' | 'unconditional' | 'none';
     };
 
-export type SetupActionDefinition = {
-  label: string;
-  load: () => Promise<unknown>;
-};
-
-export type DatabaseProvider = {
-  id: DatabaseProviderId;
+type ProviderDefinitionBase = {
   label: string;
   sourceVersion: number;
   sourceSchema: ZodType<ProviderSource>;
   recordSchema: ZodType<ProviderRecord>;
   capabilities: ProviderCapabilities;
-  setupActions: Partial<Record<ProviderSetupActionId, SetupActionDefinition>>;
-  importSource?: (input: unknown) => Promise<ProviderImportResult>;
-  getImportIdentityFromInput?: (input: unknown) => string | null;
-  getImportNameFromInput?: (input: unknown) => string;
+  isAvailable?: () => boolean;
+  prepareImport?: (input: unknown) => ProviderImportPreparation;
+  prepareCreate: (input: unknown, databaseName: string) => ProviderCreatePreparation;
   getRecordIdentity?: (record: ProviderRecord) => string | null;
-  getImportIdentity?: (result: ProviderImportResult) => string | null;
-  getCreateIdentity?: (input: unknown, databaseName: string) => string | null;
   getDuplicateMessage?: (purpose: ProviderDuplicatePurpose, databaseName: string) => string;
   getCreateFailureMessage?: (databaseName: string) => string;
-  createSession: (record?: ProviderRecord, setupInput?: unknown) => Promise<ProviderSession | null>;
-  requiresUnlockOnImport?: boolean;
-  storeCredentials?: {
-    getValuesFromSetup: (input: unknown) => Record<string, string>;
-    attachRecordId: (source: unknown, recordId: string) => unknown;
-    getCreateSource?: (input: unknown) => unknown;
-    retainLocalRecordBeforeCreate?: boolean;
-  };
-  getCredentialReplacementInput?: (record: ProviderRecord, input: unknown) => unknown;
+};
+
+export type LocalDatabaseProvider = ProviderDefinitionBase & {
+  id: 'local';
+  capabilities: { kind: 'local'; create: 'local' };
+  prepareCredentialReplacement?: never;
+};
+
+export type RemoteDatabaseProvider = ProviderDefinitionBase & {
+  id: RemoteDatabaseProviderId;
+  capabilities: Extract<ProviderCapabilities, { kind: 'remote' }>;
+  prepareImport?: (input: unknown) => ProviderImportPreparation;
+  connectForSetup: (input: unknown) => Promise<ProviderSession>;
+  unlockSavedConnection: (
+    record: RemoteProviderRecord,
+    factors?: DatabaseUnlockFactors,
+    signal?: AbortSignal,
+  ) => Promise<ProviderSession>;
+  prepareCredentialReplacement?: (record: RemoteProviderRecord, input: unknown) => ProviderReplacementPreparation;
+};
+
+export type DatabaseProvider = LocalDatabaseProvider | RemoteDatabaseProvider;
+
+export type DatabaseUnlockFactors = {
+  password: string;
+  keyFileHashBase64?: string;
 };

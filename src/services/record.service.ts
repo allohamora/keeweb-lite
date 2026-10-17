@@ -1,6 +1,6 @@
 import kdbx from '@/lib/kdbx.lib';
-import { z } from 'zod';
 import {
+  commitConnection,
   createRecord,
   getRecords as getRepositoryRecords,
   removeCredentialRecord,
@@ -9,17 +9,12 @@ import {
 } from '@/repositories/record.repository';
 import { asArrayBuffer } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
-import { getDatabaseProvider } from '@/providers/registry';
-import type {
-  DatabaseProviderId,
-  ProviderImportResult,
-  ProviderRecord,
-  RemoteSnapshot,
-  ProviderSession,
-} from '@/providers/database-provider';
+import { getDatabaseProvider, parseProviderRecord } from '@/providers/registry';
+import type { DatabaseProviderId, RemoteSnapshot, ProviderSession } from '@/providers/database-provider';
 import type { PersistedFileRecord } from '@/repositories/record.repository';
 import { toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
 import { createCredentialContainer } from '@/services/kdbx.service';
+import { webdavProvider } from '@/providers/webdav.provider';
 
 export { toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
 
@@ -126,12 +121,14 @@ const hasDuplicateIdentity = (
 
   const provider = getProvider(providerId);
 
-  return records.some(
-    (record) => record.type === providerId && provider.getRecordIdentity?.(record as ProviderRecord) === identity,
-  );
+  return records.some((record) => record.type === providerId && provider.getRecordIdentity?.(record) === identity);
 };
 
-const toPersistedProviderRecord = (record: ProviderRecord): PersistedFileRecord => record as PersistedFileRecord;
+const toPersistedProviderRecord = (record: unknown): PersistedFileRecord => {
+  const parsed = parseProviderRecord(record);
+  if (!parsed) throw new Error('Unsupported or invalid database provider record.');
+  return parsed;
+};
 
 export const importDatabaseRecord = async ({
   providerId,
@@ -146,63 +143,55 @@ export const importDatabaseRecord = async ({
 }) => {
   return createImportLock.runInLock(async () => {
     const provider = getProvider(providerId);
-    if (!provider.importSource) throw new Error(`${provider.label} does not support importing databases.`);
+    if (!provider.prepareImport) throw new Error(`${provider.label} does not support importing databases.`);
+    const preparation = provider.prepareImport(sourceInput);
 
     const records = await getRepositoryRecords();
-    const inputIdentity = provider.getImportIdentityFromInput?.(sourceInput);
-    if (hasDuplicateIdentity(providerId, inputIdentity, records)) {
-      const databaseName = provider.getImportNameFromInput?.(sourceInput) ?? '';
+    if (hasDuplicateIdentity(providerId, preparation.duplicateIdentity, records)) {
       throw new Error(
-        provider.getDuplicateMessage?.('import', databaseName) ?? 'A record for this source already exists.',
+        provider.getDuplicateMessage?.('import', preparation.displayName) ?? 'A record for this source already exists.',
       );
     }
 
-    const imported: ProviderImportResult = await provider.importSource(sourceInput);
-    const identity = provider.getImportIdentity?.(imported);
-    if (hasDuplicateIdentity(providerId, identity, records)) {
-      throw new Error(
-        provider.getDuplicateMessage?.('import', imported.name) ?? 'A record for this source already exists.',
-      );
-    }
+    const imported = await preparation.import();
 
     const key = await toKey(keyFile);
     const recordId = crypto.randomUUID();
     let source = imported.source;
     let credentialBytes: Uint8Array | undefined;
 
-    if (provider.requiresUnlockOnImport) {
+    if (preparation.credentials) {
       if (!password)
         throw new Error('Enter the database password to verify this WebDAV file before saving its connection.');
 
       await unlockKdbx({ encryptedBytes: imported.bytes, keyFileHashBase64: key?.hash, password });
-
-      if (!provider.storeCredentials)
-        throw new Error(`${provider.label} does not support encrypted connection credentials.`);
 
       const keyFileBytes = key?.hash ? kdbx.ByteUtils.base64ToBytes(key.hash) : undefined;
       const credentials = new kdbx.Credentials(kdbx.ProtectedValue.fromString(password), keyFileBytes);
       await credentials.ready;
       credentialBytes = await createCredentialContainer({
         name: `${provider.label} connection credentials`,
-        values: provider.storeCredentials.getValuesFromSetup(sourceInput),
+        values: preparation.credentials.values,
         credentials,
       });
       await setCredentialRecord(recordId, credentialBytes);
-      source = provider.storeCredentials.attachRecordId(source, recordId);
+      source = preparation.credentials.bindRecordId(recordId);
     }
 
     const record = toPersistedProviderRecord({
       id: recordId,
+      sourceVersion: 1,
       kdbx: { encryptedBytes: imported.bytes, name: imported.name },
       key,
       source,
-      synchronization: getProvider(providerId).capabilities.remote
-        ? {
-            generation: 0,
-            pending: false,
-            commonVersion: { bytes: imported.bytes, revision: imported.revision },
-          }
-        : undefined,
+      synchronization:
+        provider.capabilities.kind === 'remote'
+          ? {
+              generation: 0,
+              pending: false,
+              commonVersion: { bytes: imported.bytes, revision: imported.revision },
+            }
+          : undefined,
       type: providerId,
     });
 
@@ -257,27 +246,21 @@ export const replaceDatabaseCredentials = async ({
   database: kdbx.Kdbx;
   setupInput: unknown;
 }) => {
-  const provider = getProvider(record.type);
-  if (!provider.storeCredentials)
-    throw new Error(`${provider.label} does not support replaceable connection credentials.`);
-
-  const validatedSetupInput =
-    provider.getCredentialReplacementInput?.(record as ProviderRecord, setupInput) ?? setupInput;
-  const sourceWithUrl = provider.storeCredentials.attachRecordId(validatedSetupInput, 'credential-placeholder');
-  const candidateRecord = { ...record, source: sourceWithUrl } as ProviderRecord;
-  const nextIdentity = provider.getRecordIdentity?.(candidateRecord);
+  if (record.type !== 'webdav') throw new Error('Only WebDAV connections support credential replacement.');
+  const provider = webdavProvider;
+  const preparation = provider.prepareCredentialReplacement(record, setupInput);
   const otherRecords = (await getRepositoryRecords()).filter((storedRecord) => storedRecord.id !== record.id);
-  if (hasDuplicateIdentity(record.type, nextIdentity, otherRecords)) {
+  if (hasDuplicateIdentity('webdav', preparation.duplicateIdentity, otherRecords)) {
     throw new Error(
       provider.getDuplicateMessage?.('import', record.kdbx.name) ?? 'A record for this source already exists.',
     );
   }
 
-  const providerSession = await provider.createSession(record as ProviderRecord, validatedSetupInput);
-  if (!providerSession) throw new Error(`${provider.label} could not create a temporary validation session.`);
+  const providerSession = await preparation.connectForSetup();
 
   try {
-    const remoteSnapshot = await providerSession.read();
+    if (providerSession.read.kind !== 'remote') throw new Error('WebDAV does not support validating this connection.');
+    const remoteSnapshot = await providerSession.read.read();
     let remoteDatabase: kdbx.Kdbx;
     try {
       remoteDatabase = await kdbx.Kdbx.load(asArrayBuffer(remoteSnapshot.bytes), database.credentials);
@@ -290,27 +273,18 @@ export const replaceDatabaseCredentials = async ({
 
     const encryptedCredentials = await createCredentialContainer({
       name: `${provider.label} connection credentials`,
-      values: provider.storeCredentials.getValuesFromSetup(validatedSetupInput),
+      values: preparation.credentials.values,
       credentials: database.credentials,
     });
-    const oldSource = z.object({ credentialRecordId: z.string().min(1) }).parse((record as ProviderRecord).source);
     const nextCredentialRecordId = crypto.randomUUID();
-    await setCredentialRecord(nextCredentialRecordId, encryptedCredentials);
-
-    let nextRecord: PersistedFileRecord;
-    try {
-      const nextSource = provider.storeCredentials.attachRecordId(validatedSetupInput, nextCredentialRecordId);
-      nextRecord = await updateRecordWith(
-        record.id,
-        (currentRecord) => ({ ...currentRecord, source: nextSource }) as PersistedFileRecord,
-      );
-    } catch (error) {
-      await removeCredentialRecord(nextCredentialRecordId);
-      throw error;
-    }
-
-    await removeCredentialRecord(oldSource.credentialRecordId).catch(() => undefined);
-    return { record: nextRecord, providerSession };
+    const nextSource = preparation.credentials.bindRecordId(nextCredentialRecordId);
+    const result = await commitConnection(record.id, record.synchronization?.generation ?? 0, {
+      source: nextSource,
+      credentialRecordId: nextCredentialRecordId,
+      encryptedBytes: encryptedCredentials,
+    });
+    if (result.status !== 'applied') throw new Error('The database changed while replacing its connection. Retry.');
+    return { record: result.record, providerSession };
   } catch (error) {
     providerSession.dispose();
     throw error;
@@ -333,31 +307,29 @@ export const createDatabaseRecord = async ({
   return createImportLock.runInLock(async () => {
     const provider = getProvider(providerId);
     const { name, kdbxFileName } = validateNewDatabaseInput(databaseName, password);
+    const preparation = provider.prepareCreate(setupInput, kdbxFileName);
     const records = await getRepositoryRecords();
-    const identity = provider.getCreateIdentity?.(setupInput, kdbxFileName);
-    if (hasDuplicateIdentity(providerId, identity, records)) {
+    if (hasDuplicateIdentity(providerId, preparation.duplicateIdentity, records)) {
       throw new Error(
-        provider.getDuplicateMessage?.('create', kdbxFileName) ?? 'A record for this source already exists.',
+        provider.getDuplicateMessage?.('create', preparation.displayName) ?? 'A record for this source already exists.',
       );
     }
 
     const { encryptedBytes, generatedKey, credentials } = await createEmptyKdbx({ name, password, useKeyFile });
     const recordId = crypto.randomUUID();
 
-    if (provider.storeCredentials?.retainLocalRecordBeforeCreate) {
+    if (preparation.credentials) {
       const credentialBytes = await createCredentialContainer({
         name: `${provider.label} connection credentials`,
-        values: provider.storeCredentials.getValuesFromSetup(setupInput),
+        values: preparation.credentials.values,
         credentials,
       });
       await setCredentialRecord(recordId, credentialBytes);
 
-      const source = provider.storeCredentials.attachRecordId(
-        provider.storeCredentials.getCreateSource?.(setupInput),
-        recordId,
-      );
+      const source = preparation.credentials.bindRecordId(recordId);
       const recoveryRecord = toPersistedProviderRecord({
         id: recordId,
+        sourceVersion: 1,
         kdbx: { encryptedBytes, name: kdbxFileName },
         key: generatedKey?.key,
         source,
@@ -373,29 +345,29 @@ export const createDatabaseRecord = async ({
       }
 
       try {
-        const providerSession = await provider.createSession(recoveryRecord, {
-          password,
-          keyFileHashBase64: generatedKey?.key.hash,
-        });
-        if (!providerSession?.create) throw new Error(`${provider.label} does not support database creation.`);
+        if (!preparation.connectForSetup) throw new Error(`${provider.label} does not support database creation.`);
+        const providerSession = await preparation.connectForSetup();
 
         try {
-          const result = await providerSession.create(kdbxFileName, encryptedBytes);
-          const finalizedSource = provider.storeCredentials.attachRecordId(result.source, recordId);
-          const finalizedRecord = await updateRecordWith(
-            recordId,
-            (currentRecord) =>
-              ({
-                ...currentRecord,
-                source: finalizedSource,
-                synchronization: {
-                  generation: (currentRecord as ProviderRecord).synchronization?.generation ?? 0,
-                  pending: false,
-                  createPending: false,
-                  commonVersion: result.snapshot ?? { bytes: encryptedBytes },
-                },
-              }) as PersistedFileRecord,
-          );
+          if (providerSession.create.kind !== 'conditional')
+            throw new Error(`${provider.label} does not support conditional database creation.`);
+          const result = await providerSession.create.create(kdbxFileName, encryptedBytes);
+          const finalizedSource = preparation.credentials.bindRecordId(recordId);
+          const finalizedRecord = await updateRecordWith(recordId, (currentRecord) => {
+            if (currentRecord.type !== providerId) throw new Error('The recovery record provider was changed.');
+            const parsed = parseProviderRecord({
+              ...currentRecord,
+              source: finalizedSource,
+              synchronization: {
+                generation: currentRecord.synchronization?.generation ?? 0,
+                pending: false,
+                createPending: false,
+                commonVersion: result.snapshot ?? { bytes: encryptedBytes },
+              },
+            });
+            if (!parsed || parsed.type !== providerId) throw new Error('The recovery record is invalid.');
+            return parsed;
+          });
 
           return {
             keyFileBytes: generatedKey?.keyFileBytes,
@@ -415,12 +387,14 @@ export const createDatabaseRecord = async ({
 
     let source: unknown;
     let commonVersion: RemoteSnapshot = { bytes: encryptedBytes };
-    if (provider.capabilities.create === 'conditional' || provider.capabilities.create === 'unconditional') {
-      const providerSession: ProviderSession | null = await provider.createSession(undefined, setupInput);
-      if (!providerSession?.create) throw new Error(`${provider.label} does not support database creation.`);
+    if (provider.capabilities.kind === 'remote' && provider.id !== 'local' && provider.capabilities.create !== 'none') {
+      if (!preparation.connectForSetup) throw new Error(`${provider.label} does not support database creation.`);
+      const providerSession: ProviderSession = await preparation.connectForSetup();
 
       try {
-        const result = await providerSession.create(kdbxFileName, encryptedBytes);
+        if (providerSession.create.kind === 'none')
+          throw new Error(`${provider.label} does not support database creation.`);
+        const result = await providerSession.create.create(kdbxFileName, encryptedBytes);
         source = result.source;
         commonVersion = result.snapshot ?? commonVersion;
       } finally {
@@ -432,11 +406,12 @@ export const createDatabaseRecord = async ({
       await createRecord(
         toPersistedProviderRecord({
           id: recordId,
+          sourceVersion: 1,
           kdbx: { encryptedBytes, name: kdbxFileName },
           key: generatedKey?.key,
           source,
           synchronization:
-            provider.capabilities.remote && provider.capabilities.create !== 'local'
+            provider.capabilities.kind === 'remote' && provider.capabilities.create !== 'none'
               ? { generation: 0, pending: false, commonVersion }
               : undefined,
           type: providerId,

@@ -110,6 +110,23 @@ describe('record.repository', () => {
       expect(await get(RECORDS_STORAGE_KEY)).toEqual(legacyRecords);
     });
 
+    it('preserves records with a newer binding version for recovery', async () => {
+      const futureRecord = {
+        id: 'future-record',
+        type: 'webdav',
+        sourceVersion: 2,
+        source: { url: 'https://dav.example.test/future.kdbx', credentialRecordId: 'future-credential' },
+        kdbx: { encryptedBytes: new Uint8Array([1]), name: 'future.kdbx' },
+      };
+      await set(RECORDS_STORAGE_KEY, [futureRecord]);
+
+      expect(await getRecords()).toEqual([]);
+      expect(await getRecordIssues()).toEqual([
+        { recordId: 'future-record', message: 'Unsupported or invalid database provider record.' },
+      ]);
+      expect(await get(RECORDS_STORAGE_KEY)).toEqual([futureRecord]);
+    });
+
     it('keeps the active row when an older quarantined row has the same id', async () => {
       const activeRecord = {
         id: 'same-id',
@@ -387,6 +404,7 @@ describe('record.repository', () => {
       expect(createdRecord).toEqual({
         id: 'local-record-created',
         type: 'local',
+        sourceVersion: 1,
         kdbx: {
           encryptedBytes: new Uint8Array([1, 2, 3]),
           name: 'vault.kdbx',
@@ -396,6 +414,7 @@ describe('record.repository', () => {
         {
           id: 'local-record-created',
           type: 'local',
+          sourceVersion: 1,
           kdbx: {
             encryptedBytes: new Uint8Array([1, 2, 3]),
             name: 'vault.kdbx',
@@ -451,6 +470,7 @@ describe('record.repository', () => {
         {
           id: 'duplicate-id-check',
           type: 'local',
+          sourceVersion: 1,
           kdbx: {
             encryptedBytes: new Uint8Array([1, 2, 3]),
             name: 'vault-original.kdbx',
@@ -719,6 +739,7 @@ describe('record.repository', () => {
         {
           id: 'local-record-2',
           type: 'local',
+          sourceVersion: 1,
           kdbx: {
             encryptedBytes: new Uint8Array([7, 8, 9]),
             name: 'vault-2-updated.kdbx',
