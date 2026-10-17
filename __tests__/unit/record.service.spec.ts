@@ -1,10 +1,9 @@
 import * as recordRepository from '@/repositories/record.repository';
 import kdbxweb from '@/lib/kdbxweb.lib';
 import { HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { type CreateFileRequestContext, googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
-import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord } from '@/repositories/record.repository';
 import {
   createGoogleDriveRecord,
@@ -111,10 +110,6 @@ describe('record.service', () => {
   };
 
   describe('getRecordsByLastOpened', () => {
-    afterEach(async () => {
-      await clearRecords();
-    });
-
     it('returns an empty array when there are no records', async () => {
       expect(await getRecordsByLastOpened()).toEqual([]);
     });
@@ -186,10 +181,6 @@ describe('record.service', () => {
   });
 
   describe('importLocalRecord', () => {
-    afterEach(async () => {
-      await clearRecords();
-    });
-
     const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
 
     it('imports a local record with the database file name and encrypted bytes', async () => {
@@ -360,10 +351,6 @@ describe('record.service', () => {
   });
 
   describe('createLocalRecord', () => {
-    afterEach(async () => {
-      await clearRecords();
-    });
-
     it('creates a local record and appends .kdbx when the name does not already end with it', async () => {
       await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
@@ -559,11 +546,6 @@ describe('record.service', () => {
   });
 
   describe('createGoogleDriveRecord', () => {
-    afterEach(async () => {
-      await clearRecords();
-      await auth.clearAccessToken();
-    });
-
     it('creates a google-drive record and appends .kdbx when the name does not already end with it', async () => {
       mockServer.addHandlers(googleDriveApi.createFile.ok({ file: { id: 'drive-file-id-xyz' } }));
 
@@ -781,11 +763,6 @@ describe('record.service', () => {
   });
 
   describe('importGoogleDriveRecord', () => {
-    afterEach(async () => {
-      await clearRecords();
-      await auth.clearAccessToken();
-    });
-
     const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
 
     const testFileId = 'drive-file-id-123';
@@ -886,10 +863,6 @@ describe('record.service', () => {
   });
 
   describe('updateRecordKdbx', () => {
-    afterEach(async () => {
-      await clearRecords();
-    });
-
     const password = 'update-test-password';
 
     const createStoredDatabase = async (id = 'update-record') => {

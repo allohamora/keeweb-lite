@@ -11,10 +11,6 @@ import { mockServer } from '../setup-unit-context';
 import { auth, createFile, getFile, updateFile } from '@/repositories/google-drive.repository';
 
 describe('google-drive.repository', () => {
-  afterEach(async () => {
-    await auth.clearAccessToken();
-  });
-
   describe('auth', () => {
     describe('getAccessToken', () => {
       afterEach(() => {

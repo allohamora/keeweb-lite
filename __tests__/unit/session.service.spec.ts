@@ -1,10 +1,10 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
 import { HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
-import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { createRecord, getRecords } from '@/repositories/record.repository';
 import { unlockKdbx } from '@/services/kdbx.service';
 import { updateRecordKdbx } from '@/services/record.service';
 import { createDemoSession, syncSession, unlockSession } from '@/services/session.service';
@@ -35,11 +35,6 @@ describe('session.service', () => {
 
     return { databaseName, encryptedBytes, keyFileHashBase64, password };
   };
-
-  afterEach(async () => {
-    await clearRecords();
-    await auth.clearAccessToken();
-  });
 
   describe('unlockSession', () => {
     it('returns session data with record metadata', async () => {

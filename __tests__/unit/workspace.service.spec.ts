@@ -1,6 +1,6 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
-import { afterEach, describe, expect, it } from 'vitest';
-import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { describe, expect, it } from 'vitest';
+import { createRecord, getRecords } from '@/repositories/record.repository';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 import {
   createEntry,
@@ -30,10 +30,6 @@ import {
 } from '@/services/workspace.service';
 
 describe('workspace.service', () => {
-  afterEach(async () => {
-    await clearRecords();
-  });
-
   const createDatabase = async () => {
     const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('workspace-test-password'));
     await credentials.ready;

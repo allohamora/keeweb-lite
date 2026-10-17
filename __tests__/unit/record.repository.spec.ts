@@ -1,5 +1,5 @@
 import { get, set } from 'idb-keyval';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   RECORDS_STORAGE_KEY,
   clearRecords,
@@ -17,10 +17,6 @@ const seedRecords = async (records: PersistedFileRecord[]) => {
 };
 
 describe('record.repository', () => {
-  afterEach(async () => {
-    await clearRecords();
-  });
-
   describe('getRecords', () => {
     it('stores and reads local records', async () => {
       const records = [
