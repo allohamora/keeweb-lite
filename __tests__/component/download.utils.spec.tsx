@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { downloadBytes } from '@/utils/download.utils';
+import { useFakeTimers } from '../utils/fake-timers.utils';
 
 describe('download.utils', () => {
   describe('downloadBytes', () => {
@@ -33,8 +34,8 @@ describe('download.utils', () => {
       expect(document.querySelector('a[download="vault.kdbx"]')).not.toBeInTheDocument();
     });
 
-    it('revokes the object URL after triggering the download', () => {
-      vi.useFakeTimers();
+    it('revokes the object URL after triggering the download', async () => {
+      using timers = useFakeTimers();
       using _createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
       using revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
       using _click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -42,11 +43,9 @@ describe('download.utils', () => {
       downloadBytes({ bytes: new Uint8Array([1, 2, 3]), fileName: 'vault.kdbx' });
       expect(revokeObjectURL).not.toHaveBeenCalled();
 
-      vi.runAllTimers();
+      await timers.runAll();
 
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
-
-      vi.useRealTimers();
     });
   });
 });
