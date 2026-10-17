@@ -38,8 +38,8 @@ import { EntryRemove } from '@/features/workspace/components/entry-remove.compon
 import { EntryRestore } from '@/features/workspace/components/entry-restore.component';
 import { PasswordGenerator } from '@/features/workspace/components/password-generator.component';
 import { IconColorPicker } from '@/features/workspace/components/icon-color-picker.component';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
-import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation.hook';
 
 const entryEditSchema = z.object({
   title: z.string(),

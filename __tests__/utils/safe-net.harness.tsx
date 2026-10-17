@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
 
 type DirtySafeNetProps = {
   children: ReactNode;

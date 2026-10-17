@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { useAsyncLock } from '@/hooks/use-async-lock.hook';
+import { useAsyncLock } from '@/features/unlock/hooks/use-async-lock.hook';
 import { createDemoSession, type UnlockSession } from '@/features/unlock/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
 import { CreateMenu } from '@/features/unlock/components/create.menu';

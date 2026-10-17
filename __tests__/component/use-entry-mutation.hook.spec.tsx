@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { render as rtlRender, screen } from '@testing-library/react';
-import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
+import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation.hook';
 import { render } from '../utils/render.utils';
 
 const EntryMutationHarness = () => {

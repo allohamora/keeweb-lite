@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { useAsyncLock } from '@/hooks/use-async-lock.hook';
+import { useAsyncLock } from '@/features/unlock/hooks/use-async-lock.hook';
 import { render } from '../utils/render.utils';
 
 const AsyncLockHarness = ({ action }: { action: () => Promise<void> }) => {

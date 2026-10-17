@@ -6,7 +6,7 @@ import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 import { toKdbxFileName } from '@/features/unlock/utils/kdbx.utils';
 import { toast } from 'sonner';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
 
 type SyncStatus = 'synced' | 'syncing' | 'error';
 

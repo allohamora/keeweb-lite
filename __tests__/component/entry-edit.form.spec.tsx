@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryEditForm } from '@/features/workspace/components/entry-edit.form';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 

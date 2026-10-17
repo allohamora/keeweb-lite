@@ -16,8 +16,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { InfoPopover } from '@/components/ui/info-popover';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
-import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation.hook';
 
 type EntryRestoreProps = {
   database: kdbxweb.Kdbx;

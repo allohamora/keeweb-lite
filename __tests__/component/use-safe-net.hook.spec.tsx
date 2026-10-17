@@ -2,7 +2,7 @@ import userEvent from '@testing-library/user-event';
 import { useEffect, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render as rtlRender, screen } from '@testing-library/react';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
 import { render } from '../utils/render.utils';
 
 type SafeNetHarnessProps = {

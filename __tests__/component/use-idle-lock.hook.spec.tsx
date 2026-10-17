@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent } from '@testing-library/react';
-import { useIdleLock } from '@/hooks/use-idle-lock.hook';
+import { useIdleLock } from '@/features/workspace/hooks/use-idle-lock.hook';
 import { useFakeTimers } from '../utils/fake-timers.utils';
 import { render } from '../utils/render.utils';
 

@@ -3,7 +3,7 @@ import { HttpResponse } from 'msw';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
-import { useSync } from '@/hooks/use-sync.hook';
+import { useSync } from '@/features/workspace/hooks/use-sync.hook';
 import { createRecord } from '@/features/unlock/repositories/record.repository';
 import { createEmptyKdbx, toEncryptedBytes, unlockKdbx } from '@/features/unlock/services/kdbx.service';
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session.service';

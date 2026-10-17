@@ -15,10 +15,10 @@ import { WorkspaceMobileMenu } from '@/features/workspace/components/workspace-m
 import { toast } from 'sonner';
 import { useMedia } from 'react-use';
 import { getErrorMessage } from '@/utils/error.utils';
-import { useIdleLock } from '@/hooks/use-idle-lock.hook';
-import { useSync } from '@/hooks/use-sync.hook';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
-import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
+import { useIdleLock } from '@/features/workspace/hooks/use-idle-lock.hook';
+import { useSync } from '@/features/workspace/hooks/use-sync.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation.hook';
 
 type WorkspacePageProps = {
   session: UnlockSession;

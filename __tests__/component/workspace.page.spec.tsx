@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import type { SelectFilter } from '@/features/workspace/services/workspace.service';
 import { WorkspacePage } from '@/features/workspace/pages/workspace.page';
-import { useSafeNet } from '@/hooks/use-safe-net.hook';
-import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net.hook';
+import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation.hook';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 
