@@ -1,5 +1,5 @@
 import kdbxweb from '@/utils/kdbxweb';
-import { updateRecordKdbx } from '@/features/unlock/services/record';
+import { updateRecordDatabase } from '@/features/unlock/services/record';
 import type { FileRecord } from '@/features/unlock/repositories/record';
 import { getEntryIcon } from '@/features/workspace/services/icon';
 import { getEntryColor } from '@/features/workspace/services/color';
@@ -169,7 +169,7 @@ type MutateEntryInput = {
 };
 
 const mutateEntry = async ({ database, record, entryUuid, mutate }: MutateEntryInput) => {
-  const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordKdbx({
+  const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordDatabase({
     database,
     record,
     update: (updatedDatabase) => {
@@ -219,7 +219,7 @@ export const createEntry = async ({
   record,
   selectFilter,
 }: CreateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
-  const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordKdbx({
+  const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordDatabase({
     database,
     record,
     update: (updatedDatabase) => {

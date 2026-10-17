@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { toEncryptedBytes } from '@/features/unlock/services/kdbx';
+import { toEncryptedBytes } from '@/features/unlock/services/database';
 import type { UnlockSession } from '@/features/unlock/services/session';
 import { downloadBytes } from '@/utils/download';
 import { getErrorMessage } from '@/utils/error';

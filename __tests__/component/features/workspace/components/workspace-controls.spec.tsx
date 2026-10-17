@@ -1,4 +1,4 @@
-import * as kdbxService from '@/features/unlock/services/kdbx';
+import * as databaseService from '@/features/unlock/services/database';
 import * as downloadUtils from '@/utils/download';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,7 @@ describe('workspace-controls', () => {
     it('downloads the database directly when there are no unsaved changes', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      using toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      using toEncryptedBytes = vi.spyOn(databaseService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
       using _createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
       using _revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
       using _anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -39,7 +39,7 @@ describe('workspace-controls', () => {
     it('keeps an uppercase .KDBX extension when downloading', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      using _toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      using _toEncryptedBytes = vi.spyOn(databaseService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
       using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
       render(
@@ -61,7 +61,7 @@ describe('workspace-controls', () => {
     it('defers download behind the discard prompt when there are unsaved changes', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      using toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes');
+      using toEncryptedBytes = vi.spyOn(databaseService, 'toEncryptedBytes');
 
       render(
         <DirtySafeNet>

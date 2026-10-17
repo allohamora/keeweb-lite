@@ -2,7 +2,7 @@ import kdbxweb from '@/utils/kdbxweb';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer';
 import { Lock } from '@/utils/lock';
 
-export const loadKdbx = async ({
+export const loadDatabase = async ({
   encryptedBytes,
   credentials,
 }: {
@@ -12,7 +12,7 @@ export const loadKdbx = async ({
   return kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
 };
 
-export const unlockKdbx = async ({
+export const unlockDatabase = async ({
   encryptedBytes,
   keyFileHashBase64,
   password,
@@ -26,7 +26,7 @@ export const unlockKdbx = async ({
   await credentials.ready;
 
   try {
-    return await loadKdbx({ encryptedBytes, credentials });
+    return await loadDatabase({ encryptedBytes, credentials });
   } catch (error) {
     if (error instanceof kdbxweb.KdbxError && error.code === kdbxweb.Consts.ErrorCodes.InvalidKey) {
       throw new Error('Invalid password or key file.', { cause: error });
@@ -38,7 +38,7 @@ export const unlockKdbx = async ({
 
 // kdbxweb's save() regenerates the shared header salts and reads them again after async steps,
 // so two saves of the same database at once produce a file that fails to load with InvalidKey
-const serializeLock = new Lock('kdbx.service.serialize');
+const serializeLock = new Lock('database.service.serialize');
 
 const serialize = (database: kdbxweb.Kdbx) => serializeLock.runInLock(() => database.save());
 
@@ -55,7 +55,7 @@ const generateKeyFile = async (databaseName: string) => {
   return { key, keyFileBytes };
 };
 
-export const createEmptyKdbx = async ({
+export const createEmptyDatabase = async ({
   name,
   password,
   useKeyFile,
@@ -75,7 +75,7 @@ export const createEmptyKdbx = async ({
   return { encryptedBytes, generatedKey };
 };
 
-export const cloneKdbx = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
+export const cloneDatabase = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
   const databaseBytes = await serialize(database);
 
   return kdbxweb.Kdbx.load(databaseBytes, database.credentials);

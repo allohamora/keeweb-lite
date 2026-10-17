@@ -7,7 +7,12 @@ import {
   updateRecord,
   type FileRecord,
 } from '@/features/unlock/repositories/record';
-import { cloneKdbx, createEmptyKdbx, loadKdbx, toEncryptedBytes } from '@/features/unlock/services/kdbx';
+import {
+  cloneDatabase,
+  createEmptyDatabase,
+  loadDatabase,
+  toEncryptedBytes,
+} from '@/features/unlock/services/database';
 import { asUint8Array } from '@/utils/buffer';
 import { toKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
 import { Lock } from '@/utils/lock';
@@ -33,9 +38,9 @@ export const getRecordsByLastOpened = async () => {
   return sortRecordsByLastOpened(records);
 };
 
-const updateRecordKdbxLock = new Lock('record.service.updateRecordKdbx');
+const updateRecordDatabaseLock = new Lock('record.service.updateRecordDatabase');
 
-export const updateRecordKdbx = async <Result>({
+export const updateRecordDatabase = async <Result>({
   database,
   record,
   update,
@@ -44,16 +49,16 @@ export const updateRecordKdbx = async <Result>({
   record: FileRecord;
   update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
 }): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
-  return updateRecordKdbxLock.runInLock(async () => {
+  return updateRecordDatabaseLock.runInLock(async () => {
     // demo records are never persisted, so there's nothing to write back to storage
     if (record.type === 'demo') {
-      const nextDatabase = await cloneKdbx(database);
+      const nextDatabase = await cloneDatabase(database);
 
       return [nextDatabase, record, await update(nextDatabase)];
     }
 
     const { kdbx } = await getRecord(record.id);
-    const nextDatabase = await loadKdbx({ encryptedBytes: kdbx.encryptedBytes, credentials: database.credentials });
+    const nextDatabase = await loadDatabase({ encryptedBytes: kdbx.encryptedBytes, credentials: database.credentials });
     const result = await update(nextDatabase);
 
     const encryptedBytes = await toEncryptedBytes(nextDatabase);
@@ -172,7 +177,7 @@ export const createLocalRecord = async ({
       throw new Error(`A record named "${kdbxFileName}" already exists.`);
     }
 
-    const { encryptedBytes, generatedKey } = await createEmptyKdbx({ name, password, useKeyFile });
+    const { encryptedBytes, generatedKey } = await createEmptyDatabase({ name, password, useKeyFile });
 
     await createRecord({
       id: crypto.randomUUID(),
@@ -197,7 +202,7 @@ export const createGoogleDriveRecord = async ({
   return createImportLock.runInLock(async () => {
     const { name, kdbxFileName } = validateNewDatabaseInput(databaseName, password);
 
-    const { encryptedBytes, generatedKey } = await createEmptyKdbx({ name, password, useKeyFile });
+    const { encryptedBytes, generatedKey } = await createEmptyDatabase({ name, password, useKeyFile });
 
     const driveFile = await createFile(kdbxFileName, encryptedBytes);
 

@@ -5,8 +5,8 @@ import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
 import { auth } from '@/features/unlock/repositories/google-drive';
 import { createRecord, getRecords } from '@/features/unlock/repositories/record';
-import { unlockKdbx } from '@/features/unlock/services/kdbx';
-import { updateRecordKdbx } from '@/features/unlock/services/record';
+import { unlockDatabase } from '@/features/unlock/services/database';
+import { updateRecordDatabase } from '@/features/unlock/services/record';
 import { createDemoSession, syncSession, unlockSession } from '@/features/unlock/services/session';
 import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/entry';
 import { demoFile } from '@tests/utils/demo-file';
@@ -259,7 +259,7 @@ describe('session', () => {
         kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
         source: { id: 'drive-file-id' },
       });
-      const database = await unlockKdbx({ encryptedBytes: initialBytes, password: 'test-password' });
+      const database = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
 
       return { database, initialBytes, record };
     };
@@ -274,11 +274,11 @@ describe('session', () => {
     it('merges the remote file into the latest saved state and uploads the merged database', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
-      const remoteDatabase = await unlockKdbx({ encryptedBytes: initialBytes, password: 'test-password' });
+      const remoteDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
       remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote Entry');
       const remoteBytes = new Uint8Array(await remoteDatabase.save());
 
-      const [localDatabase, localRecord] = await updateRecordKdbx({
+      const [localDatabase, localRecord] = await updateRecordDatabase({
         database,
         record,
         update: (nextDatabase) => {
@@ -301,14 +301,14 @@ describe('session', () => {
       expect(getTitles(result.database)).toEqual(expectedTitles);
       const [stored] = await getRecords();
       expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(stored?.kdbx.encryptedBytes);
-      const storedDatabase = await unlockKdbx({
+      const storedDatabase = await unlockDatabase({
         encryptedBytes: expectPersisted(result.record).kdbx.encryptedBytes,
         password: 'test-password',
       });
       expect(getTitles(storedDatabase)).toEqual(expectedTitles);
       const [uploaded] = uploads;
       if (!uploaded) throw new Error('nothing was uploaded');
-      expect(getTitles(await unlockKdbx({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(
+      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(
         expectedTitles,
       );
     });
@@ -316,7 +316,7 @@ describe('session', () => {
     it('does not save the merged remote changes when the upload fails', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
-      const remoteDatabase = await unlockKdbx({ encryptedBytes: initialBytes, password: 'test-password' });
+      const remoteDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
       remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote Entry');
       const remoteBytes = new Uint8Array(await remoteDatabase.save());
 
@@ -358,7 +358,7 @@ describe('session', () => {
 
       const [stored] = await getRecords();
       if (!stored) throw new Error('record should exist');
-      const storedDatabase = await unlockKdbx({
+      const storedDatabase = await unlockDatabase({
         encryptedBytes: stored.kdbx.encryptedBytes,
         password: 'test-password',
       });

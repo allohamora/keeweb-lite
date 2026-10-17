@@ -1,9 +1,9 @@
 import kdbxweb from '@/utils/kdbxweb';
-import { loadDemoKdbx } from '@/features/unlock/services/demo';
+import { loadDemoDatabase } from '@/features/unlock/services/demo';
 import { getFile, updateFile } from '@/features/unlock/repositories/google-drive';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/features/unlock/repositories/record';
-import { loadKdbx, toEncryptedBytes, unlockKdbx } from '@/features/unlock/services/kdbx';
-import { updateRecordKdbx } from '@/features/unlock/services/record';
+import { loadDatabase, toEncryptedBytes, unlockDatabase } from '@/features/unlock/services/database';
+import { updateRecordDatabase } from '@/features/unlock/services/record';
 import { Lock } from '@/utils/lock';
 
 export type UnlockSession = {
@@ -33,11 +33,11 @@ export const syncSession = async ({
   return syncSessionLock.runInLock(async () => {
     const remoteBytes = await getFile(record.source.id);
 
-    const [nextDatabase, nextRecord] = await updateRecordKdbx({
+    const [nextDatabase, nextRecord] = await updateRecordDatabase({
       database,
       record,
       update: async (updatedDatabase) => {
-        const remoteDatabase = await loadKdbx({
+        const remoteDatabase = await loadDatabase({
           encryptedBytes: remoteBytes,
           credentials: updatedDatabase.credentials,
         });
@@ -59,7 +59,7 @@ export const unlockSession = async ({
   record: PersistedFileRecord;
   password: string;
 }): Promise<UnlockSession> => {
-  const database = await unlockKdbx({
+  const database = await unlockDatabase({
     encryptedBytes: record.kdbx.encryptedBytes,
     keyFileHashBase64: record.key?.hash,
     password,
@@ -74,7 +74,7 @@ export const unlockSession = async ({
 };
 
 export const createDemoSession = async (): Promise<UnlockSession> => {
-  const database = await loadDemoKdbx();
+  const database = await loadDemoDatabase();
 
   return {
     database,

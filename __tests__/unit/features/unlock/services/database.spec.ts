@@ -1,6 +1,6 @@
 import kdbxweb from '@/utils/kdbxweb';
 import { describe, expect, it } from 'vitest';
-import { cloneKdbx, toEncryptedBytes, unlockKdbx } from '@/features/unlock/services/kdbx';
+import { cloneDatabase, toEncryptedBytes, unlockDatabase } from '@/features/unlock/services/database';
 import { getFieldText as getTextFromField } from '@/features/workspace/services/entry';
 
 type DatabaseRecordInput = {
@@ -17,7 +17,7 @@ type CreateDatabaseInput = {
   records?: DatabaseRecordInput[];
 };
 
-describe('kdbx', () => {
+describe('database', () => {
   const createRandomKeyFile = async () => {
     const keyFileBuffer = await kdbxweb.Credentials.createRandomKeyFile();
 
@@ -94,7 +94,7 @@ describe('kdbx', () => {
     return record;
   };
 
-  describe('unlockKdbx', () => {
+  describe('unlockDatabase', () => {
     it('unlocks a KDBX database with password only', async () => {
       const { encryptedBytes, password } = await createDatabase({
         databaseName: 'Password Only Database',
@@ -102,7 +102,7 @@ describe('kdbx', () => {
         records: [],
       });
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         password,
       });
@@ -114,7 +114,7 @@ describe('kdbx', () => {
     it('unlocks a KDBX database with password and key file hash', async () => {
       const { databaseName, encryptedBytes, keyFileHashBase64, password } = await createDatabase();
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64,
         password,
@@ -128,7 +128,7 @@ describe('kdbx', () => {
       const { encryptedBytes, keyFileHashBase64 } = await createDatabase();
 
       await expect(
-        unlockKdbx({
+        unlockDatabase({
           encryptedBytes,
           keyFileHashBase64,
           password: 'wrong-password',
@@ -141,7 +141,7 @@ describe('kdbx', () => {
       const wrongKeyFileHashBase64 = await createRandomKeyFile();
 
       await expect(
-        unlockKdbx({
+        unlockDatabase({
           encryptedBytes,
           keyFileHashBase64: wrongKeyFileHashBase64,
           password,
@@ -159,7 +159,7 @@ describe('kdbx', () => {
       });
 
       await expect(
-        unlockKdbx({
+        unlockDatabase({
           encryptedBytes,
           keyFileHashBase64,
           password,
@@ -171,7 +171,7 @@ describe('kdbx', () => {
       const { encryptedBytes, password } = await createDatabase();
 
       await expect(
-        unlockKdbx({
+        unlockDatabase({
           encryptedBytes,
           password,
         }),
@@ -183,7 +183,7 @@ describe('kdbx', () => {
         records: [{ name: 'Test Entry', password: 'test-entry-password', username: 'test-user' }],
       });
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64,
         password,
@@ -207,7 +207,7 @@ describe('kdbx', () => {
         records: [],
       });
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64: null,
         password,
@@ -224,7 +224,7 @@ describe('kdbx', () => {
         records: [],
       });
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64: undefined,
         password,
@@ -239,7 +239,7 @@ describe('kdbx', () => {
     it('saves a KDBX database to Uint8Array', async () => {
       const { encryptedBytes, keyFileHashBase64, password } = await createDatabase();
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64,
         password,
@@ -259,7 +259,7 @@ describe('kdbx', () => {
         ],
       });
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64,
         password,
@@ -280,7 +280,7 @@ describe('kdbx', () => {
       createdEntry.fields.set('Password', kdbxweb.ProtectedValue.fromString('created-password'));
 
       const savedBytes = await toEncryptedBytes(unlockedDatabase);
-      const reloadedDatabase = await unlockKdbx({
+      const reloadedDatabase = await unlockDatabase({
         encryptedBytes: savedBytes,
         keyFileHashBase64,
         password,
@@ -303,7 +303,7 @@ describe('kdbx', () => {
     it('preserves database data after save and reload cycle', async () => {
       const { encryptedBytes, keyFileHashBase64, password } = await createDatabase();
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64,
         password,
@@ -318,7 +318,7 @@ describe('kdbx', () => {
       const savedBytes = await toEncryptedBytes(unlockedDatabase);
 
       // Reload and verify
-      const reloadedDatabase = await unlockKdbx({
+      const reloadedDatabase = await unlockDatabase({
         encryptedBytes: savedBytes,
         keyFileHashBase64,
         password,
@@ -336,7 +336,7 @@ describe('kdbx', () => {
     it('produces different bytes after database modification', async () => {
       const { encryptedBytes, keyFileHashBase64, password } = await createDatabase();
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64,
         password,
@@ -356,7 +356,7 @@ describe('kdbx', () => {
     it('maintains database metadata after save', async () => {
       const { encryptedBytes, keyFileHashBase64, password } = await createDatabase();
 
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes,
         keyFileHashBase64,
         password,
@@ -367,7 +367,7 @@ describe('kdbx', () => {
 
       const savedBytes = await toEncryptedBytes(unlockedDatabase);
 
-      const reloadedDatabase = await unlockKdbx({
+      const reloadedDatabase = await unlockDatabase({
         encryptedBytes: savedBytes,
         keyFileHashBase64,
         password,
@@ -378,14 +378,14 @@ describe('kdbx', () => {
     });
   });
 
-  describe('cloneKdbx', () => {
+  describe('cloneDatabase', () => {
     it('clones a database while other saves of the same database are in flight', async () => {
       const { encryptedBytes, keyFileHashBase64, password } = await createDatabase();
-      const database = await unlockKdbx({ encryptedBytes, keyFileHashBase64, password });
+      const database = await unlockDatabase({ encryptedBytes, keyFileHashBase64, password });
 
       const [firstClone, secondClone, savedBytes] = await Promise.all([
-        cloneKdbx(database),
-        cloneKdbx(database),
+        cloneDatabase(database),
+        cloneDatabase(database),
         toEncryptedBytes(database),
       ]);
 

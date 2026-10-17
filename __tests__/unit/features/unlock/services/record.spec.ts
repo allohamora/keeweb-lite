@@ -11,10 +11,10 @@ import {
   getRecordsByLastOpened,
   importGoogleDriveRecord,
   importLocalRecord,
-  updateRecordKdbx,
+  updateRecordDatabase,
 } from '@/features/unlock/services/record';
 import { expectPersisted } from '@tests/utils/kdbx';
-import { unlockKdbx } from '@/features/unlock/services/kdbx';
+import { unlockDatabase } from '@/features/unlock/services/database';
 import { getFieldText as getTextFromField } from '@/features/workspace/services/entry';
 import { createFileList } from '@tests/utils/file-list';
 import { unlockSession } from '@/features/unlock/services/session';
@@ -492,7 +492,7 @@ describe('record', () => {
       await createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
       const [record] = await getRecordsByLastOpened();
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes: record.kdbx.encryptedBytes,
         password: 'test-password-123',
       });
@@ -510,7 +510,7 @@ describe('record', () => {
       expect(keyFileBytes).toBeDefined();
 
       const [record] = await getRecordsByLastOpened();
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes: record.kdbx.encryptedBytes,
         keyFileHashBase64: record.key?.hash,
         password: 'test-password-123',
@@ -525,7 +525,7 @@ describe('record', () => {
       const [record] = await getRecordsByLastOpened();
 
       await expect(
-        unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password: 'wrong-password' }),
+        unlockDatabase({ encryptedBytes: record.kdbx.encryptedBytes, password: 'wrong-password' }),
       ).rejects.toThrow();
     });
 
@@ -535,7 +535,7 @@ describe('record', () => {
       const [record] = await getRecordsByLastOpened();
 
       await expect(
-        unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password: 'test-password-123' }),
+        unlockDatabase({ encryptedBytes: record.kdbx.encryptedBytes, password: 'test-password-123' }),
       ).rejects.toThrow();
     });
   });
@@ -727,7 +727,7 @@ describe('record', () => {
       await createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' });
 
       const [record] = await getRecordsByLastOpened();
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes: record.kdbx.encryptedBytes,
         password: 'test-password-123',
       });
@@ -747,7 +747,7 @@ describe('record', () => {
       expect(keyFileBytes).toBeDefined();
 
       const [record] = await getRecordsByLastOpened();
-      const unlockedDatabase = await unlockKdbx({
+      const unlockedDatabase = await unlockDatabase({
         encryptedBytes: record.kdbx.encryptedBytes,
         keyFileHashBase64: record.key?.hash,
         password: 'test-password-123',
@@ -855,7 +855,7 @@ describe('record', () => {
     });
   });
 
-  describe('updateRecordKdbx', () => {
+  describe('updateRecordDatabase', () => {
     const password = 'update-test-password';
 
     const createStoredDatabase = async (id = 'update-record') => {
@@ -884,7 +884,7 @@ describe('record', () => {
         throw new Error('Record not found.');
       }
 
-      const database = await unlockKdbx({ encryptedBytes: stored.kdbx.encryptedBytes, password });
+      const database = await unlockDatabase({ encryptedBytes: stored.kdbx.encryptedBytes, password });
 
       return database
         .getDefaultGroup()
@@ -895,7 +895,7 @@ describe('record', () => {
     it('saves the changed database back to the stored record', async () => {
       const { database, initialBytes, record } = await createStoredDatabase();
 
-      await updateRecordKdbx({ database, record, update: addEntry('New Entry') });
+      await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
 
       const [stored] = await recordRepository.getRecords();
       expect(stored?.kdbx.encryptedBytes).not.toEqual(initialBytes);
@@ -905,7 +905,7 @@ describe('record', () => {
     it('preserves existing record metadata when updating', async () => {
       const { database, record } = await createStoredDatabase();
 
-      await updateRecordKdbx({ database, record, update: addEntry('New Entry') });
+      await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
 
       const [stored] = await recordRepository.getRecords();
       expect(stored?.lastOpenedAt).toBe('2026-01-01T00:00:00.000Z');
@@ -915,7 +915,7 @@ describe('record', () => {
     it('returns the changed database, the updated record and the value returned by update', async () => {
       const { database, initialBytes, record } = await createStoredDatabase();
 
-      const [nextDatabase, nextRecord, result] = await updateRecordKdbx({
+      const [nextDatabase, nextRecord, result] = await updateRecordDatabase({
         database,
         record,
         update: (updatedDatabase) => {
@@ -934,8 +934,8 @@ describe('record', () => {
     it('builds on the latest stored state instead of the database the caller holds', async () => {
       const { database, record } = await createStoredDatabase();
 
-      await updateRecordKdbx({ database, record, update: addEntry('First') });
-      await updateRecordKdbx({ database, record, update: addEntry('Second') });
+      await updateRecordDatabase({ database, record, update: addEntry('First') });
+      await updateRecordDatabase({ database, record, update: addEntry('Second') });
 
       await expect(getStoredTitles()).resolves.toEqual(['First', 'Second']);
     });
@@ -944,9 +944,9 @@ describe('record', () => {
       const { database, record } = await createStoredDatabase();
 
       await Promise.all([
-        updateRecordKdbx({ database, record, update: addEntry('First') }),
-        updateRecordKdbx({ database, record, update: addEntry('Second') }),
-        updateRecordKdbx({ database, record, update: addEntry('Third') }),
+        updateRecordDatabase({ database, record, update: addEntry('First') }),
+        updateRecordDatabase({ database, record, update: addEntry('Second') }),
+        updateRecordDatabase({ database, record, update: addEntry('Third') }),
       ]);
 
       await expect(getStoredTitles()).resolves.toEqual(['First', 'Second', 'Third']);
@@ -956,7 +956,7 @@ describe('record', () => {
       const { database, initialBytes, record } = await createStoredDatabase();
 
       await expect(
-        updateRecordKdbx({
+        updateRecordDatabase({
           database,
           record,
           update: () => {
@@ -973,7 +973,7 @@ describe('record', () => {
       const { database, record } = await createStoredDatabase();
       await clearRecords();
 
-      await expect(updateRecordKdbx({ database, record, update: addEntry('New Entry') })).rejects.toThrow(
+      await expect(updateRecordDatabase({ database, record, update: addEntry('New Entry') })).rejects.toThrow(
         'Record not found.',
       );
     });
@@ -983,7 +983,7 @@ describe('record', () => {
       await clearRecords();
       const demoRecord = { id: 'demo', type: 'demo' as const, kdbx: { name: 'Demo' } };
 
-      const [nextDatabase, nextRecord] = await updateRecordKdbx({
+      const [nextDatabase, nextRecord] = await updateRecordDatabase({
         database,
         record: demoRecord,
         update: addEntry('New Entry'),
