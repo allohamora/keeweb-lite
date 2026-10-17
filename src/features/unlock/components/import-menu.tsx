@@ -11,9 +11,10 @@ import { ImportLocalDialog } from './import-local-dialog';
 
 type ImportMenuProps = {
   onRecordImport: () => void;
+  disabled?: boolean;
 };
 
-export const ImportMenu = ({ onRecordImport }: ImportMenuProps) => {
+export const ImportMenu = ({ onRecordImport, disabled = false }: ImportMenuProps) => {
   const [isImportLocalOpen, setIsImportLocalOpen] = useState(false);
   const [isImportGoogleDriveOpen, setIsImportGoogleDriveOpen] = useState(false);
 
@@ -21,7 +22,7 @@ export const ImportMenu = ({ onRecordImport }: ImportMenuProps) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button className="h-8 px-3 text-xs" type="button" variant="outline">
+          <Button className="h-8 px-3 text-xs" disabled={disabled} type="button" variant="outline">
             Import
           </Button>
         </DropdownMenuTrigger>
