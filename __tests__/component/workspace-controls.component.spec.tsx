@@ -1,4 +1,5 @@
 import * as kdbxService from '@/services/kdbx.service';
+import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/lib/kdbxweb.lib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -44,6 +45,30 @@ describe('workspace-controls.component', () => {
       createObjectURL.mockRestore();
       revokeObjectURL.mockRestore();
       anchorClick.mockRestore();
+    });
+
+    it('keeps an uppercase .KDBX extension when downloading', async () => {
+      const user = userEvent.setup();
+      const toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      const downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
+
+      render(
+        <WorkspaceControls
+          database={database}
+          recordName="Vault.KDBX"
+          recordType="local"
+          syncStatus="synced"
+          syncErrorMessage={null}
+          onLock={vi.fn()}
+          onSyncRetry={vi.fn()}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: 'Download database' }));
+
+      expect(downloadBytes).toHaveBeenCalledWith(expect.objectContaining({ fileName: 'Vault.KDBX' }));
+
+      toEncryptedBytes.mockRestore();
+      downloadBytes.mockRestore();
     });
 
     it('defers download behind the discard prompt when there are unsaved changes', async () => {

@@ -10,6 +10,7 @@ import {
 } from '@/repositories/record.repository';
 import { cloneKdbx, createEmptyKdbx, loadKdbx, toEncryptedBytes } from '@/services/kdbx.service';
 import { asUint8Array } from '@/utils/buffer.utils';
+import { toKdbxFileName } from '@/utils/kdbx.utils';
 import { Lock } from '@/utils/lock.utils';
 
 // makes the duplicate-name/source.id check and the write atomic across concurrent calls
@@ -107,7 +108,7 @@ const validateNewDatabaseInput = (databaseName: string, password: string) => {
     throw new Error('Master password is required.');
   }
 
-  const kdbxFileName = name.toLowerCase().endsWith('.kdbx') ? name : `${name}.kdbx`;
+  const kdbxFileName = toKdbxFileName(name);
 
   return { name, kdbxFileName };
 };

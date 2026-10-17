@@ -15,6 +15,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { fileListSchema } from '@/utils/zod.utils';
 import { getErrorMessage } from '@/utils/error.utils';
+import { isKdbxFileName } from '@/utils/kdbx.utils';
 import { importGoogleDriveRecord } from '@/services/record.service';
 import { GoogleDriveFilePicker } from './google-drive.file-picker';
 
@@ -30,7 +31,7 @@ const driveFileSchema = z.object({
 });
 
 const importGoogleDriveModalSchema = z.object({
-  driveFile: driveFileSchema.refine((file) => file.name.toLowerCase().endsWith('.kdbx'), {
+  driveFile: driveFileSchema.refine((file) => isKdbxFileName(file.name), {
     message: 'Only .kdbx files are supported.',
   }),
   keyFile: fileListSchema('Select a key file.').optional(),

@@ -4,6 +4,7 @@ import { toEncryptedBytes } from '@/services/kdbx.service';
 import type { UnlockSession } from '@/services/session.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
+import { toKdbxFileName } from '@/utils/kdbx.utils';
 import { toast } from 'sonner';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 
@@ -32,7 +33,7 @@ export const WorkspaceControls = ({
   const download = async () => {
     const bytes = await toEncryptedBytes(database);
 
-    downloadBytes({ bytes, fileName: recordName.endsWith('.kdbx') ? recordName : `${recordName}.kdbx` });
+    downloadBytes({ bytes, fileName: toKdbxFileName(recordName) });
   };
 
   const onDownload = async () => {

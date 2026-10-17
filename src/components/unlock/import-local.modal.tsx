@@ -15,6 +15,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { fileListSchema } from '@/utils/zod.utils';
 import { getErrorMessage } from '@/utils/error.utils';
+import { isKdbxFileName } from '@/utils/kdbx.utils';
 import { importLocalRecord } from '@/services/record.service';
 
 export type ImportLocalModalProps = {
@@ -28,7 +29,7 @@ const importLocalModalSchema = z.object({
     .refine((files) => files.length > 0, {
       message: 'Select a .kdbx file to import.',
     })
-    .refine((files) => files.length === 0 || files[0]?.name.toLowerCase().endsWith('.kdbx'), {
+    .refine((files) => files.length === 0 || isKdbxFileName(files[0]?.name), {
       message: 'Only .kdbx files are supported.',
     }),
   keyFile: fileListSchema('Select a key file.').optional(),
