@@ -1,5 +1,5 @@
 import { get, set } from 'idb-keyval';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   RECORDS_STORAGE_KEY,
   clearRecords,
@@ -8,7 +8,10 @@ import {
   getRecord,
   getRecords,
   getCredentialRecord,
+  mutateRecord,
+  readRecordStore,
   removeRecord,
+  onRecordForgotten,
   setCredentialRecord,
   setRecords,
   updateRecord,
@@ -90,17 +93,60 @@ describe('record.repository', () => {
         { recordId: 'broken-drive-record', message: 'Unsupported or invalid database provider record.' },
       ]);
 
-      expect(await get(RECORDS_STORAGE_KEY)).toEqual({
+      expect(await get(RECORDS_STORAGE_KEY)).toEqual([
+        validLocalRecord,
+        validDriveRecord,
+        { id: 'broken-drive-record', type: 'google-drive', kdbx: { name: 'broken.kdbx' }, source: {} },
+      ]);
+    });
+
+    it('reads legacy arrays without rewriting storage', async () => {
+      const legacyRecords = [
+        { id: 'legacy-local', type: 'local', kdbx: { encryptedBytes: new Uint8Array([1]), name: 'legacy.kdbx' } },
+      ];
+      await set(RECORDS_STORAGE_KEY, legacyRecords);
+
+      expect((await readRecordStore()).records).toEqual(legacyRecords);
+      expect(await get(RECORDS_STORAGE_KEY)).toEqual(legacyRecords);
+    });
+
+    it('keeps the active row when an older quarantined row has the same id', async () => {
+      const activeRecord = {
+        id: 'same-id',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([2]), name: 'active.kdbx' },
+      };
+      const quarantinedRecord = {
+        id: 'same-id',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([1]), name: 'old.kdbx' },
+      };
+      await set(RECORDS_STORAGE_KEY, {
         version: 1,
-        records: [validLocalRecord, validDriveRecord],
-        invalidRecords: [
-          {
-            recordId: 'broken-drive-record',
-            value: { id: 'broken-drive-record', type: 'google-drive', kdbx: { name: 'broken.kdbx' }, source: {} },
-          },
-        ],
+        records: [activeRecord],
+        invalidRecords: [{ recordId: 'same-id', value: quarantinedRecord }],
         forgottenRecordIds: [],
       });
+
+      expect(await getRecords()).toEqual([activeRecord]);
+      expect((await readRecordStore()).issues).toEqual([
+        { recordId: 'same-id', message: 'Unsupported or invalid database provider record.' },
+      ]);
+    });
+
+    it('preserves unsupported envelopes and refuses writes to them', async () => {
+      const futureEnvelope = { version: 7, records: [{ id: 'future' }], metadata: { keep: true } };
+      await set(RECORDS_STORAGE_KEY, futureEnvelope);
+
+      expect(await getRecords()).toEqual([]);
+      await expect(
+        createRecord({
+          id: 'new-record',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array([1]), name: 'new.kdbx' },
+        }),
+      ).rejects.toThrow('unsupported storage version');
+      expect(await get(RECORDS_STORAGE_KEY)).toEqual(futureEnvelope);
     });
 
     it('returns an empty array when storage is empty', async () => {
@@ -489,6 +535,16 @@ describe('record.repository', () => {
   });
 
   describe('removeRecord', () => {
+    it('notifies same-tab listeners after Forget commits', async () => {
+      const listener = vi.fn();
+      const unsubscribe = onRecordForgotten(listener);
+
+      await removeRecord('forgotten-in-this-tab');
+      unsubscribe();
+
+      expect(listener).toHaveBeenCalledWith('forgotten-in-this-tab');
+    });
+
     it('removes a record by id', async () => {
       await setRecords([
         {
@@ -586,6 +642,39 @@ describe('record.repository', () => {
       await expect(updateRecord(record)).rejects.toThrow('This database was forgotten.');
       expect(await getRecords()).toEqual([]);
     });
+
+    it('removes quarantined duplicates and both credential records atomically', async () => {
+      const activeRecord = {
+        id: 'forgotten-webdav',
+        type: 'webdav',
+        kdbx: { encryptedBytes: new Uint8Array([2]), name: 'active.kdbx' },
+        source: { url: 'https://dav.example.test/active.kdbx', credentialRecordId: 'active-credential' },
+      };
+      const quarantinedRecord = {
+        id: 'forgotten-webdav',
+        type: 'webdav',
+        kdbx: { encryptedBytes: new Uint8Array([1]), name: 'old.kdbx' },
+        source: { url: 'https://dav.example.test/old.kdbx', credentialRecordId: 'old-credential' },
+      };
+      await set(RECORDS_STORAGE_KEY, {
+        version: 1,
+        records: [
+          activeRecord,
+          { id: 'kept', type: 'local', kdbx: { encryptedBytes: new Uint8Array([3]), name: 'kept.kdbx' } },
+        ],
+        invalidRecords: [{ recordId: 'forgotten-webdav', value: quarantinedRecord }],
+        forgottenRecordIds: [],
+      });
+      await setCredentialRecord('active-credential', new Uint8Array([4]));
+      await setCredentialRecord('old-credential', new Uint8Array([5]));
+
+      await removeRecord('forgotten-webdav');
+
+      expect((await getRecords()).map(({ id }) => id)).toEqual(['kept']);
+      expect((await readRecordStore()).issues).toEqual([]);
+      expect(await getCredentialRecord('active-credential')).toBeUndefined();
+      expect(await getCredentialRecord('old-credential')).toBeUndefined();
+    });
   });
 
   describe('updateRecord', () => {
@@ -638,7 +727,7 @@ describe('record.repository', () => {
       ]);
     });
 
-    it('does not change records when updateRecord is called with a missing id', async () => {
+    it('rejects updateRecord when the id is missing', async () => {
       await setRecords([
         {
           id: 'local-record-1',
@@ -650,14 +739,16 @@ describe('record.repository', () => {
         },
       ]);
 
-      await updateRecord({
-        id: 'missing-record-id',
-        type: 'local',
-        kdbx: {
-          encryptedBytes: new Uint8Array([4, 5, 6]),
-          name: 'vault-does-not-exist.kdbx',
-        },
-      });
+      await expect(
+        updateRecord({
+          id: 'missing-record-id',
+          type: 'local',
+          kdbx: {
+            encryptedBytes: new Uint8Array([4, 5, 6]),
+            name: 'vault-does-not-exist.kdbx',
+          },
+        }),
+      ).rejects.toThrow('Record not found.');
       expect(await getRecords()).toEqual([
         {
           id: 'local-record-1',
@@ -695,6 +786,19 @@ describe('record.repository', () => {
 
       const records = await getRecords();
       expect(records[0].lastOpenedAt).toBe(timestamp);
+    });
+
+    it('rejects updater output that changes a record identity', async () => {
+      await createRecord({
+        id: 'stable-id',
+        type: 'local',
+        kdbx: { encryptedBytes: new Uint8Array([1]), name: 'stable.kdbx' },
+      });
+
+      await expect(mutateRecord('stable-id', (record) => ({ ...record, id: 'changed-id' }))).rejects.toThrow(
+        'cannot change its record ID',
+      );
+      expect((await getRecords()).map(({ id }) => id)).toEqual(['stable-id']);
     });
   });
 });

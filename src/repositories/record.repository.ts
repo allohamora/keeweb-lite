@@ -1,4 +1,4 @@
-import { del, get, set, update } from 'idb-keyval';
+import { createStore, del, get } from 'idb-keyval';
 import { z } from 'zod';
 import { Lock } from '@/utils/lock.utils';
 import { parseProviderRecord } from '@/providers/registry';
@@ -17,6 +17,7 @@ export const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
 export const RECORDS_STORAGE_VERSION = 1;
 
 const lock = new Lock('record.repository');
+const keyValueStore = createStore('keyval-store', 'keyval');
 
 const invalidRecordSchema = z.object({
   recordId: z.string().nullable(),
@@ -61,31 +62,31 @@ const parseRows = (rows: unknown[], savedIssues: z.infer<typeof invalidRecordSch
   const invalidRecords: z.infer<typeof invalidRecordSchema>[] = [];
   const recordIds = new Set<string>();
 
-  for (const savedIssue of savedIssues) {
-    const record = parseProviderRecord(savedIssue.value);
+  const append = (value: unknown, fallbackRecordId: string | null, allowRecovery: boolean) => {
+    const record = parseProviderRecord(value);
     if (record) {
-      if (!recordIds.has(record.id)) {
+      if (allowRecovery && !recordIds.has(record.id)) {
         records.push(record as PersistedFileRecord);
         recordIds.add(record.id);
+      } else {
+        invalidRecords.push({ recordId: record.id, value });
       }
     } else {
-      invalidRecords.push(savedIssue);
+      invalidRecords.push({ recordId: fallbackRecordId, value });
     }
-  }
+  };
 
   for (const value of rows) {
     const record = parseProviderRecord(value);
-    if (record) {
-      if (recordIds.has(record.id)) {
-        invalidRecords.push({ recordId: record.id, value });
-      } else {
-        records.push(record as PersistedFileRecord);
-        recordIds.add(record.id);
-      }
-    } else {
-      invalidRecords.push({ recordId: recordIdFromUnknown(value), value });
+    if (!record) append(value, recordIdFromUnknown(value), false);
+    else if (recordIds.has(record.id)) invalidRecords.push({ recordId: record.id, value });
+    else {
+      records.push(record as PersistedFileRecord);
+      recordIds.add(record.id);
     }
   }
+
+  for (const savedIssue of savedIssues) append(savedIssue.value, savedIssue.recordId, true);
 
   return { records, invalidRecords };
 };
@@ -101,6 +102,23 @@ const toStoredRecord = (
   forgottenRecordIds,
 });
 
+const excludeForgottenRecords = <
+  T extends { records: PersistedFileRecord[]; invalidRecords: { recordId: string | null; value: unknown }[] },
+>(
+  parsed: T,
+  forgottenRecordIds: string[],
+) => {
+  const forgotten = new Set(forgottenRecordIds);
+  return {
+    ...parsed,
+    records: parsed.records.filter(({ id }) => !forgotten.has(id)),
+    invalidRecords: parsed.invalidRecords.filter(({ recordId, value }) => {
+      const id = recordId ?? recordIdFromUnknown(value);
+      return !id || !forgotten.has(id);
+    }),
+  };
+};
+
 const readStoredRecords = async (): Promise<{
   records: PersistedFileRecord[];
   invalidRecords: z.infer<typeof invalidRecordSchema>[];
@@ -113,7 +131,6 @@ const readStoredRecords = async (): Promise<{
 
   if (Array.isArray(value)) {
     const parsed = parseRows(value);
-    await set(RECORDS_STORAGE_KEY, toStoredRecord(parsed.records, parsed.invalidRecords, []));
     return { ...parsed, forgottenRecordIds: [] };
   }
 
@@ -134,9 +151,13 @@ const readStoredRecords = async (): Promise<{
     };
   }
 
+  const forgottenRecordIds = storeResult.data.forgottenRecordIds ?? [];
   return {
-    ...parseRows(storeResult.data.records, storeResult.data.invalidRecords),
-    forgottenRecordIds: storeResult.data.forgottenRecordIds ?? [],
+    ...excludeForgottenRecords(
+      parseRows(storeResult.data.records, storeResult.data.invalidRecords),
+      forgottenRecordIds,
+    ),
+    forgottenRecordIds,
   };
 };
 
@@ -149,16 +170,101 @@ const toMutableStore = (value: unknown) => {
     throw new Error('The saved database list uses an unsupported storage version.');
   }
 
+  const forgottenRecordIds = storeResult.data.forgottenRecordIds ?? [];
   return {
-    ...parseRows(storeResult.data.records, storeResult.data.invalidRecords),
-    forgottenRecordIds: storeResult.data.forgottenRecordIds ?? [],
+    ...excludeForgottenRecords(
+      parseRows(storeResult.data.records, storeResult.data.invalidRecords),
+      forgottenRecordIds,
+    ),
+    forgottenRecordIds,
   };
+};
+
+type AtomicStoreUpdate<T> = {
+  value: unknown;
+  result: T;
+  write?: boolean;
+  credentialWrites?: Array<[string, Uint8Array]>;
+  credentialDeletes?: string[];
+};
+
+const updateRecordStoreAtomically = async <T>(updater: (value: unknown) => AtomicStoreUpdate<T>): Promise<T> =>
+  keyValueStore('readwrite', (store) => {
+    const transaction = store.transaction;
+
+    return new Promise<T>((resolve, reject) => {
+      let settled = false;
+      let result!: T;
+      const finishWithError = (error: unknown) => {
+        if (settled) return;
+        settled = true;
+        reject(error);
+      };
+      const request = store.get(RECORDS_STORAGE_KEY);
+
+      request.onsuccess = () => {
+        try {
+          const update = updater(request.result);
+          result = update.result;
+          if (update.write !== false) {
+            store.put(update.value, RECORDS_STORAGE_KEY);
+            for (const [credentialRecordId, encryptedBytes] of update.credentialWrites ?? []) {
+              store.put(encryptedBytes, `${CREDENTIAL_RECORDS_STORAGE_PREFIX}${credentialRecordId}`);
+            }
+            for (const credentialRecordId of update.credentialDeletes ?? []) {
+              store.delete(`${CREDENTIAL_RECORDS_STORAGE_PREFIX}${credentialRecordId}`);
+            }
+          }
+        } catch (error) {
+          try {
+            transaction.abort();
+          } catch {
+            // The transaction can already be inactive when validation fails.
+          }
+          finishWithError(error);
+        }
+      };
+      request.onerror = () => finishWithError(request.error ?? new Error('Could not read the saved database list.'));
+      transaction.oncomplete = () => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+      transaction.onabort = () =>
+        finishWithError(transaction.error ?? new Error('The saved database update was aborted.'));
+      transaction.onerror = () => finishWithError(transaction.error ?? new Error('The saved database update failed.'));
+    });
+  });
+
+const validateRecordList = (records: PersistedFileRecord[]) => {
+  const ids = new Set<string>();
+  return records.map((record) => {
+    const parsed = parseProviderRecord(record);
+    if (!parsed) throw new Error('Unsupported or invalid database provider record.');
+    if (ids.has(parsed.id)) throw new Error(`Record with id ${parsed.id} already exists`);
+    ids.add(parsed.id);
+    return parsed as PersistedFileRecord;
+  });
 };
 
 export const getRecords = async () => {
   return lock.runInLock(async () => {
     const { records } = await readStoredRecords();
     return records;
+  });
+};
+
+export const readRecordStore = async () => {
+  return lock.runInLock(async () => {
+    const { records, invalidRecords, forgottenRecordIds } = await readStoredRecords();
+    return {
+      records,
+      issues: invalidRecords.map(({ recordId }) => ({
+        recordId,
+        message: 'Unsupported or invalid database provider record.',
+      })),
+      forgottenRecordIds,
+    };
   });
 };
 
@@ -173,18 +279,17 @@ export const getRecordIssues = async (): Promise<RecordIssue[]> => {
 };
 
 export const setRecords = async (records: PersistedFileRecord[]) => {
+  const parsedRecords = validateRecordList(records);
   await lock.runInLock(async () => {
-    const parsedRecords = records.map((record) => {
-      const parsed = parseProviderRecord(record);
-      if (!parsed) throw new Error('Unsupported or invalid database provider record.');
-      return parsed as PersistedFileRecord;
-    });
-    await update(RECORDS_STORAGE_KEY, (value) => {
+    await updateRecordStoreAtomically((value) => {
       const current = toMutableStore(value);
       const forgotten = new Set(current.forgottenRecordIds);
       if (parsedRecords.some(({ id }) => forgotten.has(id)))
         throw new Error('A forgotten database cannot be restored.');
-      return toStoredRecord(parsedRecords, current.invalidRecords, current.forgottenRecordIds);
+      return {
+        value: toStoredRecord(parsedRecords, current.invalidRecords, current.forgottenRecordIds),
+        result: undefined,
+      };
     });
   });
 };
@@ -199,11 +304,17 @@ const updateRecords = async (
   },
 ) => {
   await lock.runInLock(async () => {
-    await readStoredRecords();
-    await update(RECORDS_STORAGE_KEY, (value) => {
+    await updateRecordStoreAtomically((value) => {
       const current = toMutableStore(value);
       const next = updater(current.records, current.forgottenRecordIds);
-      return toStoredRecord(next.records, current.invalidRecords, next.forgottenRecordIds);
+      const records = validateRecordList(next.records);
+      const forgottenRecordIds = [...new Set(next.forgottenRecordIds)];
+      if (records.some(({ id }) => forgottenRecordIds.includes(id)))
+        throw new Error('A forgotten database cannot be restored.');
+      return {
+        value: toStoredRecord(records, current.invalidRecords, forgottenRecordIds),
+        result: undefined,
+      };
     });
   });
 };
@@ -243,6 +354,7 @@ export const getRecord = async (recordId: string) => {
 
 let recordLifecycleChannel: BroadcastChannel | undefined;
 let recordLifecycleListenerCount = 0;
+const recordLifecycleListeners = new Set<(recordId: string) => void>();
 
 const getRecordLifecycleChannel = () => {
   if (typeof BroadcastChannel === 'undefined') return undefined;
@@ -251,46 +363,81 @@ const getRecordLifecycleChannel = () => {
 };
 
 const publishRecordForgotten = (recordId: string) => {
+  for (const listener of recordLifecycleListeners) listener(recordId);
   const channel = getRecordLifecycleChannel();
   if (!channel) return;
   channel.postMessage({ type: 'forgotten', recordId });
-  if (recordLifecycleListenerCount === 0) {
-    setTimeout(() => {
-      if (recordLifecycleChannel !== channel || recordLifecycleListenerCount > 0) return;
-      channel.close();
-      recordLifecycleChannel = undefined;
-    }, 100);
+  if (recordLifecycleListenerCount === 0 && recordLifecycleChannel === channel) {
+    channel.close();
+    recordLifecycleChannel = undefined;
   }
 };
 
-export const removeRecord = async (recordId: string) => {
+const credentialRecordIdFromValue = (value: unknown) =>
+  z.object({ source: z.object({ credentialRecordId: z.string().min(1) }) }).safeParse(value).data?.source
+    .credentialRecordId;
+
+export const forgetDatabase = async (recordId: string) => {
   const credentialRecordIds = new Set([recordId]);
-  await updateRecords((oldRecords, forgottenRecordIds) => ({
-    records: oldRecords.filter((record) => {
-      if (record.id !== recordId) return true;
-      if (record.type === 'webdav') {
-        const credential = z.object({ credentialRecordId: z.string().min(1) }).safeParse(record.source);
-        if (credential.success) credentialRecordIds.add(credential.data.credentialRecordId);
+  const removed = await lock.runInLock(async () =>
+    updateRecordStoreAtomically((value) => {
+      const current = toMutableStore(value);
+      const matchesId = (candidate: unknown) => recordIdFromUnknown(candidate) === recordId;
+      const removedRecords = current.records.filter(({ id }) => id === recordId);
+      const removedIssues = current.invalidRecords.filter(
+        ({ recordId: issueRecordId, value: issueValue }) => issueRecordId === recordId || matchesId(issueValue),
+      );
+
+      for (const record of removedRecords) {
+        const credentialId = credentialRecordIdFromValue(record);
+        if (credentialId) credentialRecordIds.add(credentialId);
       }
-      return false;
+      for (const issue of removedIssues) {
+        const credentialId = credentialRecordIdFromValue(issue.value);
+        if (credentialId) credentialRecordIds.add(credentialId);
+      }
+
+      const forgottenRecordIds = current.forgottenRecordIds.includes(recordId)
+        ? current.forgottenRecordIds
+        : [...current.forgottenRecordIds, recordId];
+
+      return {
+        value: toStoredRecord(
+          current.records.filter(({ id }) => id !== recordId),
+          current.invalidRecords.filter(
+            ({ recordId: issueRecordId, value: issueValue }) => issueRecordId !== recordId && !matchesId(issueValue),
+          ),
+          forgottenRecordIds,
+        ),
+        result: true,
+        credentialDeletes: [...credentialRecordIds],
+      };
     }),
-    forgottenRecordIds: forgottenRecordIds.includes(recordId) ? forgottenRecordIds : [...forgottenRecordIds, recordId],
-  }));
-  publishRecordForgotten(recordId);
-  await Promise.all([...credentialRecordIds].map((credentialId) => removeCredentialRecord(credentialId)));
+  );
+
+  if (removed) publishRecordForgotten(recordId);
+};
+
+export const removeRecord = async (recordId: string) => {
+  await forgetDatabase(recordId);
 };
 
 export const onRecordForgotten = (listener: (recordId: string) => void) => {
   const channel = getRecordLifecycleChannel();
-  if (!channel) return () => undefined;
+  recordLifecycleListeners.add(listener);
+  if (!channel) {
+    return () => recordLifecycleListeners.delete(listener);
+  }
   recordLifecycleListenerCount += 1;
   const handleMessage = (event: MessageEvent<unknown>) => {
     const message = z.object({ type: z.literal('forgotten'), recordId: z.string() }).safeParse(event.data);
+    if (message.success && !recordLifecycleListeners.has(listener)) return;
     if (message.success) listener(message.data.recordId);
   };
   channel.addEventListener('message', handleMessage);
   return () => {
     channel.removeEventListener('message', handleMessage);
+    recordLifecycleListeners.delete(listener);
     recordLifecycleListenerCount = Math.max(0, recordLifecycleListenerCount - 1);
     if (recordLifecycleListenerCount === 0 && recordLifecycleChannel === channel) {
       channel.close();
@@ -301,41 +448,24 @@ export const onRecordForgotten = (listener: (recordId: string) => void) => {
 
 export { CREDENTIAL_RECORDS_STORAGE_PREFIX, getCredentialRecord, removeCredentialRecord, setCredentialRecord };
 
-export const updateRecord = async (record: PersistedFileRecord) => {
-  const parsedRecord = parseProviderRecord(record);
-  if (!parsedRecord) throw new Error('Unsupported or invalid database provider record.');
-  const persistedRecord = parsedRecord as PersistedFileRecord;
-
-  await updateRecords((oldRecords, forgottenRecordIds) => {
-    if (forgottenRecordIds.includes(persistedRecord.id)) throw new Error('This database was forgotten.');
-    return {
-      records: oldRecords.map((currentRecord) => {
-        if (currentRecord.id !== persistedRecord.id) {
-          return currentRecord;
-        }
-
-        return persistedRecord;
-      }),
-      forgottenRecordIds,
-    };
-  });
-
-  return persistedRecord;
-};
-
-export const updateRecordWith = async (
+export async function mutateRecord(
   recordId: string,
   updater: (record: PersistedFileRecord) => PersistedFileRecord,
-) => {
+): Promise<PersistedFileRecord> {
   let updatedRecord: PersistedFileRecord | undefined;
 
   await updateRecords((oldRecords, forgottenRecordIds) => {
     if (forgottenRecordIds.includes(recordId)) throw new Error('This database was forgotten.');
+    if (!oldRecords.some(({ id }) => id === recordId)) throw new Error('Record not found.');
     return {
       records: oldRecords.map((record) => {
         if (record.id !== recordId) return record;
 
-        updatedRecord = updater(record);
+        const candidate = updater(record);
+        if (candidate.id !== recordId) throw new Error('A database update cannot change its record ID.');
+        const parsed = parseProviderRecord(candidate);
+        if (!parsed) throw new Error('Unsupported or invalid database provider record.');
+        updatedRecord = parsed as PersistedFileRecord;
         return updatedRecord;
       }),
       forgottenRecordIds,
@@ -345,6 +475,107 @@ export const updateRecordWith = async (
   if (!updatedRecord) throw new Error('Record not found.');
 
   return updatedRecord;
+}
+
+export const updateRecord = async (record: PersistedFileRecord) => {
+  const parsedRecord = parseProviderRecord(record);
+  if (!parsedRecord) throw new Error('Unsupported or invalid database provider record.');
+  const persistedRecord = parsedRecord as PersistedFileRecord;
+
+  return mutateRecord(persistedRecord.id, () => persistedRecord);
+};
+
+export const updateRecordWith = mutateRecord;
+
+export type RecordCommitResult =
+  | { status: 'applied'; record: PersistedFileRecord }
+  | { status: 'superseded'; record: PersistedFileRecord }
+  | { status: 'forgotten' };
+
+const recordGeneration = (record: PersistedFileRecord) =>
+  (record as PersistedFileRecord & { synchronization?: { generation: number } }).synchronization?.generation ?? 0;
+
+const replaceRecord = (current: ReturnType<typeof toMutableStore>, recordId: string, record: PersistedFileRecord) => ({
+  ...current,
+  records: current.records.map((currentRecord) => (currentRecord.id === recordId ? record : currentRecord)),
+});
+
+export const commitSynchronizedRecord = async (
+  recordId: string,
+  expectedGeneration: number,
+  updater: (record: PersistedFileRecord) => PersistedFileRecord,
+): Promise<RecordCommitResult> => {
+  return lock.runInLock(() =>
+    updateRecordStoreAtomically<RecordCommitResult>((value) => {
+      const current = toMutableStore(value);
+      if (current.forgottenRecordIds.includes(recordId)) {
+        return { value, result: { status: 'forgotten' }, write: false };
+      }
+      const record = current.records.find(({ id }) => id === recordId);
+      if (!record) return { value, result: { status: 'forgotten' }, write: false };
+      if (recordGeneration(record) !== expectedGeneration) {
+        return { value, result: { status: 'superseded', record }, write: false };
+      }
+
+      const candidate = updater(record);
+      if (candidate.id !== recordId) throw new Error('A database update cannot change its record ID.');
+      const parsed = parseProviderRecord(candidate);
+      if (!parsed) throw new Error('Unsupported or invalid database provider record.');
+      const updatedRecord = parsed as PersistedFileRecord;
+      const next = replaceRecord(current, recordId, updatedRecord);
+
+      return {
+        value: toStoredRecord(next.records, next.invalidRecords, next.forgottenRecordIds),
+        result: { status: 'applied', record: updatedRecord },
+      };
+    }),
+  );
+};
+
+export const commitConnection = async (
+  recordId: string,
+  expectedGeneration: number,
+  preparedConnection: { source: unknown; credentialRecordId: string; encryptedBytes: Uint8Array },
+): Promise<RecordCommitResult> => {
+  return lock.runInLock(() =>
+    updateRecordStoreAtomically<RecordCommitResult>((value) => {
+      const current = toMutableStore(value);
+      if (current.forgottenRecordIds.includes(recordId)) {
+        return { value, result: { status: 'forgotten' }, write: false };
+      }
+      const record = current.records.find(({ id }) => id === recordId);
+      if (!record) return { value, result: { status: 'forgotten' }, write: false };
+      if (recordGeneration(record) !== expectedGeneration) {
+        return { value, result: { status: 'superseded', record }, write: false };
+      }
+
+      const candidate = {
+        ...record,
+        source: preparedConnection.source,
+        synchronization: {
+          ...record.synchronization,
+          generation: expectedGeneration + 1,
+          pending: true,
+        },
+      } as PersistedFileRecord;
+      const parsed = parseProviderRecord(candidate);
+      if (!parsed) throw new Error('The replacement connection is invalid.');
+      const updatedRecord = parsed as PersistedFileRecord;
+      const previousCredentialId = credentialRecordIdFromValue(record);
+      const credentialDeletes =
+        previousCredentialId && previousCredentialId !== preparedConnection.credentialRecordId
+          ? [previousCredentialId]
+          : [];
+      const next = replaceRecord(current, recordId, updatedRecord);
+
+      return {
+        value: toStoredRecord(next.records, next.invalidRecords, next.forgottenRecordIds),
+        result: { status: 'applied', record: updatedRecord },
+        credentialWrites: [[preparedConnection.credentialRecordId, preparedConnection.encryptedBytes]],
+        credentialDeletes,
+      };
+    }),
+  );
 };
 
 export const updateRecordIfGeneration = async (
@@ -352,15 +583,7 @@ export const updateRecordIfGeneration = async (
   expectedGeneration: number,
   updater: (record: PersistedFileRecord) => PersistedFileRecord,
 ) => {
-  let updated = false;
-  const record = await updateRecordWith(recordId, (currentRecord) => {
-    const generation = (currentRecord as PersistedFileRecord & { synchronization?: { generation: number } })
-      .synchronization?.generation;
-    if ((generation ?? 0) !== expectedGeneration) return currentRecord;
-
-    updated = true;
-    return updater(currentRecord);
-  });
-
-  return { updated, record };
+  const result = await commitSynchronizedRecord(recordId, expectedGeneration, updater);
+  if (result.status === 'forgotten') throw new Error('This database was forgotten.');
+  return { updated: result.status === 'applied', record: result.record };
 };
