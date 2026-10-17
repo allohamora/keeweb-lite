@@ -36,7 +36,7 @@
 
 - Follow the rule of three: don't extract a helper, constant or abstraction until the third repetition, unless asked. Don't add one to wrap a trivial expression.
 - Take at most 4 parameters, and at most 2 of the same type (e.g. `string, string, string` ids are easy to swap). Past that, take one object.
-- Group code by type, not by feature: put components, hooks, services, repositories, utils, types, etc. in their own directories, even when only one feature uses them.
+- Group code by feature, not by type: keep what belongs to a feature together, even when other features use it. Only generic code that belongs to no single feature goes in shared locations.
 - Don't silence type errors with shortcuts like `any`, `as` casts, `@ts-ignore` or `!`. Fix the types first (e.g. with a type guard). Use a shortcut only when the types can't express it. `as const` is fine: it narrows a type and doesn't silence an error.
 - Prefer immutable code where possible: derive new values instead of mutating or reassigning existing ones. Mutate only when there is no clearer way.
 - Default to no comments. Write one only if names, types and structure don't already answer the question and skipping it risks a real mistake. A comment copied from elsewhere (a reference file, a plan, another agent's output) must pass the same test.
