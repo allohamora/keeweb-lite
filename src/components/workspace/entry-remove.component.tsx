@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
-import { removeEntry } from '@/services/workspace.service';
+import { removeEntry, type EntryMutationResult } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import {
   Dialog,
@@ -23,11 +23,7 @@ type EntryRemoveProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  onRemove: (payload: {
-    nextDatabase: kdbxweb.Kdbx;
-    nextEntryUuid?: kdbxweb.KdbxUuid | null;
-    nextRecord: FileRecord;
-  }) => void;
+  onRemove: (result: EntryMutationResult) => void;
 };
 
 export const EntryRemove = ({ database, entry, record, onRemove }: EntryRemoveProps) => {

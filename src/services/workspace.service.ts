@@ -233,7 +233,7 @@ const mutateEntry = async ({ database, record, entryUuid, mutate }: MutateEntryI
   return { nextDatabase, nextEntryUuid, nextRecord };
 };
 
-type EntryMutationResult<EntryUuid extends kdbxweb.KdbxUuid | null> = {
+export type EntryMutationResult<EntryUuid extends kdbxweb.KdbxUuid | null = kdbxweb.KdbxUuid | null> = {
   nextDatabase: kdbxweb.Kdbx;
   nextEntryUuid: EntryUuid;
   nextRecord: FileRecord;

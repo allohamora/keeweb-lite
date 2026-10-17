@@ -30,6 +30,7 @@ import {
   getEntryValues,
   isEntryInRecycleBin,
   saveEntry,
+  type EntryMutationResult,
 } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
@@ -58,11 +59,7 @@ type EntryEditFormProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  onSave: (payload: {
-    nextDatabase: kdbxweb.Kdbx;
-    nextEntryUuid?: kdbxweb.KdbxUuid | null;
-    nextRecord: FileRecord;
-  }) => void;
+  onSave: (result: EntryMutationResult) => void;
 };
 
 export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
@@ -111,13 +108,9 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
     }
   });
 
-  const handleSave = (payload: {
-    nextDatabase: kdbxweb.Kdbx;
-    nextEntryUuid?: kdbxweb.KdbxUuid | null;
-    nextRecord: FileRecord;
-  }) => {
+  const handleSave = (result: EntryMutationResult) => {
     reset(); // Reset the form state after remove/restore (isDirty, touched state, etc)
-    onSave?.(payload);
+    onSave?.(result);
   };
 
   const handleApplyHistory = (values: EntryEditValues) => {

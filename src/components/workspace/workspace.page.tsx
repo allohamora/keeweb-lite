@@ -1,8 +1,12 @@
 import type kdbxweb from '@/lib/kdbxweb.lib';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { type UnlockSession } from '@/services/session.service';
-import { createEntry, findEntryByUuid, type SelectFilter } from '@/services/workspace.service';
-import type { FileRecord } from '@/repositories/record.repository';
+import {
+  createEntry,
+  findEntryByUuid,
+  type EntryMutationResult,
+  type SelectFilter,
+} from '@/services/workspace.service';
 import { MenuPane } from '@/components/workspace/menu-pane.component';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { EntryDetails } from '@/components/workspace/entry-details.component';
@@ -56,15 +60,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
 
   const handleBack = () => guardNavigation(() => setSelectedEntryUuid(null));
 
-  const handleSave = ({
-    nextDatabase,
-    nextEntryUuid,
-    nextRecord,
-  }: {
-    nextDatabase: kdbxweb.Kdbx;
-    nextEntryUuid?: kdbxweb.KdbxUuid | null;
-    nextRecord: FileRecord;
-  }) => {
+  const handleSave = ({ nextDatabase, nextEntryUuid, nextRecord }: EntryMutationResult) => {
     setSession((previousSession) => {
       if (!previousSession) return previousSession;
 
@@ -76,9 +72,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
       };
     });
 
-    if (nextEntryUuid !== undefined) {
-      setSelectedEntryUuid(nextEntryUuid);
-    }
+    setSelectedEntryUuid(nextEntryUuid);
   };
 
   const onLock = () => {

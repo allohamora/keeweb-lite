@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
-import { restoreEntry } from '@/services/workspace.service';
+import { restoreEntry, type EntryMutationResult } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import {
   Dialog,
@@ -23,7 +23,7 @@ type EntryRestoreProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  onRestore: (payload: { nextDatabase: kdbxweb.Kdbx; nextEntryUuid: null; nextRecord: FileRecord }) => void;
+  onRestore: (result: EntryMutationResult) => void;
 };
 
 export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {

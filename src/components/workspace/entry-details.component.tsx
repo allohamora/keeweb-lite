@@ -5,17 +5,14 @@ import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { EntryEditForm } from '@/components/workspace/entry-edit.form';
 import type { FileRecord } from '@/repositories/record.repository';
+import type { EntryMutationResult } from '@/services/workspace.service';
 
 type EntryDetailsProps = {
   className?: string;
   selectedEntry: kdbxweb.KdbxEntry | null;
   database: kdbxweb.Kdbx;
   record: FileRecord;
-  onSave: (payload: {
-    nextDatabase: kdbxweb.Kdbx;
-    nextEntryUuid?: kdbxweb.KdbxUuid | null;
-    nextRecord: FileRecord;
-  }) => void;
+  onSave: (result: EntryMutationResult) => void;
   showBackButton: boolean;
   onBack: () => void;
 };
