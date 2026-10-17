@@ -2,17 +2,14 @@ import { toast } from 'sonner';
 import { useAsyncFn } from 'react-use';
 import { PUBLIC_GOOGLE_APP_ID } from 'astro:env/client';
 import { Button } from '@/components/ui/button';
-import { auth } from '@/repositories/google-drive.repository';
+import { auth, type DriveFile } from '@/repositories/google-drive.repository';
 import { getErrorMessage } from '@/utils/error.utils';
 
-export type DriveFile = {
-  id: string;
-  name: string;
-};
+type PickedDriveFile = Pick<DriveFile, 'id' | 'name'>;
 
 export type GoogleDriveFilePickerProps = {
-  value?: DriveFile | null;
-  onChange: (file: DriveFile | null) => void;
+  value?: PickedDriveFile | null;
+  onChange: (file: PickedDriveFile | null) => void;
   id?: string;
   'aria-invalid'?: boolean;
 };

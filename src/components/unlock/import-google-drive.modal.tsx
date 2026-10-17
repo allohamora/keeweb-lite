@@ -17,6 +17,7 @@ import { fileListSchema } from '@/utils/zod.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 import { isKdbxFileName } from '@/utils/kdbx.utils';
 import { importGoogleDriveRecord } from '@/services/record.service';
+import { driveFileSchema } from '@/repositories/google-drive.repository';
 import { GoogleDriveFilePicker } from './google-drive.file-picker';
 
 export type ImportGoogleDriveModalProps = {
@@ -25,13 +26,8 @@ export type ImportGoogleDriveModalProps = {
   onRecordImported: () => void;
 };
 
-const driveFileSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-});
-
 const importGoogleDriveModalSchema = z.object({
-  driveFile: driveFileSchema.refine((file) => isKdbxFileName(file.name), {
+  driveFile: driveFileSchema.pick({ id: true, name: true }).refine((file) => isKdbxFileName(file.name), {
     message: 'Only .kdbx files are supported.',
   }),
   keyFile: fileListSchema('Select a key file.').optional(),

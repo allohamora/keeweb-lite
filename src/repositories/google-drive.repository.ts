@@ -65,13 +65,13 @@ class Auth {
 
 export const auth = new Auth();
 
-const driveFileSchema = z.object({
+export const driveFileSchema = z.object({
   id: z.string(),
   name: z.string(),
   modifiedTime: z.string(),
 });
 
-type DriveFile = z.infer<typeof driveFileSchema>;
+export type DriveFile = z.infer<typeof driveFileSchema>;
 
 export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
   const accessToken = await auth.getAccessToken();
