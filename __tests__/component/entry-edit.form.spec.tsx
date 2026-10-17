@@ -2,7 +2,7 @@ import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/lib/kdbxweb.lib';
 import { useState } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryEditForm } from '@/components/workspace/entry-edit.form';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
@@ -31,22 +31,18 @@ const ToggleableEntryEditForm = ({ database, entry, onGuardedAction }: Toggleabl
 };
 
 describe('entry-edit.form', () => {
-  let database: kdbxweb.Kdbx;
-  let entry: kdbxweb.KdbxEntry;
-
-  beforeEach(async () => {
-    database = await createTestDatabase();
-    entry = createTestEntry(database);
-  });
-
   describe('EntryEditForm', () => {
-    it('disables Save on mount, since the form starts clean', () => {
+    it('disables Save on mount, since the form starts clean', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     });
 
     it('enables Save once a field is edited', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
@@ -56,6 +52,8 @@ describe('entry-edit.form', () => {
     });
 
     it('defers the remove trigger behind the discard prompt without discarding edits', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
@@ -68,6 +66,8 @@ describe('entry-edit.form', () => {
     });
 
     it('discards edits and opens the remove dialog once the discard prompt is confirmed', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
@@ -80,6 +80,8 @@ describe('entry-edit.form', () => {
     });
 
     it('fills the form from a history revision and marks it dirty', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       entry.pushHistory();
       entry.fields.set('Title', 'Changed Title');
@@ -95,6 +97,8 @@ describe('entry-edit.form', () => {
     });
 
     it('saves the entry and resets dirty state on submit', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       const onSave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
@@ -110,6 +114,8 @@ describe('entry-edit.form', () => {
     });
 
     it('picks a color and icon from the combined picker and saves them', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       const onSave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
@@ -131,6 +137,8 @@ describe('entry-edit.form', () => {
     });
 
     it("keeps a trashed entry's own color choosable in the picker, even if unused elsewhere", async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       const recycleBin = database.createGroup(database.getDefaultGroup(), 'Trash');
       database.meta.recycleBinUuid = recycleBin.uuid;
@@ -144,6 +152,8 @@ describe('entry-edit.form', () => {
     });
 
     it('clears the global dirty flag on unmount so navigation is not blocked afterward', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       const onGuardedAction = vi.fn();
 
@@ -157,6 +167,8 @@ describe('entry-edit.form', () => {
     });
 
     it('picks a date from the Expires calendar and marks the form dirty', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
@@ -173,6 +185,8 @@ describe('entry-edit.form', () => {
     });
 
     it('discards the picked date when the Expires popover is closed without clicking Done', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
@@ -186,6 +200,8 @@ describe('entry-edit.form', () => {
     });
 
     it('disables Done while the expiry time is incomplete', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
@@ -203,6 +219,8 @@ describe('entry-edit.form', () => {
     });
 
     it('shows a past expiry date struck through and clears it via the clear button', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       entry.times.expires = true;
       entry.times.expiryTime = new Date(2000, 0, 1);
@@ -218,6 +236,8 @@ describe('entry-edit.form', () => {
     });
 
     it('blocks Remove while Save is still pending, and re-enables it once Save settles', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       let resolveSave: (payload: {
         nextDatabase: kdbxweb.Kdbx;

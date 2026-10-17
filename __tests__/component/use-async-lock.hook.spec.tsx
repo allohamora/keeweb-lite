@@ -1,6 +1,6 @@
 import userEvent from '@testing-library/user-event';
 import { screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { useAsyncLock } from '@/hooks/use-async-lock.hook';
 import { render } from '../utils/render.utils';
 
@@ -18,10 +18,6 @@ const AsyncLockHarness = ({ action }: { action: () => Promise<void> }) => {
 };
 
 describe('use-async-lock.hook', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('locks while the action is pending and unlocks once it resolves', async () => {
     const user = userEvent.setup();
     let resolveAction!: () => void;

@@ -1,16 +1,12 @@
 import * as recordService from '@/services/record.service';
 import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { CreateLocalModal } from '@/components/unlock/create-local.modal';
 import { render } from '../utils/render.utils';
 
 describe('create-local.modal', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   describe('CreateLocalModal', () => {
     it('renders database name, password, confirm password fields and a use-key-file checkbox', () => {
       render(<CreateLocalModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
@@ -23,7 +19,7 @@ describe('create-local.modal', () => {
 
     it('shows a validation error and does not submit when passwords do not match', async () => {
       const user = userEvent.setup();
-      const createLocalRecord = vi.spyOn(recordService, 'createLocalRecord');
+      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord');
 
       render(<CreateLocalModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
@@ -39,7 +35,7 @@ describe('create-local.modal', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       const onRecordCreated = vi.fn();
-      const createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
+      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
         keyFileBytes: undefined,
         keyFileName: undefined,
       });
@@ -62,11 +58,11 @@ describe('create-local.modal', () => {
     it('creates the record with a key file and downloads it when the checkbox is checked', async () => {
       const user = userEvent.setup();
       const keyFileBytes = new Uint8Array([1, 2, 3]);
-      const createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
+      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
         keyFileBytes,
         keyFileName: 'My Vault.keyx',
       });
-      const downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
+      using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
       render(<CreateLocalModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
@@ -89,9 +85,9 @@ describe('create-local.modal', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       const onRecordCreated = vi.fn();
-      vi.spyOn(recordService, 'createLocalRecord').mockRejectedValue(
-        new Error('A record named "My Vault.kdbx" already exists.'),
-      );
+      using _createLocalRecord = vi
+        .spyOn(recordService, 'createLocalRecord')
+        .mockRejectedValue(new Error('A record named "My Vault.kdbx" already exists.'));
 
       render(<CreateLocalModal onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');

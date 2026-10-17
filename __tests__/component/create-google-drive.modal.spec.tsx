@@ -1,16 +1,12 @@
 import * as recordService from '@/services/record.service';
 import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { CreateGoogleDriveModal } from '@/components/unlock/create-google-drive.modal';
 import { render } from '../utils/render.utils';
 
 describe('create-google-drive.modal', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   describe('CreateGoogleDriveModal', () => {
     it('renders database name, password, confirm password fields and a use-key-file checkbox', () => {
       render(<CreateGoogleDriveModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
@@ -23,7 +19,7 @@ describe('create-google-drive.modal', () => {
 
     it('shows a validation error and does not submit when passwords do not match', async () => {
       const user = userEvent.setup();
-      const createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord');
+      using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord');
 
       render(<CreateGoogleDriveModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
@@ -39,7 +35,7 @@ describe('create-google-drive.modal', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       const onRecordCreated = vi.fn();
-      const createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord').mockResolvedValue({
+      using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord').mockResolvedValue({
         keyFileBytes: undefined,
         keyFileName: undefined,
       });
@@ -62,11 +58,11 @@ describe('create-google-drive.modal', () => {
     it('creates the record with a key file and downloads it when the checkbox is checked', async () => {
       const user = userEvent.setup();
       const keyFileBytes = new Uint8Array([1, 2, 3]);
-      const createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord').mockResolvedValue({
+      using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord').mockResolvedValue({
         keyFileBytes,
         keyFileName: 'My Vault.keyx',
       });
-      const downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
+      using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
       render(<CreateGoogleDriveModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
@@ -89,7 +85,9 @@ describe('create-google-drive.modal', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       const onRecordCreated = vi.fn();
-      vi.spyOn(recordService, 'createGoogleDriveRecord').mockRejectedValue(new Error('Failed to create file.'));
+      using _createGoogleDriveRecord = vi
+        .spyOn(recordService, 'createGoogleDriveRecord')
+        .mockRejectedValue(new Error('Failed to create file.'));
 
       render(<CreateGoogleDriveModal onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');

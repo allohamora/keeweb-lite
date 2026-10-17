@@ -2,17 +2,13 @@ import * as recordService from '@/services/record.service';
 import * as sessionService from '@/services/session.service';
 import userEvent from '@testing-library/user-event';
 import { screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { UnlockPage } from '@/components/unlock/unlock.page';
 import { mockServer } from '../setup-component-context';
 import { demoFile } from '../utils/demo-file.utils';
 import { render } from '../utils/render.utils';
 
 describe('unlock.page', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('starts an in-memory demo session when the Demo button is clicked', async () => {
     mockServer.addHandlers(demoFile.ok());
 
@@ -35,12 +31,12 @@ describe('unlock.page', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([
-      { id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never,
-    ]);
+    using _getRecordsByLastOpened = vi
+      .spyOn(recordService, 'getRecordsByLastOpened')
+      .mockResolvedValue([{ id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never]);
 
     let resolveDemo!: (session: sessionService.UnlockSession) => void;
-    vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(
+    using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(
       new Promise((resolve) => {
         resolveDemo = resolve;
       }),
@@ -73,17 +69,17 @@ describe('unlock.page', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([
-      { id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never,
-    ]);
+    using _getRecordsByLastOpened = vi
+      .spyOn(recordService, 'getRecordsByLastOpened')
+      .mockResolvedValue([{ id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never]);
 
     let resolveUnlock!: (session: sessionService.UnlockSession) => void;
-    vi.spyOn(sessionService, 'unlockSession').mockReturnValue(
+    using _unlockSession = vi.spyOn(sessionService, 'unlockSession').mockReturnValue(
       new Promise((resolve) => {
         resolveUnlock = resolve;
       }),
     );
-    const createDemoSession = vi.spyOn(sessionService, 'createDemoSession');
+    using createDemoSession = vi.spyOn(sessionService, 'createDemoSession');
 
     render(<UnlockPage setSession={setSession} />);
     await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));

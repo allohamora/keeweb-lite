@@ -1,6 +1,5 @@
-import type kdbxweb from '@/lib/kdbxweb.lib';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { EntryList } from '@/components/workspace/entry-list.component';
 import { createTestDatabase, createTestEntry } from '../fixtures/kdbx.fixture';
@@ -8,14 +7,9 @@ import { render } from '../utils/render.utils';
 import { MutatingEntryMutation } from '../utils/entry-mutation.harness';
 
 describe('entry-list.component', () => {
-  let database: kdbxweb.Kdbx;
-
-  beforeEach(async () => {
-    database = await createTestDatabase();
-  });
-
   describe('EntryList', () => {
-    it('enables the create entry trigger by default', () => {
+    it('enables the create entry trigger by default', async () => {
+      const database = await createTestDatabase();
       render(
         <EntryList
           database={database}
@@ -32,6 +26,7 @@ describe('entry-list.component', () => {
     });
 
     it('reorders the entries when another sort order is picked', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
       createTestEntry(database).fields.set('Title', 'Alpha');
       createTestEntry(database).fields.set('Title', 'Beta');
@@ -55,7 +50,8 @@ describe('entry-list.component', () => {
       expect(screen.getAllByText(/^(Alpha|Beta)$/).map((title) => title.textContent)).toEqual(['Beta', 'Alpha']);
     });
 
-    it('disables the create entry trigger while an entry mutation is in progress', () => {
+    it('disables the create entry trigger while an entry mutation is in progress', async () => {
+      const database = await createTestDatabase();
       render(
         <MutatingEntryMutation>
           <EntryList
@@ -73,7 +69,8 @@ describe('entry-list.component', () => {
       expect(screen.getByRole('button', { name: 'Create entry' })).toBeDisabled();
     });
 
-    it('does not strike through the title and username for an entry that has not expired', () => {
+    it('does not strike through the title and username for an entry that has not expired', async () => {
+      const database = await createTestDatabase();
       createTestEntry(database);
 
       render(
@@ -92,7 +89,8 @@ describe('entry-list.component', () => {
       expect(screen.getByText('test-user')).not.toHaveClass('line-through');
     });
 
-    it('strikes through the title and username for an expired entry', () => {
+    it('strikes through the title and username for an expired entry', async () => {
+      const database = await createTestDatabase();
       const entry = createTestEntry(database);
       entry.times.expires = true;
       entry.times.expiryTime = new Date(2000, 0, 1);
@@ -113,7 +111,8 @@ describe('entry-list.component', () => {
       expect(screen.getByText('test-user')).toHaveClass('line-through');
     });
 
-    it('tints the entry icon with the entry color when set', () => {
+    it('tints the entry icon with the entry color when set', async () => {
+      const database = await createTestDatabase();
       const entry = createTestEntry(database);
       entry.bgColor = '#FF0000';
 
@@ -133,7 +132,8 @@ describe('entry-list.component', () => {
       expect(icon).toHaveStyle({ color: '#FF0000' });
     });
 
-    it('leaves the entry icon untinted when no color is set', () => {
+    it('leaves the entry icon untinted when no color is set', async () => {
+      const database = await createTestDatabase();
       createTestEntry(database);
 
       render(

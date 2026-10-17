@@ -1,8 +1,7 @@
 import * as kdbxService from '@/services/kdbx.service';
 import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
-import type kdbxweb from '@/lib/kdbxweb.lib';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
@@ -12,19 +11,14 @@ import { DirtySafeNet } from '../utils/safe-net.harness';
 const record = createTestRecord();
 
 describe('workspace-controls.component', () => {
-  let database: kdbxweb.Kdbx;
-
-  beforeEach(async () => {
-    database = await createTestDatabase();
-  });
-
   describe('WorkspaceControls', () => {
     it('downloads the database directly when there are no unsaved changes', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
-      const toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
-      const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
-      const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      using toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      using _createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+      using _revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+      using _anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
       render(
         <WorkspaceControls
@@ -40,17 +34,13 @@ describe('workspace-controls.component', () => {
       await user.click(screen.getByRole('button', { name: 'Download database' }));
 
       expect(toEncryptedBytes).toHaveBeenCalledWith(database);
-
-      toEncryptedBytes.mockRestore();
-      createObjectURL.mockRestore();
-      revokeObjectURL.mockRestore();
-      anchorClick.mockRestore();
     });
 
     it('keeps an uppercase .KDBX extension when downloading', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
-      const toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
-      const downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
+      using _toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
       render(
         <WorkspaceControls
@@ -66,14 +56,12 @@ describe('workspace-controls.component', () => {
       await user.click(screen.getByRole('button', { name: 'Download database' }));
 
       expect(downloadBytes).toHaveBeenCalledWith(expect.objectContaining({ fileName: 'Vault.KDBX' }));
-
-      toEncryptedBytes.mockRestore();
-      downloadBytes.mockRestore();
     });
 
     it('defers download behind the discard prompt when there are unsaved changes', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
-      const toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes');
+      using toEncryptedBytes = vi.spyOn(kdbxService, 'toEncryptedBytes');
 
       render(
         <DirtySafeNet>
@@ -92,11 +80,10 @@ describe('workspace-controls.component', () => {
 
       expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
       expect(toEncryptedBytes).not.toHaveBeenCalled();
-
-      toEncryptedBytes.mockRestore();
     });
 
-    it('hides the download button for demo records', () => {
+    it('hides the download button for demo records', async () => {
+      const database = await createTestDatabase();
       render(
         <WorkspaceControls
           database={database}
@@ -114,6 +101,7 @@ describe('workspace-controls.component', () => {
     });
 
     it('retries sync directly when there are no unsaved changes', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
       const onSyncRetry = vi.fn();
 
@@ -134,6 +122,7 @@ describe('workspace-controls.component', () => {
     });
 
     it('defers sync retry behind the discard prompt when there are unsaved changes', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
       const onSyncRetry = vi.fn();
 

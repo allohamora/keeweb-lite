@@ -1,7 +1,7 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/lib/kdbxweb.lib';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import type { SelectFilter } from '@/services/workspace.service';
 import { WorkspacePage } from '@/components/workspace/workspace.page';
@@ -63,14 +63,9 @@ vi.mock('@/components/workspace/workspace-controls.component', () => ({
 const record = createTestRecord();
 
 describe('workspace.page', () => {
-  let database: kdbxweb.Kdbx;
-
-  beforeEach(async () => {
-    database = await createTestDatabase();
-  });
-
   describe('WorkspacePage', () => {
     it('navigates immediately when there are no unsaved changes', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
@@ -81,6 +76,7 @@ describe('workspace.page', () => {
     });
 
     it('defers navigation and shows the discard dialog when there are unsaved changes', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
@@ -92,6 +88,7 @@ describe('workspace.page', () => {
     });
 
     it('keeps the pending navigation blocked when Cancel is clicked', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
@@ -104,6 +101,7 @@ describe('workspace.page', () => {
     });
 
     it('runs the deferred navigation and clears the dirty state when Discard is clicked', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
@@ -120,8 +118,9 @@ describe('workspace.page', () => {
     });
 
     it('guards the filter select, create entry, and lock actions the same way', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
-      const createEntry = vi.spyOn(workspaceService, 'createEntry');
+      using createEntry = vi.spyOn(workspaceService, 'createEntry');
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Stub make dirty' }));
@@ -138,11 +137,10 @@ describe('workspace.page', () => {
       expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
 
       expect(createEntry).not.toHaveBeenCalled();
-
-      createEntry.mockRestore();
     });
 
     it('prevents beforeunload while there are unsaved changes', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
@@ -155,6 +153,7 @@ describe('workspace.page', () => {
     });
 
     it('does not prevent beforeunload without unsaved changes', async () => {
+      const database = await createTestDatabase();
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
 
       const event = new Event('beforeunload', { cancelable: true });
@@ -164,6 +163,7 @@ describe('workspace.page', () => {
     });
 
     it('disables create entry while a create is pending, and re-enables it once it settles', async () => {
+      const database = await createTestDatabase();
       const user = userEvent.setup();
       let resolveCreate: (payload: {
         nextDatabase: kdbxweb.Kdbx;

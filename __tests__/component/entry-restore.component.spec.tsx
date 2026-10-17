@@ -1,7 +1,7 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/lib/kdbxweb.lib';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
@@ -10,17 +10,12 @@ import { DirtySafeNet } from '../utils/safe-net.harness';
 import { MutatingEntryMutation } from '../utils/entry-mutation.harness';
 
 describe('entry-restore.component', () => {
-  let database: kdbxweb.Kdbx;
-  let entry: kdbxweb.KdbxEntry;
   const record = createTestRecord();
-
-  beforeEach(async () => {
-    database = await createTestDatabase();
-    entry = createTestEntry(database);
-  });
 
   describe('EntryRestore', () => {
     it('opens the confirm dialog directly when there are no unsaved changes', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />);
@@ -30,6 +25,8 @@ describe('entry-restore.component', () => {
     });
 
     it('defers opening the confirm dialog behind the discard prompt when there are unsaved changes', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(
@@ -44,6 +41,8 @@ describe('entry-restore.component', () => {
     });
 
     it('opens the confirm dialog once the discard prompt is confirmed', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(
@@ -58,6 +57,8 @@ describe('entry-restore.component', () => {
     });
 
     it('restores the entry and calls onRestore on confirm', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       const onRestore = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
@@ -72,6 +73,8 @@ describe('entry-restore.component', () => {
     });
 
     it('disables the trigger and cannot open the dialog while another entry mutation is in progress', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
 
       render(
@@ -89,6 +92,8 @@ describe('entry-restore.component', () => {
     });
 
     it('disables its own trigger while the restore is in flight, then re-enables it', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
       const user = userEvent.setup();
       let resolveRestore: (payload: {
         nextDatabase: kdbxweb.Kdbx;

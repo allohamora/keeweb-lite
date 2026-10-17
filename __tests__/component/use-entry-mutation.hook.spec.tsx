@@ -19,15 +19,13 @@ const EntryMutationHarness = () => {
 describe('use-entry-mutation.hook', () => {
   describe('useEntryMutation', () => {
     it('throws when used outside an EntryMutationProvider', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      using _consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
       const Consumer = () => {
         useEntryMutation();
         return null;
       };
 
       expect(() => rtlRender(<Consumer />)).toThrow('useEntryMutation must be used within an EntryMutationProvider');
-
-      consoleError.mockRestore();
     });
 
     it('defaults to not mutating', () => {

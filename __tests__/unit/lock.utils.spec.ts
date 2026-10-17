@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Lock } from '@/utils/lock.utils';
 
-describe('lock.utils.ts', () => {
+describe('lock.utils', () => {
   describe('runInLock', () => {
     it('returns sync callback results', async () => {
       const lock = new Lock('lock.utils.sync');

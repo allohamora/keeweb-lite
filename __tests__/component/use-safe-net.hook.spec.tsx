@@ -67,15 +67,13 @@ const ToggleableForm = ({ discard }: { discard: () => void }) => {
 describe('use-safe-net.hook', () => {
   describe('useSafeNet', () => {
     it('throws when used outside a SafeNetProvider', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      using _consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
       const Consumer = () => {
         useSafeNet();
         return null;
       };
 
       expect(() => rtlRender(<Consumer />)).toThrow('useSafeNet must be used within a SafeNetProvider');
-
-      consoleError.mockRestore();
     });
 
     describe('guardNavigation', () => {
