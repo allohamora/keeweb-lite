@@ -6,8 +6,9 @@ import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
 import { unlockKdbx } from '@/services/kdbx.service';
+import { updateRecordKdbx } from '@/services/record.service';
 import { createDemoSession, syncSession, unlockSession } from '@/services/session.service';
-import { getEntryValues, saveEntry } from '@/services/workspace.service';
+import { getEntryValues, getFieldText, saveEntry } from '@/services/workspace.service';
 import { demoFile } from '../utils/demo-file.utils';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 
@@ -250,118 +251,129 @@ describe('session.service', () => {
       expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
     });
 
-    it('saves an entry while a sync is copying the database', async () => {
+    const createSyncSetup = async () => {
       const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
       await credentials.ready;
-      const initialDatabase = kdbxweb.Kdbx.create(credentials, 'Overlap DB');
+      const initialDatabase = kdbxweb.Kdbx.create(credentials, 'Sync Race DB');
       initialDatabase.createEntry(initialDatabase.getDefaultGroup()).fields.set('Title', 'Original Title');
       const initialBytes = new Uint8Array(await initialDatabase.save());
 
       const record = await createRecord({
-        id: 'gd-overlap',
+        id: 'gd-sync-setup',
         type: 'google-drive',
         kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
         source: { id: 'drive-file-id' },
       });
       const database = await unlockKdbx({ encryptedBytes: initialBytes, password: 'test-password' });
-      const entry = database.getDefaultGroup().entries[0];
-      if (!entry) throw new Error('entry should exist');
 
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: initialBytes }), googleDriveApi.updateFile.ok());
+      return { database, initialBytes, record };
+    };
 
-      const [synced, saved] = await Promise.all([
-        syncSession({ database, record }),
-        saveEntry({
-          database,
-          record,
-          entryUuid: entry.uuid.toString(),
-          values: { ...getEntryValues(entry), title: 'Edited Title' },
-        }),
-      ]);
+    const getTitles = (database: kdbxweb.Kdbx) => {
+      return database
+        .getDefaultGroup()
+        .entries.map((entry) => getFieldText(entry.fields.get('Title')))
+        .toSorted();
+    };
 
-      expect(synced.database).toBeDefined();
-      expect(saved.nextDatabase.getDefaultGroup().entries).toHaveLength(1);
-    });
+    it('merges the remote file into the latest saved state and uploads the merged database', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
 
-    it('accumulates mutations from both concurrent calls in the final merged result', async () => {
-      const creds = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
-      await creds.ready;
-      const initialDb = kdbxweb.Kdbx.create(creds, 'Lock Test DB');
-      const group = initialDb.getDefaultGroup();
+      const remoteDatabase = await unlockKdbx({ encryptedBytes: initialBytes, password: 'test-password' });
+      remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote Entry');
+      const remoteBytes = new Uint8Array(await remoteDatabase.save());
 
-      const entryA = initialDb.createEntry(group);
-      entryA.fields.set('Title', kdbxweb.ProtectedValue.fromString('Original A'));
-
-      const entryB = initialDb.createEntry(group);
-      entryB.fields.set('Title', kdbxweb.ProtectedValue.fromString('Original B'));
-
-      const initialBytes = new Uint8Array(await initialDb.save());
-
-      // First caller's database: only Entry A updated
-      const credsForA = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
-      await credsForA.ready;
-      const dbWithAUpdated = await kdbxweb.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForA);
-      const entryAToUpdate = dbWithAUpdated.getDefaultGroup().entries.find((entry) => {
-        const title = entry.fields.get('Title');
-        return title instanceof kdbxweb.ProtectedValue && title.getText() === 'Original A';
-      });
-      if (entryAToUpdate) {
-        entryAToUpdate.fields.set('Title', kdbxweb.ProtectedValue.fromString('Updated A'));
-        entryAToUpdate.times.lastModTime = new Date(Date.now() + 1000);
-      }
-
-      // Second caller's database: only Entry B updated
-      const credsForB = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
-      await credsForB.ready;
-      const dbWithBUpdated = await kdbxweb.Kdbx.load(initialBytes.buffer as ArrayBuffer, credsForB);
-      const entryBToUpdate = dbWithBUpdated.getDefaultGroup().entries.find((entry) => {
-        const title = entry.fields.get('Title');
-        return title instanceof kdbxweb.ProtectedValue && title.getText() === 'Original B';
-      });
-      if (entryBToUpdate) {
-        entryBToUpdate.fields.set('Title', kdbxweb.ProtectedValue.fromString('Updated B'));
-        entryBToUpdate.times.lastModTime = new Date(Date.now() + 1000);
-      }
-
-      const record = await createRecord({
-        id: 'gd-lock-concurrent',
-        type: 'google-drive',
-        kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
-        source: { id: 'drive-file-id' },
+      const [localDatabase, localRecord] = await updateRecordKdbx({
+        database,
+        record,
+        update: (nextDatabase) => {
+          nextDatabase.createEntry(nextDatabase.getDefaultGroup()).fields.set('Title', 'Local Entry');
+        },
       });
 
-      // Dynamic handler: getFile always returns the latest uploaded bytes so
-      // the second lock holder sees the first lock holder's result and both
-      // mutations accumulate in the final merge.
-      let remoteFileBytes = initialBytes;
-
+      const uploads: Uint8Array[] = [];
       mockServer.addHandlers(
-        googleDriveApi.getFile.mock(
-          () => new HttpResponse(remoteFileBytes, { headers: { 'Content-Type': 'application/octet-stream' } }),
-        ),
+        googleDriveApi.getFile.ok({ bytes: remoteBytes }),
         googleDriveApi.updateFile.mock(({ body }) => {
-          remoteFileBytes = new Uint8Array(body);
+          uploads.push(body);
           return HttpResponse.json({ id: 'drive-file-id', modifiedTime: new Date().toISOString(), name: 'vault.kdbx' });
         }),
       );
 
-      const [, lastResult] = await Promise.all([
-        syncSession({ database: dbWithAUpdated, record }),
-        syncSession({ database: dbWithBUpdated, record }),
-      ]);
+      const result = await syncSession({ database: localDatabase, record: localRecord });
 
-      const entries = lastResult.database.getDefaultGroup().entries;
-      const getTitle = (entry: (typeof entries)[number]) => {
-        const title = entry.fields.get('Title');
-        return title instanceof kdbxweb.ProtectedValue ? title.getText() : String(title ?? '');
-      };
+      const expectedTitles = ['Local Entry', 'Original Title', 'Remote Entry'];
+      expect(getTitles(result.database)).toEqual(expectedTitles);
+      const [stored] = await getRecords();
+      expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(stored?.kdbx.encryptedBytes);
+      const storedDatabase = await unlockKdbx({
+        encryptedBytes: expectPersisted(result.record).kdbx.encryptedBytes,
+        password: 'test-password',
+      });
+      expect(getTitles(storedDatabase)).toEqual(expectedTitles);
+      const [uploaded] = uploads;
+      if (!uploaded) throw new Error('nothing was uploaded');
+      expect(getTitles(await unlockKdbx({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(
+        expectedTitles,
+      );
+    });
 
-      expect(entries.find((entry) => getTitle(entry) === 'Updated A')).toBeDefined();
-      expect(entries.find((entry) => getTitle(entry) === 'Updated B')).toBeDefined();
+    it('keeps an entry edit that is saved while the remote file is downloading', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
 
-      const records = await getRecords();
-      const updated = records.find(({ id }) => id === 'gd-lock-concurrent');
-      expect(updated?.kdbx.encryptedBytes).toEqual(expectPersisted(lastResult.record).kdbx.encryptedBytes);
+      const { promise: remoteReady, resolve: releaseRemote } = Promise.withResolvers<void>();
+      mockServer.addHandlers(
+        googleDriveApi.getFile.mock(async () => {
+          await remoteReady;
+          return new HttpResponse(initialBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
+        }),
+        googleDriveApi.updateFile.ok(),
+      );
+
+      const syncing = syncSession({ database, record });
+
+      const entry = database.getDefaultGroup().entries[0];
+      if (!entry) throw new Error('entry should exist');
+      await saveEntry({
+        database,
+        record,
+        entryUuid: entry.uuid.toString(),
+        values: { ...getEntryValues(entry), title: 'Edited Title' },
+      });
+
+      releaseRemote();
+      const result = await syncing;
+
+      const [stored] = await getRecords();
+      if (!stored) throw new Error('record should exist');
+      const storedDatabase = await unlockKdbx({
+        encryptedBytes: stored.kdbx.encryptedBytes,
+        password: 'test-password',
+      });
+      expect(getTitles(storedDatabase)).toEqual(['Edited Title']);
+      expect(getTitles(result.database)).toEqual(['Edited Title']);
+    });
+
+    it('runs concurrent syncs one at a time', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      mockServer.addHandlers(
+        googleDriveApi.getFile.mock(async () => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          inFlight -= 1;
+
+          return new HttpResponse(initialBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
+        }),
+        googleDriveApi.updateFile.ok(),
+      );
+
+      await Promise.all([syncSession({ database, record }), syncSession({ database, record })]);
+
+      expect(maxInFlight).toBe(1);
     });
   });
 });

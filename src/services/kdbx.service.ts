@@ -1,7 +1,16 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
-import { updateRecord, type FileRecord } from '@/repositories/record.repository';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
+
+export const loadKdbx = async ({
+  encryptedBytes,
+  credentials,
+}: {
+  encryptedBytes: Uint8Array;
+  credentials: kdbxweb.Credentials;
+}) => {
+  return kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
+};
 
 export const unlockKdbx = async ({
   encryptedBytes,
@@ -17,7 +26,7 @@ export const unlockKdbx = async ({
   await credentials.ready;
 
   try {
-    return await kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
+    return await loadKdbx({ encryptedBytes, credentials });
   } catch (error) {
     if (error instanceof kdbxweb.KdbxError && error.code === kdbxweb.Consts.ErrorCodes.InvalidKey) {
       throw new Error('Invalid password or key file.', { cause: error });
@@ -70,26 +79,4 @@ export const cloneKdbx = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> =
   const databaseBytes = await serialize(database);
 
   return kdbxweb.Kdbx.load(databaseBytes, database.credentials);
-};
-
-const saveKdbxLock = new Lock('kdbx.service.saveKdbx');
-
-export const saveKdbx = async ({
-  database,
-  record,
-}: {
-  database: kdbxweb.Kdbx;
-  record: FileRecord;
-}): Promise<{ record: FileRecord }> => {
-  // demo records are never persisted, so there's nothing to write back to storage
-  if (record.type === 'demo') {
-    return { record };
-  }
-
-  return saveKdbxLock.runInLock(async () => {
-    const encryptedBytes = await toEncryptedBytes(database);
-    const savedRecord = await updateRecord({ ...record, kdbx: { ...record.kdbx, encryptedBytes } });
-
-    return { record: savedRecord };
-  });
 };

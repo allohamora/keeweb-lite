@@ -1,7 +1,14 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
 import { createFile, getFile } from '@/repositories/google-drive.repository';
-import { createRecord, getRecords, removeRecord as removeRepositoryRecord } from '@/repositories/record.repository';
-import { createEmptyKdbx } from '@/services/kdbx.service';
+import {
+  createRecord,
+  getRecord,
+  getRecords,
+  removeRecord as removeRepositoryRecord,
+  updateRecord,
+  type FileRecord,
+} from '@/repositories/record.repository';
+import { cloneKdbx, createEmptyKdbx, loadKdbx, toEncryptedBytes } from '@/services/kdbx.service';
 import { asUint8Array } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
 
@@ -28,6 +35,39 @@ export const getRecordsByLastOpened = async () => {
 
 export const removeRecord = async (recordId: string) => {
   await removeRepositoryRecord(recordId);
+};
+
+const updateRecordKdbxLock = new Lock('record.service.updateRecordKdbx');
+
+export const updateRecordKdbx = async <Result>({
+  database,
+  record,
+  update,
+}: {
+  database: kdbxweb.Kdbx;
+  record: FileRecord;
+  update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
+}): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
+  return updateRecordKdbxLock.runInLock(async () => {
+    // demo records are never persisted, so there's nothing to write back to storage
+    if (record.type === 'demo') {
+      const nextDatabase = await cloneKdbx(database);
+
+      return [nextDatabase, record, await update(nextDatabase)];
+    }
+
+    const { kdbx } = await getRecord(record.id);
+    const nextDatabase = await loadKdbx({ encryptedBytes: kdbx.encryptedBytes, credentials: database.credentials });
+    const result = await update(nextDatabase);
+
+    const encryptedBytes = await toEncryptedBytes(nextDatabase);
+    const nextRecord = await updateRecord(record.id, (currentRecord) => ({
+      ...currentRecord,
+      kdbx: { ...currentRecord.kdbx, encryptedBytes },
+    }));
+
+    return [nextDatabase, nextRecord, result];
+  });
 };
 
 const readKeyFile = async (file: File) => {

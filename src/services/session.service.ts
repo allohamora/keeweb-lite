@@ -2,8 +2,8 @@ import kdbxweb from '@/lib/kdbxweb.lib';
 import { loadDemoKdbx } from '@/services/demo.service';
 import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
-import { asArrayBuffer } from '@/utils/buffer.utils';
-import { cloneKdbx, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
+import { loadKdbx, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
+import { updateRecordKdbx } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 
 export type UnlockSession = {
@@ -31,18 +31,22 @@ export const syncSession = async ({
   }
 
   return syncSessionLock.runInLock(async () => {
-    const nextDatabase = await cloneKdbx(database);
-
     const remoteBytes = await getFile(record.source.id);
-    const remoteDatabase = await kdbxweb.Kdbx.load(asArrayBuffer(remoteBytes), nextDatabase.credentials);
 
-    nextDatabase.merge(remoteDatabase);
-    await updateFile(record.source.id, await toEncryptedBytes(nextDatabase));
+    const [nextDatabase, nextRecord] = await updateRecordKdbx({
+      database,
+      record,
+      update: async (updatedDatabase) => {
+        const remoteDatabase = await loadKdbx({
+          encryptedBytes: remoteBytes,
+          credentials: updatedDatabase.credentials,
+        });
 
-    const nextRecord = await updateRecord({
-      ...record,
-      kdbx: { ...record.kdbx, encryptedBytes: await toEncryptedBytes(nextDatabase) },
+        updatedDatabase.merge(remoteDatabase);
+      },
     });
+
+    await updateFile(record.source.id, await toEncryptedBytes(nextDatabase));
 
     return { database: nextDatabase, record: nextRecord };
   });
@@ -61,10 +65,10 @@ export const unlockSession = async ({
     password,
   });
 
-  const updatedRecord = await updateRecord({
-    ...record,
+  const updatedRecord = await updateRecord(record.id, (currentRecord) => ({
+    ...currentRecord,
     lastOpenedAt: new Date().toISOString(),
-  });
+  }));
 
   return { database, record: updatedRecord, version: 0 };
 };

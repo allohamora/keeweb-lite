@@ -1,4 +1,4 @@
-import { del, get, update } from 'idb-keyval';
+import { del, get, set } from 'idb-keyval';
 import { z } from 'zod';
 import { Lock } from '@/utils/lock.utils';
 
@@ -68,14 +68,25 @@ export const getRecords = async () => {
   });
 };
 
-const updateRecords = async (updater: (oldRecords: PersistedFileRecord[]) => PersistedFileRecord[]) => {
-  await lock.runInLock(async () => {
-    await update(RECORDS_STORAGE_KEY, (oldValue) => {
-      const parseResult = fileRecordsSchema.safeParse(oldValue);
-      const oldRecords = parseResult.success ? parseResult.data : [];
+export const getRecord = async (recordId: string) => {
+  const records = await getRecords();
+  const record = records.find(({ id }) => id === recordId);
+  if (!record) {
+    throw new Error('Record not found.');
+  }
 
-      return updater(oldRecords);
-    });
+  return record;
+};
+
+const updateRecords = async <Update extends { nextRecords: PersistedFileRecord[]; result?: unknown }>(
+  updater: (oldRecords: PersistedFileRecord[]) => Update,
+): Promise<Update['result']> => {
+  return lock.runInLock(async () => {
+    const parseResult = fileRecordsSchema.safeParse(await get<unknown>(RECORDS_STORAGE_KEY));
+    const update = updater(parseResult.success ? parseResult.data : []);
+    await set(RECORDS_STORAGE_KEY, update.nextRecords);
+
+    return update.result;
   });
 };
 
@@ -87,34 +98,31 @@ export const clearRecords = async () => {
 
 export const createRecord = async (record: PersistedFileRecord) => {
   const parsedRecord = fileRecordSchema.parse(record);
-  await updateRecords((oldRecords) => {
+
+  return updateRecords((oldRecords) => {
     const existingRecord = oldRecords.find(({ id }) => id === parsedRecord.id);
     if (existingRecord) {
       throw new Error(`Record with id ${parsedRecord.id} already exists`);
     }
 
-    return [...oldRecords, parsedRecord];
+    return { nextRecords: [...oldRecords, parsedRecord], result: parsedRecord };
   });
-
-  return parsedRecord;
 };
 
 export const removeRecord = async (recordId: string) => {
-  await updateRecords((oldRecords) => oldRecords.filter(({ id }) => id !== recordId));
+  await updateRecords((oldRecords) => ({ nextRecords: oldRecords.filter(({ id }) => id !== recordId) }));
 };
 
-export const updateRecord = async (record: PersistedFileRecord) => {
-  const parsedRecord = fileRecordSchema.parse(record);
+export const updateRecord = async (recordId: string, update: (record: PersistedFileRecord) => PersistedFileRecord) => {
+  return updateRecords((oldRecords) => {
+    const record = oldRecords.find(({ id }) => id === recordId);
+    if (!record) {
+      throw new Error('Record not found.');
+    }
 
-  await updateRecords((oldRecords) =>
-    oldRecords.map((currentRecord) => {
-      if (currentRecord.id !== parsedRecord.id) {
-        return currentRecord;
-      }
+    const nextRecord = fileRecordSchema.parse(update(record));
+    const nextRecords = oldRecords.map((currentRecord) => (currentRecord.id === recordId ? nextRecord : currentRecord));
 
-      return parsedRecord;
-    }),
-  );
-
-  return parsedRecord;
+    return { nextRecords, result: nextRecord };
+  });
 };

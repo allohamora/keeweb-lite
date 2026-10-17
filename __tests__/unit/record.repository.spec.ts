@@ -414,112 +414,63 @@ describe('record.repository', () => {
   });
 
   describe('updateRecord', () => {
-    it('updates a record by id', async () => {
-      await seedRecords([
-        {
-          id: 'local-record-1',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault-1.kdbx',
-          },
-        },
-        {
-          id: 'local-record-2',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([4, 5, 6]),
-            name: 'vault-2.kdbx',
-          },
-        },
-      ]);
+    const storedRecord = {
+      id: 'local-record-1',
+      type: 'local' as const,
+      kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
+      lastOpenedAt: '2026-01-01T00:00:00.000Z',
+    };
 
-      await updateRecord({
-        id: 'local-record-2',
-        type: 'local',
-        kdbx: {
-          encryptedBytes: new Uint8Array([7, 8, 9]),
-          name: 'vault-2-updated.kdbx',
-        },
-      });
+    it('passes the stored record to update and saves and returns the record it returns', async () => {
+      const otherRecord = { ...storedRecord, id: 'local-record-2' };
+      await seedRecords([storedRecord, otherRecord]);
+
+      const nextRecord = await updateRecord('local-record-1', (record) => ({
+        ...record,
+        kdbx: { ...record.kdbx, encryptedBytes: new Uint8Array([7, 8, 9]) },
+      }));
+
+      const expectedRecord = {
+        ...storedRecord,
+        kdbx: { ...storedRecord.kdbx, encryptedBytes: new Uint8Array([7, 8, 9]) },
+      };
+      expect(nextRecord).toEqual(expectedRecord);
+      expect(await getRecords()).toEqual([expectedRecord, otherRecord]);
+    });
+
+    it('builds each update on the latest stored record', async () => {
+      await seedRecords([storedRecord]);
+
+      await Promise.all([
+        updateRecord('local-record-1', (record) => ({ ...record, lastOpenedAt: '2026-02-01T00:00:00.000Z' })),
+        updateRecord('local-record-1', (record) => ({ ...record, kdbx: { ...record.kdbx, name: 'renamed.kdbx' } })),
+      ]);
 
       expect(await getRecords()).toEqual([
         {
-          id: 'local-record-1',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault-1.kdbx',
-          },
-        },
-        {
-          id: 'local-record-2',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([7, 8, 9]),
-            name: 'vault-2-updated.kdbx',
-          },
+          ...storedRecord,
+          kdbx: { ...storedRecord.kdbx, name: 'renamed.kdbx' },
+          lastOpenedAt: '2026-02-01T00:00:00.000Z',
         },
       ]);
     });
 
-    it('does not change records when updateRecord is called with a missing id', async () => {
-      await seedRecords([
-        {
-          id: 'local-record-1',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault-1.kdbx',
-          },
-        },
-      ]);
+    it('throws and keeps storage unchanged when no record matches the given id', async () => {
+      await seedRecords([storedRecord]);
 
-      await updateRecord({
-        id: 'missing-record-id',
-        type: 'local',
-        kdbx: {
-          encryptedBytes: new Uint8Array([4, 5, 6]),
-          name: 'vault-does-not-exist.kdbx',
-        },
-      });
-      expect(await getRecords()).toEqual([
-        {
-          id: 'local-record-1',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault-1.kdbx',
-          },
-        },
-      ]);
+      await expect(updateRecord('missing-record-id', (record) => record)).rejects.toThrow('Record not found.');
+
+      expect(await getRecords()).toEqual([storedRecord]);
     });
 
-    it('updates lastOpenedAt field', async () => {
-      await seedRecords([
-        {
-          id: 'local-record-1',
-          type: 'local',
-          kdbx: {
-            encryptedBytes: new Uint8Array([1, 2, 3]),
-            name: 'vault.kdbx',
-          },
-        },
-      ]);
+    it('throws and keeps storage unchanged when update returns an invalid record', async () => {
+      await seedRecords([storedRecord]);
 
-      const timestamp = '2026-02-15T12:00:00.000Z';
-      await updateRecord({
-        id: 'local-record-1',
-        type: 'local',
-        kdbx: {
-          encryptedBytes: new Uint8Array([1, 2, 3]),
-          name: 'vault.kdbx',
-        },
-        lastOpenedAt: timestamp,
-      });
+      await expect(
+        updateRecord('local-record-1', (record) => ({ ...record, kdbx: { ...record.kdbx, name: 42 } }) as never),
+      ).rejects.toThrow();
 
-      const records = await getRecords();
-      expect(records[0].lastOpenedAt).toBe(timestamp);
+      expect(await getRecords()).toEqual([storedRecord]);
     });
   });
 });

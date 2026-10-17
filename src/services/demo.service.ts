@@ -1,6 +1,6 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
 import demoKdbxUrl from '@/assets/demo.kdbx?url';
-import { asArrayBuffer } from '@/utils/buffer.utils';
+import { loadKdbx } from '@/services/kdbx.service';
 
 // matches the fixed password KeeWeb itself uses for its bundled demo file
 const DEMO_PASSWORD = 'demo';
@@ -16,5 +16,5 @@ export const loadDemoKdbx = async (): Promise<kdbxweb.Kdbx> => {
   const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(DEMO_PASSWORD));
   await credentials.ready;
 
-  return kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
+  return loadKdbx({ encryptedBytes, credentials });
 };

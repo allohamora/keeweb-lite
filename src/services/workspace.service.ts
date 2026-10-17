@@ -1,5 +1,5 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
-import { cloneKdbx, saveKdbx } from '@/services/kdbx.service';
+import { updateRecordKdbx } from '@/services/record.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { getEntryIcon } from '@/services/icon.service';
 import { getEntryColor } from '@/services/color.service';
@@ -214,18 +214,23 @@ type MutateEntryInput = {
 };
 
 const mutateEntry = async ({ database, record, entryUuid, mutate }: MutateEntryInput) => {
-  const nextDatabase = await cloneKdbx(database);
-  const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
+  const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordKdbx({
+    database,
+    record,
+    update: (updatedDatabase) => {
+      const nextEntry = findEntryByUuid(updatedDatabase, entryUuid);
 
-  if (!nextEntry) {
-    throw new Error('Entry not found.');
-  }
+      if (!nextEntry) {
+        throw new Error('Entry not found.');
+      }
 
-  mutate(nextDatabase, nextEntry);
+      mutate(updatedDatabase, nextEntry);
 
-  const { record: nextRecord } = await saveKdbx({ database: nextDatabase, record });
+      return nextEntry.uuid;
+    },
+  });
 
-  return { nextDatabase, nextEntry, nextRecord };
+  return { nextDatabase, nextEntryUuid, nextRecord };
 };
 
 type EntryMutationResult<EntryUuid extends kdbxweb.KdbxUuid | null> = {
@@ -240,14 +245,12 @@ export const saveEntry = async ({
   entryUuid,
   values,
 }: UpdateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
-  const { nextDatabase, nextEntry, nextRecord } = await mutateEntry({
+  return mutateEntry({
     database,
     record,
     entryUuid,
     mutate: (_, entry) => applyEntryValues(entry, values),
   });
-
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
 };
 
 type CreateEntryInput = {
@@ -261,23 +264,27 @@ export const createEntry = async ({
   record,
   selectFilter,
 }: CreateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
-  const nextDatabase = await cloneKdbx(database);
+  const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordKdbx({
+    database,
+    record,
+    update: (updatedDatabase) => {
+      const group = isGroupSelect(selectFilter)
+        ? findGroupByUuid(updatedDatabase, selectFilter)
+        : updatedDatabase.getDefaultGroup();
+      if (!group) {
+        throw new Error('Group not found.');
+      }
 
-  const group = isGroupSelect(selectFilter)
-    ? findGroupByUuid(nextDatabase, selectFilter)
-    : nextDatabase.getDefaultGroup();
-  if (!group) {
-    throw new Error('Group not found.');
-  }
+      const nextEntry = updatedDatabase.createEntry(group);
+      if (isTagSelect(selectFilter)) {
+        nextEntry.tags = [selectFilter.tag];
+      }
 
-  const nextEntry = nextDatabase.createEntry(group);
-  if (isTagSelect(selectFilter)) {
-    nextEntry.tags = [selectFilter.tag];
-  }
+      return nextEntry.uuid;
+    },
+  });
 
-  const { record: nextRecord } = await saveKdbx({ database: nextDatabase, record });
-
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
+  return { nextDatabase, nextEntryUuid, nextRecord };
 };
 
 export const isEntryExpired = (entry: kdbxweb.KdbxEntry): boolean => {
