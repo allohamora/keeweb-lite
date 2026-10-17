@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
-  selectedRecordId: z.string().min(1, 'Create or select a file before unlocking.'),
+  selectedRecordId: z.string().min(1, 'Create or select a record before unlocking.'),
   password: z.string().trim().min(1, 'Enter a password to unlock.'),
 });
 
@@ -124,7 +124,7 @@ export const UnlockForm = ({
         name="selectedRecordId"
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor="unlock-selected-file">Selected file</FieldLabel>
+            <FieldLabel htmlFor="unlock-selected-record">Selected record</FieldLabel>
             <FieldContent>
               <Select
                 {...field}
@@ -135,7 +135,7 @@ export const UnlockForm = ({
                 <SelectTrigger
                   aria-invalid={fieldState.invalid}
                   className="h-10 w-full text-xs"
-                  id="unlock-selected-file"
+                  id="unlock-selected-record"
                 >
                   <SelectValue
                     placeholder={
@@ -143,7 +143,7 @@ export const UnlockForm = ({
                         ? 'Loading records...'
                         : records.length === 0
                           ? 'No records available'
-                          : 'Select a file'
+                          : 'Select a record'
                     }
                   />
                 </SelectTrigger>

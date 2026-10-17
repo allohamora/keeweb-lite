@@ -45,12 +45,12 @@ describe('unlock', () => {
     using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(demo.promise);
 
     render(<UnlockPage setSession={setSession} />);
-    await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
     await user.click(await screen.findByRole('option', { name: 'My Vault (local)' }));
 
     await user.click(screen.getByRole('button', { name: 'Demo' }));
 
-    expect(screen.getByRole('combobox', { name: 'Selected file' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Selected record' })).toBeDisabled();
     expect(screen.getByLabelText('Password')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
 
@@ -66,7 +66,7 @@ describe('unlock', () => {
       expect(setSession).toHaveBeenCalledOnce();
     });
     expect(setSession.mock.calls[0]?.[0].record).toEqual({ id: 'demo', type: 'demo', kdbx: { name: 'Demo' } });
-    expect(screen.getByRole('combobox', { name: 'Selected file' })).toBeEnabled();
+    expect(screen.getByRole('combobox', { name: 'Selected record' })).toBeEnabled();
   });
 
   it('disables the Demo button while the unlock form is submitting, so a slower demo start cannot overwrite it', async () => {
@@ -80,7 +80,7 @@ describe('unlock', () => {
     using createDemoSession = vi.spyOn(sessionService, 'createDemoSession');
 
     render(<UnlockPage setSession={setSession} />);
-    await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
     await user.click(await screen.findByRole('option', { name: 'My Vault (local)' }));
     await user.type(screen.getByLabelText('Password'), 'password');
     await user.click(screen.getByRole('button', { name: 'Unlock' }));
@@ -115,7 +115,7 @@ describe('unlock', () => {
       const setSession = vi.fn();
 
       render(<UnlockPage setSession={setSession} />);
-      await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
+      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
       await user.click(await screen.findByRole('option', { name: 'Vault.kdbx (local)' }));
       await user.type(screen.getByLabelText('Password'), 'secret');
       await user.click(screen.getByRole('button', { name: 'Unlock' }));
@@ -135,7 +135,7 @@ describe('unlock', () => {
       const setSession = vi.fn();
 
       render(<UnlockPage setSession={setSession} />);
-      await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
+      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
       await user.click(await screen.findByRole('option', { name: 'Vault.kdbx (local)' }));
       await user.type(screen.getByLabelText('Password'), 'wrong');
       await user.click(screen.getByRole('button', { name: 'Unlock' }));
@@ -153,7 +153,7 @@ describe('unlock', () => {
       const user = userEvent.setup();
 
       render(<UnlockPage setSession={vi.fn()} />);
-      await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
+      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
       await user.click(await screen.findByRole('option', { name: 'Vault.kdbx (local)' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove' }));
@@ -167,7 +167,7 @@ describe('unlock', () => {
       const user = userEvent.setup();
 
       render(<UnlockPage setSession={vi.fn()} />);
-      await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
+      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
       await user.click(await screen.findByRole('option', { name: 'Vault.kdbx (local)' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
