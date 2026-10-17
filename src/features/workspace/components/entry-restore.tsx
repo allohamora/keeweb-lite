@@ -29,7 +29,7 @@ type EntryRestoreProps = {
 export const EntryRestore = ({ database, entry, record, onEntryRestore }: EntryRestoreProps) => {
   const { guardNavigation } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleRestore = async () => {
     setMutating(true);
@@ -50,15 +50,15 @@ export const EntryRestore = ({ database, entry, record, onEntryRestore }: EntryR
     if (nextOpen) {
       if (isMutating) return;
 
-      guardNavigation(() => setOpen(true));
+      guardNavigation(() => setIsOpen(true));
       return;
     }
 
-    setOpen(false);
+    setIsOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" className="h-8 px-4 text-xs" disabled={isMutating}>
           Restore

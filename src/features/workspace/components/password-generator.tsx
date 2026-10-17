@@ -38,7 +38,7 @@ type PasswordGeneratorFormValues = z.input<typeof passwordGeneratorSchema>;
 type PasswordGeneratorOutputValues = z.output<typeof passwordGeneratorSchema>;
 
 export const PasswordGenerator = ({ currentPassword, onPasswordApply }: PasswordGeneratorProps) => {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(currentPassword);
   const { control, handleSubmit } = useForm<PasswordGeneratorFormValues, unknown, PasswordGeneratorOutputValues>({
@@ -49,7 +49,7 @@ export const PasswordGenerator = ({ currentPassword, onPasswordApply }: Password
 
   const handleApply = handleSubmit(() => {
     onPasswordApply(password);
-    setOpen(false);
+    setIsOpen(false);
   });
 
   const handleGenerate = handleSubmit((values) => {
@@ -57,7 +57,7 @@ export const PasswordGenerator = ({ currentPassword, onPasswordApply }: Password
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <button
           type="button"

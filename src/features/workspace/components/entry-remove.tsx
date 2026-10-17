@@ -29,7 +29,7 @@ type EntryRemoveProps = {
 export const EntryRemove = ({ database, entry, record, onEntryRemove }: EntryRemoveProps) => {
   const { guardNavigation } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleRemove = async () => {
     setMutating(true);
@@ -50,15 +50,15 @@ export const EntryRemove = ({ database, entry, record, onEntryRemove }: EntryRem
     if (nextOpen) {
       if (isMutating) return;
 
-      guardNavigation(() => setOpen(true));
+      guardNavigation(() => setIsOpen(true));
       return;
     }
 
-    setOpen(false);
+    setIsOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" variant="destructive" className="h-8 px-4 text-xs" disabled={isMutating}>
           Remove
