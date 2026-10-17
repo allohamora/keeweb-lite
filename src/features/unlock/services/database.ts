@@ -76,7 +76,7 @@ export const createEmptyDatabase = async ({
 };
 
 export const cloneDatabase = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
-  const databaseBytes = await serialize(database);
+  const encryptedBytes = await serialize(database);
 
-  return kdbxweb.Kdbx.load(databaseBytes, database.credentials);
+  return kdbxweb.Kdbx.load(encryptedBytes, database.credentials);
 };
