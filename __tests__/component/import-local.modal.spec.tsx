@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { ImportLocalModal } from '@/components/unlock/import-local.modal';
+import { ImportLocalModal } from '@/features/unlock/components/import-local.modal';
 import { createRecord, getRecords } from '@/repositories/record.repository';
 import { render } from '../utils/render.utils';
 

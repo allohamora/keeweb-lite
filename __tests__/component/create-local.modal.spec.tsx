@@ -3,7 +3,7 @@ import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { CreateLocalModal } from '@/components/unlock/create-local.modal';
+import { CreateLocalModal } from '@/features/unlock/components/create-local.modal';
 import { render } from '../utils/render.utils';
 
 describe('create-local.modal', () => {

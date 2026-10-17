@@ -3,7 +3,7 @@ import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { CreateGoogleDriveModal } from '@/components/unlock/create-google-drive.modal';
+import { CreateGoogleDriveModal } from '@/features/unlock/components/create-google-drive.modal';
 import { render } from '../utils/render.utils';
 
 describe('create-google-drive.modal', () => {

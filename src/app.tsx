@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { UnlockPage } from '@/components/unlock/unlock.page';
+import { UnlockPage } from '@/features/unlock/pages/unlock.page';
 import { WorkspacePage } from '@/components/workspace/workspace.page';
 import { SafeNetProvider } from '@/hooks/use-safe-net.hook';
 import { EntryMutationProvider } from '@/hooks/use-entry-mutation.hook';

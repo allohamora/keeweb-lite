@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useAsyncLock } from '@/hooks/use-async-lock.hook';
 import { createDemoSession, type UnlockSession } from '@/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
-import { CreateMenu } from './create.menu';
-import { ImportMenu } from './import.menu';
-import { UnlockForm } from './unlock.form';
+import { CreateMenu } from '@/features/unlock/components/create.menu';
+import { ImportMenu } from '@/features/unlock/components/import.menu';
+import { UnlockForm } from '@/features/unlock/components/unlock.form';
 
 type UnlockPageProps = {
   setSession: (session: UnlockSession) => void;
