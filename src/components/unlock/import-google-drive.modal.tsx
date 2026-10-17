@@ -20,7 +20,7 @@ import { importGoogleDriveRecord } from '@/services/record.service';
 import { driveFileSchema } from '@/repositories/google-drive.repository';
 import { GoogleDriveFilePicker } from './google-drive.file-picker';
 
-export type ImportGoogleDriveModalProps = {
+type ImportGoogleDriveModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecordImported: () => void;

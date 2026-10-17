@@ -1,13 +1,6 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
 import { createFile, getFile } from '@/repositories/google-drive.repository';
-import {
-  createRecord,
-  getRecord,
-  getRecords,
-  removeRecord as removeRepositoryRecord,
-  updateRecord,
-  type FileRecord,
-} from '@/repositories/record.repository';
+import { createRecord, getRecord, getRecords, updateRecord, type FileRecord } from '@/repositories/record.repository';
 import { cloneKdbx, createEmptyKdbx, loadKdbx, toEncryptedBytes } from '@/services/kdbx.service';
 import { asUint8Array } from '@/utils/buffer.utils';
 import { toKdbxFileName } from '@/utils/kdbx.utils';
@@ -32,10 +25,6 @@ export const getRecordsByLastOpened = async () => {
   const records = await getRecords();
 
   return sortRecordsByLastOpened(records);
-};
-
-export const removeRecord = async (recordId: string) => {
-  await removeRepositoryRecord(recordId);
 };
 
 const updateRecordKdbxLock = new Lock('record.service.updateRecordKdbx');

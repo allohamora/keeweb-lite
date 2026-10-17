@@ -18,7 +18,7 @@ import { getErrorMessage } from '@/utils/error.utils';
 import { isKdbxFileName } from '@/utils/kdbx.utils';
 import { importLocalRecord } from '@/services/record.service';
 
-export type ImportLocalModalProps = {
+type ImportLocalModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecordImported: () => void;

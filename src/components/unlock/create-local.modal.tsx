@@ -19,7 +19,7 @@ import { createLocalRecord } from '@/services/record.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 
-export type CreateLocalModalProps = {
+type CreateLocalModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecordCreated: () => void;

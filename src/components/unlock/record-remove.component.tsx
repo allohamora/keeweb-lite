@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
-import { removeRecord } from '@/services/record.service';
+import { removeRecord } from '@/repositories/record.repository';
 import {
   Dialog,
   DialogClose,

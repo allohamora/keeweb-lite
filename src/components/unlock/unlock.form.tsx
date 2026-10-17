@@ -22,7 +22,7 @@ const unlockFormSchema = z.object({
 
 type UnlockFormValues = z.infer<typeof unlockFormSchema>;
 
-export type UnlockFormProps = {
+type UnlockFormProps = {
   isUnlocking?: boolean;
   recordsReloadToken: number;
   runUnlockAction: (fn: () => Promise<void>) => Promise<void>;

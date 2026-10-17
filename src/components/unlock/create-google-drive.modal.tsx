@@ -20,7 +20,7 @@ import { createGoogleDriveRecord } from '@/services/record.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 
-export type CreateGoogleDriveModalProps = {
+type CreateGoogleDriveModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecordCreated: () => void;

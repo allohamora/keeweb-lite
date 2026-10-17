@@ -38,7 +38,7 @@ const googleDriveFileRecordSchema = z.object({
 const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, googleDriveFileRecordSchema]);
 const fileRecordsSchema = z.array(fileRecordSchema);
 
-export type RecordKdbx = z.infer<typeof recordKdbxSchema>;
+type RecordKdbx = z.infer<typeof recordKdbxSchema>;
 export type PersistedFileRecord = z.infer<typeof fileRecordSchema>;
 
 // never persisted: intentionally excluded from fileRecordSchema so it can never pass

@@ -7,7 +7,7 @@ import { getErrorMessage } from '@/utils/error.utils';
 
 type PickedDriveFile = Pick<DriveFile, 'id' | 'name'>;
 
-export type GoogleDriveFilePickerProps = {
+type GoogleDriveFilePickerProps = {
   value?: PickedDriveFile | null;
   onChange: (file: PickedDriveFile | null) => void;
   id?: string;

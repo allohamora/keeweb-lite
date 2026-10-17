@@ -56,7 +56,7 @@ export const findGroupByUuid = (
   return null;
 };
 
-export type GroupTreeItem = { group: kdbxweb.KdbxGroup; depth: number };
+type GroupTreeItem = { group: kdbxweb.KdbxGroup; depth: number };
 type GroupTree = { items: GroupTreeItem[]; recycleBinGroup: kdbxweb.KdbxGroup | null };
 
 // preserves nesting depth, unlike flattenGroups, and excludes the recycle bin group's entire subtree
