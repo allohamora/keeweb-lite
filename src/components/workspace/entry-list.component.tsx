@@ -1,4 +1,4 @@
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import type kdbxweb from '@/utils/kdbxweb.utils';
 import { useState } from 'react';
 import { useDebounce } from 'react-use';
 import { HugeiconsIcon } from '@hugeicons/react';

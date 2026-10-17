@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import { describe, expect, it } from 'vitest';
 import { createRecord, getRecords } from '@/repositories/record.repository';
 import { expectPersisted } from '../fixtures/kdbx.fixture';

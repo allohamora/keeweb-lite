@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import { updateRecordKdbx } from '@/services/record.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { getEntryIcon } from '@/services/icon.service';

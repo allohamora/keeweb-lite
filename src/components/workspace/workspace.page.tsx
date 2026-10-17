@@ -1,4 +1,4 @@
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import type kdbxweb from '@/utils/kdbxweb.utils';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { type UnlockSession } from '@/services/session.service';
 import {

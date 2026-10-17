@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import { loadDemoKdbx } from '@/services/demo.service';
 import { getFile, updateFile } from '@/repositories/google-drive.repository';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';

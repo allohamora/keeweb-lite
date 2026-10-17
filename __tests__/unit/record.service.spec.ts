@@ -1,5 +1,5 @@
 import * as recordRepository from '@/repositories/record.repository';
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { type CreateFileRequestContext, googleDriveApi } from '../mocks/google-drive.repository.mock';

@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import demoKdbxUrl from '@/assets/demo.kdbx?url';
 import demoKdbxDataUrl from '@/assets/demo.kdbx?url&inline';
 import { http, HttpResponse, type DefaultBodyType } from 'msw';

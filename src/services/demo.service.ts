@@ -1,4 +1,4 @@
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import type kdbxweb from '@/utils/kdbxweb.utils';
 import demoKdbxUrl from '@/assets/demo.kdbx?url';
 import { unlockKdbx } from '@/services/kdbx.service';
 

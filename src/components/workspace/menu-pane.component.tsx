@@ -1,4 +1,4 @@
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import type kdbxweb from '@/utils/kdbxweb.utils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Delete01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';

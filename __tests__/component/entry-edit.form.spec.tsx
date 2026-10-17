@@ -1,6 +1,6 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import type kdbxweb from '@/utils/kdbxweb.utils';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';

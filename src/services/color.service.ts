@@ -1,4 +1,4 @@
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import type kdbxweb from '@/utils/kdbxweb.utils';
 
 // same soft pastel family as the demo database's own entry colors (#FFFF80, #FF8080)
 export const STANDARD_COLORS: { name: string; hex: string }[] = [

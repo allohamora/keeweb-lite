@@ -1,4 +1,4 @@
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import type kdbxweb from '@/utils/kdbxweb.utils';
 import type { IconSvgElement } from '@hugeicons/react';
 import {
   Key01Icon,

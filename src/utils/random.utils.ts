@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 
 export const random = () => {
   // Request 4 random bytes because 4 bytes = 32 bits, which exactly matches one uint32 value.

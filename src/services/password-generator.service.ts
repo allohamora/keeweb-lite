@@ -1,4 +1,4 @@
-import { randomElement, shuffle } from '@/lib/random.lib';
+import { randomElement, shuffle } from '@/utils/random.utils';
 
 export const MIN_LENGTH = 4;
 export const MAX_LENGTH = 64;

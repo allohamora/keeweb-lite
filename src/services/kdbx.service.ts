@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer.utils';
 import { Lock } from '@/utils/lock.utils';
 

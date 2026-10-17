@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import type { FileRecord, PersistedFileRecord } from '@/repositories/record.repository';
 
 export const createTestDatabase = async () => {

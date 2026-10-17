@@ -1,4 +1,4 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import { describe, expect, it } from 'vitest';
 import { cloneKdbx, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
 import { getFieldText as getTextFromField } from '@/services/workspace.service';

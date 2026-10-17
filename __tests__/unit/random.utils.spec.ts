@@ -1,6 +1,6 @@
-import kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/utils/kdbxweb.utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { random, randomElement, randomInt, shuffle } from '@/lib/random.lib';
+import { random, randomElement, randomInt, shuffle } from '@/utils/random.utils';
 
 const randomSpy = vi.spyOn(kdbxweb.CryptoEngine, 'random');
 
@@ -25,7 +25,7 @@ const mockRandom = (...values: number[]) => {
   }
 };
 
-describe('random.lib', () => {
+describe('random.utils', () => {
   afterEach(() => {
     randomSpy.mockReset();
   });
