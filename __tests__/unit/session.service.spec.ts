@@ -313,6 +313,23 @@ describe('session.service', () => {
       );
     });
 
+    it('does not save the merged remote changes when the upload fails', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+
+      const remoteDatabase = await unlockKdbx({ encryptedBytes: initialBytes, password: 'test-password' });
+      remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote Entry');
+      const remoteBytes = new Uint8Array(await remoteDatabase.save());
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: remoteBytes }), googleDriveApi.updateFile.error());
+
+      await expect(syncSession({ database, record })).rejects.toThrow();
+
+      const [stored] = await getRecords();
+      if (!stored) throw new Error('record should exist');
+      expect(stored.kdbx.encryptedBytes).toEqual(initialBytes);
+      expect(getTitles(database)).toEqual(['Original Title']);
+    });
+
     it('keeps an entry edit that is saved while the remote file is downloading', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
 

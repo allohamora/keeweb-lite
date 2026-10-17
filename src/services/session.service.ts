@@ -43,10 +43,10 @@ export const syncSession = async ({
         });
 
         updatedDatabase.merge(remoteDatabase);
+
+        await updateFile(record.source.id, await toEncryptedBytes(updatedDatabase));
       },
     });
-
-    await updateFile(record.source.id, await toEncryptedBytes(nextDatabase));
 
     return { database: nextDatabase, record: nextRecord };
   });
