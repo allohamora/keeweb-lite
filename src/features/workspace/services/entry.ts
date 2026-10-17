@@ -3,14 +3,14 @@ import { updateRecordKdbx } from '@/features/unlock/services/record';
 import type { FileRecord } from '@/features/unlock/repositories/record';
 import { getEntryIcon } from '@/features/workspace/services/icon';
 import { getEntryColor } from '@/features/workspace/services/color';
+import {
+  findGroupByUuid,
+  flattenGroups,
+  getVisibleGroups,
+  type RecycleAwareDatabase,
+} from '@/features/workspace/services/group';
 
 export type SelectFilter = kdbxweb.KdbxUuid | { tag: string } | { color: string | null } | null;
-
-export const flattenGroups = (groups: kdbxweb.KdbxGroup[]): kdbxweb.KdbxGroup[] => {
-  return groups.flatMap((group) => [...group.allGroups()]);
-};
-
-type RecycleAwareDatabase = Pick<kdbxweb.Kdbx, 'groups'> & { meta: Pick<kdbxweb.KdbxMeta, 'recycleBinUuid'> };
 
 const normalizeText = (tag: string): string => tag.trim().toLocaleLowerCase();
 
@@ -43,51 +43,6 @@ export const findEntryByUuid = (
   }
 
   return null;
-};
-
-export const findGroupByUuid = (
-  database: Pick<kdbxweb.Kdbx, 'groups'>,
-  uuid: kdbxweb.KdbxUuid | string,
-): kdbxweb.KdbxGroup | null => {
-  for (const group of flattenGroups(database.groups)) {
-    if (group.uuid.equals(uuid)) return group;
-  }
-
-  return null;
-};
-
-type GroupTreeItem = { group: kdbxweb.KdbxGroup; depth: number };
-type GroupTree = { items: GroupTreeItem[]; recycleBinGroup: kdbxweb.KdbxGroup | null };
-
-// preserves nesting depth, unlike flattenGroups, and excludes the recycle bin group's entire subtree
-export const getGroupTree = (database: RecycleAwareDatabase): GroupTree => {
-  const recycleBinUuid = database.meta.recycleBinUuid;
-
-  const buildTree = (groups: kdbxweb.KdbxGroup[], depth: number): GroupTree => {
-    return groups.reduce<GroupTree>(
-      (state, group) => {
-        if (recycleBinUuid && group.uuid.equals(recycleBinUuid)) {
-          state.recycleBinGroup = group;
-          return state;
-        }
-
-        const nested = buildTree(group.groups, depth + 1);
-        state.items.push({ group, depth }, ...nested.items);
-        state.recycleBinGroup ??= nested.recycleBinGroup;
-
-        return state;
-      },
-      { items: [], recycleBinGroup: null },
-    );
-  };
-
-  return buildTree(database.groups, 0);
-};
-
-export const getVisibleGroups = (database: RecycleAwareDatabase) => {
-  const { items, recycleBinGroup } = getGroupTree(database);
-
-  return { groups: items.map((item) => item.group), recycleBinGroup };
 };
 
 const getVisibleEntries = (database: RecycleAwareDatabase): kdbxweb.KdbxEntry[] => {

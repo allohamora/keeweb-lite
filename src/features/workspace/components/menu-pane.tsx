@@ -6,12 +6,12 @@ import { getGroupIcon, resolveStandardIcon } from '@/features/workspace/services
 import {
   getAllColors,
   getAllTags,
-  getGroupTree,
   isColorSelect,
   isGroupSelect,
   isTagSelect,
   type SelectFilter,
 } from '@/features/workspace/services/entry';
+import { getGroupTree } from '@/features/workspace/services/group';
 import { ColorSwatch } from '@/features/workspace/components/color-swatch';
 
 type MenuPaneProps = {
