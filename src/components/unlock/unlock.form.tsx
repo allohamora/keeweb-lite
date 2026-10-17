@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useAsync } from 'react-use';
 import { z } from 'zod';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -41,7 +41,6 @@ export const UnlockForm = ({
     control,
     formState: { isSubmitting },
     handleSubmit,
-    watch,
     reset,
   } = useForm<UnlockFormValues>({
     defaultValues: {
@@ -51,7 +50,7 @@ export const UnlockForm = ({
     resolver: zodResolver(unlockFormSchema),
   });
 
-  const selectedRecordId = watch('selectedRecordId');
+  const selectedRecordId = useWatch({ control, name: 'selectedRecordId' });
 
   const {
     error: recordsLoadError,
