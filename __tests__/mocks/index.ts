@@ -1,6 +1,7 @@
 import 'navigator.locks';
 import 'fake-indexeddb/auto';
-import './argon2-browser.mock';
-import './google-drive.repository.mock';
-import './google-identity.mock';
-import './location.mock';
+import './argon2-browser';
+import './google-drive';
+import './google-identity';
+import './location';
+import './xml';

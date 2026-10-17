@@ -7,8 +7,8 @@ description: Walk through PR review comments one at a time with the author - ass
 
 - Read all open review comment threads on the current PR.
 - Go through the threads **one at a time**, never in bulk:
-  1. Show a link to the thread, the comment, and my assessment: is this a real/valid issue, or not?
-  2. If valid, propose a concrete change. If not, explain why I think it doesn't apply.
+  1. Show a link to the thread, the comment, and my assessment: is this a real/valid issue, or not? When it helps, add a code example.
+  2. If valid, propose a concrete change and, when it helps, show a code example of it. If not, explain why I think it doesn't apply.
   3. Ask the author what to do: apply the change, decline with a reason, or something else.
   4. Wait for the author's decision - do not act without it.
   5. If applying a change: make the code change, then show the proposed commit message and ask for confirmation before committing - wait for a yes, then commit, push, and reply to the thread with the commit link.
@@ -18,6 +18,7 @@ description: Walk through PR review comments one at a time with the author - ass
 - A decision the author gives for one thread only applies to that thread, not to any other thread (except the grouping case below).
 - Exception: if several threads point to the same underlying issue (e.g. the same outdated GitHub Action version in 20 workflow files), I treat them as one - one assessment, one proposed change, one decision from the author. That decision then applies to all of them: one commit if it covers them all, but each thread still gets its own reply, and is resolved per the "Who can resolve" rules below.
 - This is only for currently open/unresolved threads. Reviewers add new comments after re-reviewing, so this skill is meant to be run again on later review passes - it just picks up whatever is unresolved at that point.
+- If the PR author already replied last on a thread with a real answer - not just a promise to do something later - treat it as settled. Skip it, mention it as skipped in the final summary, and only revisit it if the author asks.
 
 ## Who can resolve
 

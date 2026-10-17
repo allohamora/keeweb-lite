@@ -1,0 +1,14 @@
+import { useEffect, type ReactNode } from 'react';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
+
+type DirtySafeNetProps = {
+  children: ReactNode;
+};
+
+export const DirtySafeNet = ({ children }: DirtySafeNetProps) => {
+  const { setDirty } = useSafeNet();
+
+  useEffect(() => setDirty(true), [setDirty]);
+
+  return children;
+};

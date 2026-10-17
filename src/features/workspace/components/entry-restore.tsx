@@ -1,0 +1,90 @@
+import type kdbxweb from '@/utils/kdbxweb';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { getErrorMessage } from '@/utils/error';
+import { restoreEntry, type EntryMutationResult } from '@/features/workspace/services/entry';
+import type { FileRecord } from '@/features/unlock/repositories/record';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { InfoPopover } from '@/components/ui/info-popover';
+import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
+import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation';
+
+type EntryRestoreProps = {
+  database: kdbxweb.Kdbx;
+  entry: kdbxweb.KdbxEntry;
+  record: FileRecord;
+  onEntryRestore: (result: EntryMutationResult) => void;
+};
+
+export const EntryRestore = ({ database, entry, record, onEntryRestore }: EntryRestoreProps) => {
+  const { guardNavigation } = useSafeNet();
+  const { isMutating, setMutating } = useEntryMutation();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleRestore = async () => {
+    setMutating(true);
+    try {
+      const entryUuid = entry.uuid.toString();
+
+      onEntryRestore(await restoreEntry({ database, record, entryUuid }));
+
+      toast.success('Entry restored.');
+    } catch (error) {
+      toast.error(getErrorMessage({ error, fallback: 'Entry restore failed.' }));
+    } finally {
+      setMutating(false);
+    }
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      if (isMutating) return;
+
+      guardNavigation(() => setIsOpen(true));
+      return;
+    }
+
+    setIsOpen(false);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button type="button" className="h-8 px-4 text-xs" disabled={isMutating}>
+          Restore
+        </Button>
+      </DialogTrigger>
+      <DialogContent showCloseButton={false} className="sm:max-w-xs">
+        <DialogHeader className="grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center">
+          <DialogTitle className="flex items-center gap-1.5">
+            Restore entry?
+            <InfoPopover ariaLabel="Restore entry info">The entry will be moved back to the default group.</InfoPopover>
+          </DialogTitle>
+          <DialogDescription>Are you sure you want to restore this entry?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="grid grid-cols-2">
+          <DialogClose asChild>
+            <Button type="button" variant="secondary">
+              Cancel
+            </Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button type="button" disabled={isMutating} onClick={() => void handleRestore()}>
+              {isMutating ? 'Restoring...' : 'Restore'}
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

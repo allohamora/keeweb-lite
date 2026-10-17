@@ -1,8 +1,8 @@
 ---
 import Layout from '@/layouts/layout.astro';
-import { App } from '@/components/app';
+import { App } from '@/app';
 ---
 
 <Layout title="Unlock">
-  <App client:only="react" />
+  <App client:load />
 </Layout>

@@ -1,4 +1,5 @@
 ---
+import { APP_NAME, getPageTitle } from '@/utils/page';
 import '../styles/global.css';
 
 type Props = {
@@ -6,6 +7,11 @@ type Props = {
 };
 
 const { title } = Astro.props;
+const fullTitle = getPageTitle(title);
+
+const description = `${APP_NAME} is a lightweight, web-only password manager inspired by KeeWeb. Open, edit and create KeePass (KDBX) vaults in your browser, with sync via Google Drive and more.`;
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const imageUrl = new URL('/icons/android-chrome-512x512.png', Astro.site);
 ---
 
 <html lang="en" class="dark">
@@ -17,11 +23,22 @@ const { title } = Astro.props;
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Keeweb Lite" />
+    <meta name="apple-mobile-web-app-title" content={APP_NAME} />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title} - Keeweb Lite</title>
-
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl.href} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={APP_NAME} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl.href} />
+    <meta property="og:image" content={imageUrl.href} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl.href} />
     <script is:inline src="https://accounts.google.com/gsi/client" async></script>
     <script is:inline src="https://apis.google.com/js/api.js" async></script>
   </head>
