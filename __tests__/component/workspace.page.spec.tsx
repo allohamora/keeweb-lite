@@ -4,7 +4,7 @@ import kdbxweb from '@/utils/kdbxweb.utils';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import type { SelectFilter } from '@/services/workspace.service';
-import { WorkspacePage } from '@/components/workspace/workspace.page';
+import { WorkspacePage } from '@/features/workspace/pages/workspace.page';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
@@ -12,13 +12,13 @@ import { render } from '../utils/render.utils';
 
 const entryUuid = kdbxweb.KdbxUuid.random();
 
-vi.mock('@/components/workspace/menu-pane.component', () => ({
+vi.mock('@/features/workspace/components/menu-pane.component', () => ({
   MenuPane: ({ onSelectFilter }: { onSelectFilter: (filter: SelectFilter) => void }) => (
     <button onClick={() => onSelectFilter({ tag: 'tag-filter' })}>Stub select filter</button>
   ),
 }));
 
-vi.mock('@/components/workspace/entry-list.component', () => ({
+vi.mock('@/features/workspace/components/entry-list.component', () => ({
   EntryList: ({
     onSelectEntry,
     onCreateEntry,
@@ -42,7 +42,7 @@ vi.mock('@/components/workspace/entry-list.component', () => ({
   },
 }));
 
-vi.mock('@/components/workspace/entry-details.component', () => ({
+vi.mock('@/features/workspace/components/entry-details.component', () => ({
   EntryDetails: ({ onBack }: { onBack: () => void }) => {
     const { setDirty } = useSafeNet();
 
@@ -56,7 +56,7 @@ vi.mock('@/components/workspace/entry-details.component', () => ({
   },
 }));
 
-vi.mock('@/components/workspace/workspace-controls.component', () => ({
+vi.mock('@/features/workspace/components/workspace-controls.component', () => ({
   WorkspaceControls: ({ onLock }: { onLock: () => void }) => <button onClick={onLock}>Stub lock</button>,
 }));
 

@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { PasswordGenerator } from '@/components/workspace/password-generator.component';
+import { PasswordGenerator } from '@/features/workspace/components/password-generator.component';
 import { render } from '../utils/render.utils';
 
 describe('password-generator.component', () => {

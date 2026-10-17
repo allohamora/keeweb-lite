@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { UnsavedChangesDialog } from '@/components/workspace/unsaved-changes-dialog.component';
+import { UnsavedChangesDialog } from '@/features/workspace/components/unsaved-changes-dialog.component';
 
 describe('unsaved-changes-dialog.component', () => {
   describe('UnsavedChangesDialog', () => {

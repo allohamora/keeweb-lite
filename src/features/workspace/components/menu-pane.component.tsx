@@ -12,7 +12,7 @@ import {
   isTagSelect,
   type SelectFilter,
 } from '@/services/workspace.service';
-import { ColorSwatch } from '@/components/workspace/color-swatch.component';
+import { ColorSwatch } from '@/features/workspace/components/color-swatch.component';
 
 type MenuPaneProps = {
   className?: string;

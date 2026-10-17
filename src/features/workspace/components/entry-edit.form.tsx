@@ -33,11 +33,11 @@ import {
   type EntryMutationResult,
 } from '@/services/workspace.service';
 import type { FileRecord } from '@/repositories/record.repository';
-import { EntryHistory } from '@/components/workspace/entry-history.component';
-import { EntryRemove } from '@/components/workspace/entry-remove.component';
-import { EntryRestore } from '@/components/workspace/entry-restore.component';
-import { PasswordGenerator } from '@/components/workspace/password-generator.component';
-import { IconColorPicker } from '@/components/workspace/icon-color-picker.component';
+import { EntryHistory } from '@/features/workspace/components/entry-history.component';
+import { EntryRemove } from '@/features/workspace/components/entry-remove.component';
+import { EntryRestore } from '@/features/workspace/components/entry-restore.component';
+import { PasswordGenerator } from '@/features/workspace/components/password-generator.component';
+import { IconColorPicker } from '@/features/workspace/components/icon-color-picker.component';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 

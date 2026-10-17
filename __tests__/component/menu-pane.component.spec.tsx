@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { MenuPane } from '@/components/workspace/menu-pane.component';
+import { MenuPane } from '@/features/workspace/components/menu-pane.component';
 import { createTestDatabase } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 

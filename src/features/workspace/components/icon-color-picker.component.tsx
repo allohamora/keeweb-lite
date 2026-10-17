@@ -4,8 +4,8 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { STANDARD_ICON_MAP } from '@/services/icon.service';
 import { STANDARD_COLORS } from '@/services/color.service';
-import { EntryIcon } from '@/components/workspace/entry-icon.component';
-import { ColorSwatch } from '@/components/workspace/color-swatch.component';
+import { EntryIcon } from '@/features/workspace/components/entry-icon.component';
+import { ColorSwatch } from '@/features/workspace/components/color-swatch.component';
 
 type IconColorPickerProps = {
   iconValue: number;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { UnlockPage } from '@/features/unlock/pages/unlock.page';
-import { WorkspacePage } from '@/components/workspace/workspace.page';
+import { WorkspacePage } from '@/features/workspace/pages/workspace.page';
 import { SafeNetProvider } from '@/hooks/use-safe-net.hook';
 import { EntryMutationProvider } from '@/hooks/use-entry-mutation.hook';
 import type { UnlockSession } from '@/services/session.service';

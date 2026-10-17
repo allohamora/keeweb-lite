@@ -7,11 +7,11 @@ import {
   type EntryMutationResult,
   type SelectFilter,
 } from '@/services/workspace.service';
-import { MenuPane } from '@/components/workspace/menu-pane.component';
-import { EntryList } from '@/components/workspace/entry-list.component';
-import { EntryDetails } from '@/components/workspace/entry-details.component';
-import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
-import { WorkspaceMobileMenu } from '@/components/workspace/workspace-mobile-menu.component';
+import { MenuPane } from '@/features/workspace/components/menu-pane.component';
+import { EntryList } from '@/features/workspace/components/entry-list.component';
+import { EntryDetails } from '@/features/workspace/components/entry-details.component';
+import { WorkspaceControls } from '@/features/workspace/components/workspace-controls.component';
+import { WorkspaceMobileMenu } from '@/features/workspace/components/workspace-mobile-menu.component';
 import { toast } from 'sonner';
 import { useMedia } from 'react-use';
 import { getErrorMessage } from '@/utils/error.utils';

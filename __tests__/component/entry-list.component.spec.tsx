@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { EntryList } from '@/components/workspace/entry-list.component';
+import { EntryList } from '@/features/workspace/components/entry-list.component';
 import { createTestDatabase, createTestEntry } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 import { MutatingEntryMutation } from '../utils/entry-mutation.harness';

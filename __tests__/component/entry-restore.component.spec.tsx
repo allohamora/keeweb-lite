@@ -2,7 +2,7 @@ import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { EntryRestore } from '@/components/workspace/entry-restore.component';
+import { EntryRestore } from '@/features/workspace/components/entry-restore.component';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 import { DirtySafeNet } from '../utils/safe-net.harness';

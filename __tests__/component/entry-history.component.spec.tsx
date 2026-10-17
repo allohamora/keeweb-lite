@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { EntryHistory } from '@/components/workspace/entry-history.component';
+import { EntryHistory } from '@/features/workspace/components/entry-history.component';
 import { createTestDatabase, createTestEntry } from '../fixtures/kdbx.fixture';
 
 describe('entry-history.component', () => {

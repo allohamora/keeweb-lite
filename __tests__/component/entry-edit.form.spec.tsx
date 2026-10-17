@@ -4,7 +4,7 @@ import type kdbxweb from '@/utils/kdbxweb.utils';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { EntryEditForm } from '@/components/workspace/entry-edit.form';
+import { EntryEditForm } from '@/features/workspace/components/entry-edit.form';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';

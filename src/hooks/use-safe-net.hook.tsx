@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { UnsavedChangesDialog } from '@/components/workspace/unsaved-changes-dialog.component';
+import { UnsavedChangesDialog } from '@/features/workspace/components/unsaved-changes-dialog.component';
 
 type SafeNetContextValue = {
   guardNavigation: (action: () => void) => void;

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
-import { EntryEditForm } from '@/components/workspace/entry-edit.form';
+import { EntryEditForm } from '@/features/workspace/components/entry-edit.form';
 import type { FileRecord } from '@/repositories/record.repository';
 import type { EntryMutationResult } from '@/services/workspace.service';
 

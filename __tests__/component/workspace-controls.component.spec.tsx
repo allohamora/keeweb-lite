@@ -3,7 +3,7 @@ import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { WorkspaceControls } from '@/components/workspace/workspace-controls.component';
+import { WorkspaceControls } from '@/features/workspace/components/workspace-controls.component';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
 import { DirtySafeNet } from '../utils/safe-net.harness';
