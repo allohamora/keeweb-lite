@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import {
   derivePasswordOptions,
   generatePassword,
-  MAX_LENGTH,
-  MIN_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
 } from '@/features/workspace/services/password-generator';
 
 type PasswordGeneratorProps = {
@@ -26,8 +26,8 @@ const passwordGeneratorSchema = z.object({
   length: z.coerce
     .number()
     .int({ message: 'Length must be a whole number.' })
-    .min(MIN_LENGTH, { message: `Length must be at least ${MIN_LENGTH}.` })
-    .max(MAX_LENGTH, { message: `Length must be at most ${MAX_LENGTH}.` }),
+    .min(MIN_PASSWORD_LENGTH, { message: `Length must be at least ${MIN_PASSWORD_LENGTH}.` })
+    .max(MAX_PASSWORD_LENGTH, { message: `Length must be at most ${MAX_PASSWORD_LENGTH}.` }),
   upper: z.boolean(),
   lower: z.boolean(),
   digits: z.boolean(),

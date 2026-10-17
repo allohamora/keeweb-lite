@@ -1,16 +1,16 @@
 import { randomElement, shuffle } from '@/utils/random';
 
-export const MIN_LENGTH = 4;
-export const MAX_LENGTH = 64;
+export const MIN_PASSWORD_LENGTH = 4;
+export const MAX_PASSWORD_LENGTH = 64;
 
-export const CharRanges = {
+export const CHAR_RANGES = {
   upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
   lower: 'abcdefghijklmnopqrstuvwxyz',
   digits: '0123456789',
   symbols: '!@#$%^&*_+-=,./?;:`"~\'\\',
 };
 
-type CharRangeKey = keyof typeof CharRanges;
+type CharRangeKey = keyof typeof CHAR_RANGES;
 
 export type PasswordOptions = { length: number } & Record<CharRangeKey, boolean>;
 
@@ -25,10 +25,10 @@ export const DEFAULT_PASSWORD_OPTIONS: PasswordOptions = {
 const buildRanges = (options: PasswordOptions) => {
   const ranges: string[] = [];
 
-  if (options.upper) ranges.push(CharRanges.upper);
-  if (options.lower) ranges.push(CharRanges.lower);
-  if (options.digits) ranges.push(CharRanges.digits);
-  if (options.symbols) ranges.push(CharRanges.symbols);
+  if (options.upper) ranges.push(CHAR_RANGES.upper);
+  if (options.lower) ranges.push(CHAR_RANGES.lower);
+  if (options.digits) ranges.push(CHAR_RANGES.digits);
+  if (options.symbols) ranges.push(CHAR_RANGES.symbols);
 
   return ranges;
 };
@@ -37,7 +37,7 @@ export const derivePasswordOptions = (password: string): PasswordOptions => {
   if (!password.trim()) return { ...DEFAULT_PASSWORD_OPTIONS };
 
   const options = {
-    length: Math.max(MIN_LENGTH, Math.min(MAX_LENGTH, password.length)),
+    length: Math.max(MIN_PASSWORD_LENGTH, Math.min(MAX_PASSWORD_LENGTH, password.length)),
     upper: false,
     lower: false,
     digits: false,
@@ -45,10 +45,10 @@ export const derivePasswordOptions = (password: string): PasswordOptions => {
   };
 
   for (const char of password) {
-    if (CharRanges.upper.includes(char)) options.upper = true;
-    if (CharRanges.lower.includes(char)) options.lower = true;
-    if (CharRanges.digits.includes(char)) options.digits = true;
-    if (CharRanges.symbols.includes(char)) options.symbols = true;
+    if (CHAR_RANGES.upper.includes(char)) options.upper = true;
+    if (CHAR_RANGES.lower.includes(char)) options.lower = true;
+    if (CHAR_RANGES.digits.includes(char)) options.digits = true;
+    if (CHAR_RANGES.symbols.includes(char)) options.symbols = true;
   }
 
   return options;
@@ -65,8 +65,12 @@ const getRemainingChars = (ranges: readonly string[], count: number) => {
 };
 
 export const generatePassword = (options: PasswordOptions = DEFAULT_PASSWORD_OPTIONS) => {
-  if (!Number.isInteger(options.length) || options.length < MIN_LENGTH || options.length > MAX_LENGTH) {
-    throw new Error(`Password length must be between ${MIN_LENGTH} and ${MAX_LENGTH}`);
+  if (
+    !Number.isInteger(options.length) ||
+    options.length < MIN_PASSWORD_LENGTH ||
+    options.length > MAX_PASSWORD_LENGTH
+  ) {
+    throw new Error(`Password length must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH}`);
   }
 
   const ranges = buildRanges(options);
