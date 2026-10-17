@@ -2,7 +2,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { EntryList } from '@/features/workspace/components/entry-list';
-import { createTestDatabase, createTestEntry } from '@tests/fixtures/kdbx';
+import { createTestDatabase, createTestEntry } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
 import { MutatingEntryMutation } from '@tests/utils/entry-mutation-harness';
 

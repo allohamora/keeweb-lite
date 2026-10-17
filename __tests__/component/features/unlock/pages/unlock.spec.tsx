@@ -8,7 +8,7 @@ import { mockServer } from '@tests/setup-component-context';
 import { demoFile } from '@tests/utils/demo-file';
 import { render } from '@tests/utils/render';
 import type { PersistedFileRecord } from '@/features/unlock/repositories/record';
-import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx';
+import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 
 describe('unlock', () => {
   const vaultRecord: PersistedFileRecord = {

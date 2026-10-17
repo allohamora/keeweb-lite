@@ -13,7 +13,7 @@ import {
   importLocalRecord,
   updateRecordKdbx,
 } from '@/features/unlock/services/record';
-import { expectPersisted } from '@tests/fixtures/kdbx';
+import { expectPersisted } from '@tests/utils/kdbx';
 import { unlockKdbx } from '@/features/unlock/services/kdbx';
 import { getFieldText as getTextFromField } from '@/features/workspace/services/workspace';
 import { createFileList } from '@tests/utils/file-list';

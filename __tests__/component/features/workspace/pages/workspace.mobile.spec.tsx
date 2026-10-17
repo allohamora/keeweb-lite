@@ -2,7 +2,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { WorkspacePage } from '@/features/workspace/pages/workspace';
-import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/fixtures/kdbx';
+import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
 
 // `using _viewport = useMobileViewport()` restores the desktop width when the test ends, even if it fails

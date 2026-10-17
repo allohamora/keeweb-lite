@@ -10,7 +10,7 @@ import { updateRecordKdbx } from '@/features/unlock/services/record';
 import { createDemoSession, syncSession, unlockSession } from '@/features/unlock/services/session';
 import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/workspace';
 import { demoFile } from '@tests/utils/demo-file';
-import { expectPersisted } from '@tests/fixtures/kdbx';
+import { expectPersisted } from '@tests/utils/kdbx';
 
 describe('session', () => {
   const createDatabase = async ({

@@ -2,7 +2,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { MenuPane } from '@/features/workspace/components/menu-pane';
-import { createTestDatabase } from '@tests/fixtures/kdbx';
+import { createTestDatabase } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
 
 const createGroupTree = async () => {

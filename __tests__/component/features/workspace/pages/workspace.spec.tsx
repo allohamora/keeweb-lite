@@ -7,7 +7,7 @@ import type { SelectFilter } from '@/features/workspace/services/workspace';
 import { WorkspacePage } from '@/features/workspace/pages/workspace';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
 import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation';
-import { createTestDatabase, createTestRecord } from '@tests/fixtures/kdbx';
+import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
 
 const entryUuid = kdbxweb.KdbxUuid.random();
