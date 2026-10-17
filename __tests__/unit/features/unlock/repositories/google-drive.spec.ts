@@ -11,65 +11,63 @@ import { mockServer } from '@tests/setup-unit-context';
 import { auth, createFile, getFile, updateFile } from '@/features/unlock/repositories/google-drive';
 
 describe('google-drive', () => {
-  describe('auth', () => {
-    describe('getAccessToken', () => {
-      afterEach(() => {
-        vi.useRealTimers();
-      });
-
-      it('returns the access token from Google Identity', async () => {
-        const token = await auth.getAccessToken();
-
-        expect(token).toBe('test');
-      });
-
-      it('returns the cached token on subsequent calls without re-requesting', async () => {
-        const token1 = await auth.getAccessToken();
-        expect(token1).toBe('test');
-
-        mockGoogleIdentitySuccess('new-token');
-
-        const token2 = await auth.getAccessToken();
-        expect(token2).toBe('test');
-      });
-
-      it('re-requests a new token after the cached token expires', async () => {
-        vi.useFakeTimers({ toFake: ['Date'] });
-
-        const token1 = await auth.getAccessToken();
-        expect(token1).toBe('test');
-
-        mockGoogleIdentitySuccess('refreshed-token');
-        vi.setSystemTime(Date.now() + 3601 * 1000);
-
-        const token2 = await auth.getAccessToken();
-        expect(token2).toBe('refreshed-token');
-      });
-
-      it('throws when Google Identity triggers an error callback', async () => {
-        mockGoogleIdentityError('access_denied');
-
-        await expect(auth.getAccessToken()).rejects.toThrow();
-      });
-
-      it('throws when the token response is missing access_token', async () => {
-        mockGoogleIdentitySuccess('');
-
-        await expect(auth.getAccessToken()).rejects.toThrow('Invalid token response');
-      });
+  describe('getAccessToken', () => {
+    afterEach(() => {
+      vi.useRealTimers();
     });
 
-    describe('clearAccessToken', () => {
-      it('forces a fresh token request after clearing the cached token', async () => {
-        const token1 = await auth.getAccessToken();
-        expect(token1).toBe('test');
+    it('returns the access token from Google Identity', async () => {
+      const token = await auth.getAccessToken();
 
-        await auth.clearAccessToken();
-        mockGoogleIdentitySuccess('fresh-token');
+      expect(token).toBe('test');
+    });
 
-        const token2 = await auth.getAccessToken();
-        expect(token2).toBe('fresh-token');
-      });
+    it('returns the cached token on subsequent calls without re-requesting', async () => {
+      const token1 = await auth.getAccessToken();
+      expect(token1).toBe('test');
+
+      mockGoogleIdentitySuccess('new-token');
+
+      const token2 = await auth.getAccessToken();
+      expect(token2).toBe('test');
+    });
+
+    it('re-requests a new token after the cached token expires', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+
+      const token1 = await auth.getAccessToken();
+      expect(token1).toBe('test');
+
+      mockGoogleIdentitySuccess('refreshed-token');
+      vi.setSystemTime(Date.now() + 3601 * 1000);
+
+      const token2 = await auth.getAccessToken();
+      expect(token2).toBe('refreshed-token');
+    });
+
+    it('throws when Google Identity triggers an error callback', async () => {
+      mockGoogleIdentityError('access_denied');
+
+      await expect(auth.getAccessToken()).rejects.toThrow();
+    });
+
+    it('throws when the token response is missing access_token', async () => {
+      mockGoogleIdentitySuccess('');
+
+      await expect(auth.getAccessToken()).rejects.toThrow('Invalid token response');
+    });
+  });
+
+  describe('clearAccessToken', () => {
+    it('forces a fresh token request after clearing the cached token', async () => {
+      const token1 = await auth.getAccessToken();
+      expect(token1).toBe('test');
+
+      await auth.clearAccessToken();
+      mockGoogleIdentitySuccess('fresh-token');
+
+      const token2 = await auth.getAccessToken();
+      expect(token2).toBe('fresh-token');
     });
   });
 

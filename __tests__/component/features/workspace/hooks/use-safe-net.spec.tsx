@@ -65,7 +65,7 @@ const ToggleableForm = ({ discard }: { discard: () => void }) => {
 };
 
 describe('use-safe-net', () => {
-  describe('useSafeNet', () => {
+  describe('SafeNetProvider', () => {
     it('throws when used outside a SafeNetProvider', () => {
       using _consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
       const Consumer = () => {
@@ -75,113 +75,113 @@ describe('use-safe-net', () => {
 
       expect(() => rtlRender(<Consumer />)).toThrow('useSafeNet must be used within a SafeNetProvider');
     });
+  });
 
-    describe('guardNavigation', () => {
-      it('runs the action immediately when not dirty', async () => {
-        const user = userEvent.setup();
-        const action = vi.fn();
+  describe('guardNavigation', () => {
+    it('runs the action immediately when not dirty', async () => {
+      const user = userEvent.setup();
+      const action = vi.fn();
 
-        render(<SafeNetHarness action={action} />);
-        await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
+      render(<SafeNetHarness action={action} />);
+      await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
 
-        expect(action).toHaveBeenCalledOnce();
-        expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
-      });
-
-      it('defers the action behind the discard dialog when dirty', async () => {
-        const user = userEvent.setup();
-        const action = vi.fn();
-
-        render(<SafeNetHarness action={action} />);
-        await user.click(screen.getByRole('button', { name: 'Make dirty' }));
-        await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
-
-        expect(action).not.toHaveBeenCalled();
-        expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
-      });
-
-      it('keeps the action blocked when Cancel is clicked', async () => {
-        const user = userEvent.setup();
-        const action = vi.fn();
-
-        render(<SafeNetHarness action={action} />);
-        await user.click(screen.getByRole('button', { name: 'Make dirty' }));
-        await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
-        await user.click(screen.getByRole('button', { name: 'Cancel' }));
-
-        expect(action).not.toHaveBeenCalled();
-        expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
-      });
-
-      it('runs the action once Discard is confirmed', async () => {
-        const user = userEvent.setup();
-        const action = vi.fn();
-
-        render(<SafeNetHarness action={action} />);
-        await user.click(screen.getByRole('button', { name: 'Make dirty' }));
-        await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
-        await user.click(screen.getByRole('button', { name: 'Discard' }));
-
-        expect(action).toHaveBeenCalledOnce();
-        expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
-      });
+      expect(action).toHaveBeenCalledOnce();
+      expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
     });
 
-    describe('registerDiscard', () => {
-      it('calls the registered discard function when Discard is confirmed', async () => {
-        const user = userEvent.setup();
-        const discard = vi.fn();
+    it('defers the action behind the discard dialog when dirty', async () => {
+      const user = userEvent.setup();
+      const action = vi.fn();
 
-        render(<SafeNetHarness action={vi.fn()} discard={discard} />);
-        await user.click(screen.getByRole('button', { name: 'Make dirty' }));
-        await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
-        await user.click(screen.getByRole('button', { name: 'Discard' }));
+      render(<SafeNetHarness action={action} />);
+      await user.click(screen.getByRole('button', { name: 'Make dirty' }));
+      await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
 
-        expect(discard).toHaveBeenCalledOnce();
-      });
-
-      it('does not call a discard function after it unregisters on unmount', async () => {
-        const user = userEvent.setup();
-        const action = vi.fn();
-        const discard = vi.fn();
-
-        render(
-          <>
-            <PersistentControls action={action} />
-            <ToggleableForm discard={discard} />
-          </>,
-        );
-        await user.click(screen.getByRole('button', { name: 'Unmount form' }));
-        await user.click(screen.getByRole('button', { name: 'Make dirty' }));
-        await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
-        await user.click(screen.getByRole('button', { name: 'Discard' }));
-
-        expect(action).toHaveBeenCalledOnce();
-        expect(discard).not.toHaveBeenCalled();
-      });
+      expect(action).not.toHaveBeenCalled();
+      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
     });
 
-    describe('beforeunload', () => {
-      it('prevents beforeunload while dirty', async () => {
-        const user = userEvent.setup();
+    it('keeps the action blocked when Cancel is clicked', async () => {
+      const user = userEvent.setup();
+      const action = vi.fn();
 
-        render(<SafeNetHarness action={vi.fn()} />);
-        await user.click(screen.getByRole('button', { name: 'Make dirty' }));
+      render(<SafeNetHarness action={action} />);
+      await user.click(screen.getByRole('button', { name: 'Make dirty' }));
+      await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-        const event = new Event('beforeunload', { cancelable: true });
-        window.dispatchEvent(event);
+      expect(action).not.toHaveBeenCalled();
+      expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
+    });
 
-        expect(event.defaultPrevented).toBe(true);
-      });
+    it('runs the action once Discard is confirmed', async () => {
+      const user = userEvent.setup();
+      const action = vi.fn();
 
-      it('does not prevent beforeunload when not dirty', () => {
-        render(<SafeNetHarness action={vi.fn()} />);
+      render(<SafeNetHarness action={action} />);
+      await user.click(screen.getByRole('button', { name: 'Make dirty' }));
+      await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
 
-        const event = new Event('beforeunload', { cancelable: true });
-        window.dispatchEvent(event);
+      expect(action).toHaveBeenCalledOnce();
+      expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
+    });
+  });
 
-        expect(event.defaultPrevented).toBe(false);
-      });
+  describe('registerDiscard', () => {
+    it('calls the registered discard function when Discard is confirmed', async () => {
+      const user = userEvent.setup();
+      const discard = vi.fn();
+
+      render(<SafeNetHarness action={vi.fn()} discard={discard} />);
+      await user.click(screen.getByRole('button', { name: 'Make dirty' }));
+      await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
+
+      expect(discard).toHaveBeenCalledOnce();
+    });
+
+    it('does not call a discard function after it unregisters on unmount', async () => {
+      const user = userEvent.setup();
+      const action = vi.fn();
+      const discard = vi.fn();
+
+      render(
+        <>
+          <PersistentControls action={action} />
+          <ToggleableForm discard={discard} />
+        </>,
+      );
+      await user.click(screen.getByRole('button', { name: 'Unmount form' }));
+      await user.click(screen.getByRole('button', { name: 'Make dirty' }));
+      await user.click(screen.getByRole('button', { name: 'Run guarded action' }));
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
+
+      expect(action).toHaveBeenCalledOnce();
+      expect(discard).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('beforeunload', () => {
+    it('prevents beforeunload while dirty', async () => {
+      const user = userEvent.setup();
+
+      render(<SafeNetHarness action={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Make dirty' }));
+
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('does not prevent beforeunload when not dirty', () => {
+      render(<SafeNetHarness action={vi.fn()} />);
+
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
     });
   });
 });
