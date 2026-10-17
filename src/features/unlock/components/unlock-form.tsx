@@ -91,14 +91,6 @@ export const UnlockForm = ({
     reset();
   };
 
-  if (isLoadingRecords) {
-    return (
-      <div aria-live="polite" className="mt-4 min-h-4">
-        <p className="text-xs text-zinc-400">Loading records...</p>
-      </div>
-    );
-  }
-
   if (recordsLoadError) {
     return (
       <div aria-live="polite" className="mt-4 min-h-4">
