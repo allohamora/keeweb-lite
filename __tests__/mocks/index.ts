@@ -4,3 +4,4 @@ import './argon2-browser.mock';
 import './google-drive.repository.mock';
 import './google-identity.mock';
 import './location.mock';
+import './xml.mock';
