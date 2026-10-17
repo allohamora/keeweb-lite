@@ -1,4 +1,4 @@
-import * as workspaceService from '@/features/workspace/services/workspace';
+import * as entryService from '@/features/workspace/services/entry';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
@@ -61,7 +61,7 @@ describe('entry-restore', () => {
       const user = userEvent.setup();
       const onRestore = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
-      const restoreEntry = vi.spyOn(workspaceService, 'restoreEntry').mockResolvedValue(payload);
+      const restoreEntry = vi.spyOn(entryService, 'restoreEntry').mockResolvedValue(payload);
 
       render(<EntryRestore database={database} entry={entry} record={record} onRestore={onRestore} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
@@ -94,8 +94,8 @@ describe('entry-restore', () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      const restore = Promise.withResolvers<Awaited<ReturnType<typeof workspaceService.restoreEntry>>>();
-      vi.spyOn(workspaceService, 'restoreEntry').mockReturnValue(restore.promise);
+      const restore = Promise.withResolvers<Awaited<ReturnType<typeof entryService.restoreEntry>>>();
+      vi.spyOn(entryService, 'restoreEntry').mockReturnValue(restore.promise);
 
       render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));

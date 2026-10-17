@@ -31,7 +31,7 @@ import {
   isEntryInRecycleBin,
   saveEntry,
   type EntryMutationResult,
-} from '@/features/workspace/services/workspace';
+} from '@/features/workspace/services/entry';
 import type { FileRecord } from '@/features/unlock/repositories/record';
 import { EntryHistory } from '@/features/workspace/components/entry-history';
 import { EntryRemove } from '@/features/workspace/components/entry-remove';

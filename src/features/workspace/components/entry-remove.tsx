@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
-import { removeEntry, type EntryMutationResult } from '@/features/workspace/services/workspace';
+import { removeEntry, type EntryMutationResult } from '@/features/workspace/services/entry';
 import type { FileRecord } from '@/features/unlock/repositories/record';
 import {
   Dialog,

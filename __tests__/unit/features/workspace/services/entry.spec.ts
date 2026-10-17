@@ -27,9 +27,9 @@ import {
   saveEntry,
   sortEntries,
   applyEntryValues,
-} from '@/features/workspace/services/workspace';
+} from '@/features/workspace/services/entry';
 
-describe('workspace', () => {
+describe('entry', () => {
   const createDatabase = async () => {
     const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('workspace-test-password'));
     await credentials.ready;

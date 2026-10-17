@@ -11,7 +11,7 @@ import {
   isGroupSelect,
   isTagSelect,
   type SelectFilter,
-} from '@/features/workspace/services/workspace';
+} from '@/features/workspace/services/entry';
 import { ColorSwatch } from '@/features/workspace/components/color-swatch';
 
 type MenuPaneProps = {

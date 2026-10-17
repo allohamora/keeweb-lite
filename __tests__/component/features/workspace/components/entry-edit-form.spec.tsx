@@ -1,4 +1,4 @@
-import * as workspaceService from '@/features/workspace/services/workspace';
+import * as entryService from '@/features/workspace/services/entry';
 import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/utils/kdbxweb';
 import { useState } from 'react';
@@ -102,7 +102,7 @@ describe('entry-edit-form', () => {
       const user = userEvent.setup();
       const onSave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
-      const saveEntry = vi.spyOn(workspaceService, 'saveEntry').mockResolvedValue(payload);
+      const saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={onSave} />);
       await user.type(screen.getByLabelText('Title'), '!');
@@ -119,7 +119,7 @@ describe('entry-edit-form', () => {
       const user = userEvent.setup();
       const onSave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
-      const saveEntry = vi.spyOn(workspaceService, 'saveEntry').mockResolvedValue(payload);
+      const saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={onSave} />);
       await user.click(screen.getByRole('button', { name: 'Change icon and color' }));
@@ -239,8 +239,8 @@ describe('entry-edit-form', () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      const save = Promise.withResolvers<Awaited<ReturnType<typeof workspaceService.saveEntry>>>();
-      vi.spyOn(workspaceService, 'saveEntry').mockReturnValue(save.promise);
+      const save = Promise.withResolvers<Awaited<ReturnType<typeof entryService.saveEntry>>>();
+      vi.spyOn(entryService, 'saveEntry').mockReturnValue(save.promise);
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');

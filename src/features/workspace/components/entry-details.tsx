@@ -5,7 +5,7 @@ import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { EntryEditForm } from '@/features/workspace/components/entry-edit-form';
 import type { FileRecord } from '@/features/unlock/repositories/record';
-import type { EntryMutationResult } from '@/features/workspace/services/workspace';
+import type { EntryMutationResult } from '@/features/workspace/services/entry';
 
 type EntryDetailsProps = {
   className?: string;

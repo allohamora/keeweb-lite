@@ -6,7 +6,7 @@ import {
   findEntryByUuid,
   type EntryMutationResult,
   type SelectFilter,
-} from '@/features/workspace/services/workspace';
+} from '@/features/workspace/services/entry';
 import { MenuPane } from '@/features/workspace/components/menu-pane';
 import { EntryList } from '@/features/workspace/components/entry-list';
 import { EntryDetails } from '@/features/workspace/components/entry-details';

@@ -8,7 +8,7 @@ import { createRecord, getRecords } from '@/features/unlock/repositories/record'
 import { unlockKdbx } from '@/features/unlock/services/kdbx';
 import { updateRecordKdbx } from '@/features/unlock/services/record';
 import { createDemoSession, syncSession, unlockSession } from '@/features/unlock/services/session';
-import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/workspace';
+import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/entry';
 import { demoFile } from '@tests/utils/demo-file';
 import { expectPersisted } from '@tests/utils/kdbx';
 

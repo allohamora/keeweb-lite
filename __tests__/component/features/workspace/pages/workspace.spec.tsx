@@ -1,9 +1,9 @@
-import * as workspaceService from '@/features/workspace/services/workspace';
+import * as entryService from '@/features/workspace/services/entry';
 import userEvent from '@testing-library/user-event';
 import kdbxweb from '@/utils/kdbxweb';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import type { SelectFilter } from '@/features/workspace/services/workspace';
+import type { SelectFilter } from '@/features/workspace/services/entry';
 import { WorkspacePage } from '@/features/workspace/pages/workspace';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
 import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation';
@@ -120,7 +120,7 @@ describe('workspace', () => {
     it('guards the filter select, create entry, and lock actions the same way', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      using createEntry = vi.spyOn(workspaceService, 'createEntry');
+      using createEntry = vi.spyOn(entryService, 'createEntry');
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Stub make dirty' }));
@@ -165,8 +165,8 @@ describe('workspace', () => {
     it('disables create entry while a create is pending, and re-enables it once it settles', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      const create = Promise.withResolvers<Awaited<ReturnType<typeof workspaceService.createEntry>>>();
-      vi.spyOn(workspaceService, 'createEntry').mockReturnValue(create.promise);
+      const create = Promise.withResolvers<Awaited<ReturnType<typeof entryService.createEntry>>>();
+      vi.spyOn(entryService, 'createEntry').mockReturnValue(create.promise);
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Stub create entry' }));

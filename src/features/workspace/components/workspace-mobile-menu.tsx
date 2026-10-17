@@ -1,7 +1,7 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MenuPane } from '@/features/workspace/components/menu-pane';
-import type { SelectFilter } from '@/features/workspace/services/workspace';
+import type { SelectFilter } from '@/features/workspace/services/entry';
 
 type WorkspaceMobileMenuProps = {
   open: boolean;

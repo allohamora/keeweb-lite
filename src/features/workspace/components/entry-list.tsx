@@ -23,7 +23,7 @@ import {
   type SelectFilter,
   isSortOrder,
   type SortOrder,
-} from '@/features/workspace/services/workspace';
+} from '@/features/workspace/services/entry';
 import { getEntryIcon } from '@/features/workspace/services/icon';
 import { getEntryColor } from '@/features/workspace/services/color';
 import { EntryIcon } from '@/features/workspace/components/entry-icon';

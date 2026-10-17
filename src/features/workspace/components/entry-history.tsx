@@ -1,7 +1,7 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { getEntryValues, type EntryUpdateValues } from '@/features/workspace/services/workspace';
+import { getEntryValues, type EntryUpdateValues } from '@/features/workspace/services/entry';
 
 type EntryHistoryProps = {
   history: kdbxweb.KdbxEntry[];
