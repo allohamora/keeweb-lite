@@ -166,8 +166,25 @@ const createFile = {
   },
 };
 
+// happy-dom's fetch sends a CORS preflight before the authorized Drive requests, plain Node doesn't
+const preflight = {
+  ok: () => {
+    return http.options('https://www.googleapis.com/*', () => {
+      return new HttpResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PATCH',
+          'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        },
+      });
+    });
+  },
+};
+
 export const googleDriveApi = {
   createFile,
+  preflight,
   getFile,
   updateFile,
 };
