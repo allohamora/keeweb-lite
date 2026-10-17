@@ -33,7 +33,7 @@ type CreateDatabaseInput = {
   records?: DatabaseRecordInput[];
 };
 
-describe('record', () => {
+describe('record-service', () => {
   const createRandomKeyFile = async () => {
     const keyFileBuffer = await kdbxweb.Credentials.createRandomKeyFile();
 

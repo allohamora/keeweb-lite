@@ -15,7 +15,7 @@ const useMobileViewport = () => {
 
 const record = createTestRecord();
 
-describe('workspace', () => {
+describe('workspace.mobile', () => {
   describe('mobile layout', () => {
     it('shows the entry details instead of the list and goes back to the list', async () => {
       using _viewport = useMobileViewport();

@@ -16,7 +16,7 @@ const seedRecords = async (records: PersistedFileRecord[]) => {
   }
 };
 
-describe('record', () => {
+describe('record-repository', () => {
   describe('getRecords', () => {
     it('stores and reads local records', async () => {
       const records = [
