@@ -5,8 +5,8 @@ import { screen, waitFor } from '@testing-library/react';
 import { EntryRestore } from '@/features/workspace/components/entry-restore';
 import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
-import { DirtySafeNet } from '@tests/utils/safe-net-harness';
-import { MutatingEntryMutation } from '@tests/utils/entry-mutation-harness';
+import { DirtySafeNet } from '@tests/utils/dirty-safe-net';
+import { MutatingEntryMutation } from '@tests/utils/mutating-entry-mutation';
 
 describe('entry-restore', () => {
   const record = createTestRecord();
