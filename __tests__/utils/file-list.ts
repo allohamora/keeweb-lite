@@ -1,10 +1,10 @@
+import { invalid } from '@tests/utils/invalid';
+
 export const createFileList = (...files: File[]): FileList => {
-  const fileList = {
+  return invalid<FileList>({
     ...files,
     item: (index: number) => files[index] ?? null,
     length: files.length,
     [Symbol.iterator]: () => files[Symbol.iterator](),
-  };
-
-  return fileList as unknown as FileList;
+  });
 };

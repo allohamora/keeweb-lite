@@ -1,4 +1,5 @@
 import { beforeEach, vi } from 'vitest';
+import { createServiceMock } from '@tests/utils/service-mock';
 
 const createSuccessTokenResponse = (accessToken: string): google.accounts.oauth2.TokenResponse => {
   return {
@@ -30,13 +31,11 @@ const setGoogleIdentityMock = (callback: (config: google.accounts.oauth2.TokenCl
     };
   });
 
-  globalThis.google = {
-    accounts: {
-      oauth2: {
-        initTokenClient,
-      } as unknown as typeof google.accounts.oauth2,
-    } as unknown as typeof google.accounts,
-  } as unknown as typeof google;
+  globalThis.google = createServiceMock<typeof google>({
+    accounts: createServiceMock<typeof google.accounts>({
+      oauth2: createServiceMock<typeof google.accounts.oauth2>({ initTokenClient }),
+    }),
+  });
 
   return { initTokenClient, requestAccessToken };
 };
