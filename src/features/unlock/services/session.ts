@@ -17,7 +17,7 @@ type SyncSessionResult = {
   record: FileRecord;
 };
 
-const syncSessionLock = new Lock('session.service.syncSession');
+const syncSessionLock = new Lock('session.service.sync-session');
 
 export const syncSession = async ({
   record,

@@ -18,7 +18,7 @@ import { toKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
 import { Lock } from '@/utils/lock';
 
 // makes the duplicate-name/source.id check and the write atomic across concurrent calls
-const createImportLock = new Lock('record.service.createImport');
+const createImportLock = new Lock('record.service.create-import');
 
 const sortRecordsByLastOpened = <RecordType extends { lastOpenedAt?: string }>(records: RecordType[]) => {
   return records
@@ -38,7 +38,7 @@ export const getRecordsByLastOpened = async () => {
   return sortRecordsByLastOpened(records);
 };
 
-const updateRecordDatabaseLock = new Lock('record.service.updateRecordDatabase');
+const updateRecordDatabaseLock = new Lock('record.service.update-record-database');
 
 export const updateRecordDatabase = async <Result>({
   database,

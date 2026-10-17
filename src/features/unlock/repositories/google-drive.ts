@@ -5,7 +5,7 @@ import { PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
-const lock = new Lock('google-drive');
+const lock = new Lock('google-drive.repository.auth');
 
 class Auth {
   private state: { accessToken: string; expiresAt: Date } | null = null;

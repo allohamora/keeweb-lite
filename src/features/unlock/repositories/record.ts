@@ -4,7 +4,7 @@ import { Lock } from '@/utils/lock';
 
 export const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
 
-const lock = new Lock('record');
+const lock = new Lock('record.repository.storage');
 
 const keySchema = z.object({
   hash: z.string(),
