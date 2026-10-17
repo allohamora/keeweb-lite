@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation.hook';
+import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation';
 
 type MutatingEntryMutationProps = {
   children: ReactNode;

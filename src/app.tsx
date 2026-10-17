@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { UnlockPage } from '@/features/unlock/pages/unlock.page';
-import { WorkspacePage } from '@/features/workspace/pages/workspace.page';
-import { SafeNetProvider } from '@/features/workspace/hooks/use-safe-net.hook';
-import { EntryMutationProvider } from '@/features/workspace/hooks/use-entry-mutation.hook';
-import type { UnlockSession } from '@/features/unlock/services/session.service';
-import { getPageTitle } from '@/utils/page.utils';
+import { UnlockPage } from '@/features/unlock/pages/unlock-page';
+import { WorkspacePage } from '@/features/workspace/pages/workspace-page';
+import { SafeNetProvider } from '@/features/workspace/hooks/use-safe-net';
+import { EntryMutationProvider } from '@/features/workspace/hooks/use-entry-mutation';
+import type { UnlockSession } from '@/features/unlock/services/session';
+import { getPageTitle } from '@/utils/page';
 
 export const App = () => {
   const [session, setSession] = useState<UnlockSession | null>(null);

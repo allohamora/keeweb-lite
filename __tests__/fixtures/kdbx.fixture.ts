@@ -1,5 +1,5 @@
-import kdbxweb from '@/utils/kdbxweb.utils';
-import type { FileRecord, PersistedFileRecord } from '@/features/unlock/repositories/record.repository';
+import kdbxweb from '@/utils/kdbxweb';
+import type { FileRecord, PersistedFileRecord } from '@/features/unlock/repositories/record';
 
 export const createTestDatabase = async () => {
   const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('component-test-password'));
