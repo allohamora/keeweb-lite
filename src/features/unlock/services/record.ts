@@ -78,7 +78,7 @@ const readKeyFile = async (file: File) => {
   return { hash, name };
 };
 
-const toKdbx = async (databaseFile: FileList) => {
+const toRecordKdbx = async (databaseFile: FileList) => {
   const selectedDatabaseFile = databaseFile[0];
   if (!selectedDatabaseFile) {
     throw new Error('No database file selected.');
@@ -143,17 +143,17 @@ export const importGoogleDriveRecord = async ({
 
 export const importLocalRecord = async ({ databaseFile, keyFile }: { databaseFile: FileList; keyFile?: FileList }) => {
   return createImportLock.runInLock(async () => {
-    const database = await toKdbx(databaseFile);
+    const recordKdbx = await toRecordKdbx(databaseFile);
     const records = await getRecords();
-    if (records.some((record) => record.type === 'local' && record.kdbx.name === database.name)) {
-      throw new Error(`A record named "${database.name}" already exists.`);
+    if (records.some((record) => record.type === 'local' && record.kdbx.name === recordKdbx.name)) {
+      throw new Error(`A record named "${recordKdbx.name}" already exists.`);
     }
 
     const key = await toKey(keyFile);
 
     await createRecord({
       id: crypto.randomUUID(),
-      kdbx: database,
+      kdbx: recordKdbx,
       key,
       type: 'local',
     });
