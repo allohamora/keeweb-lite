@@ -1,7 +1,10 @@
 import { http, HttpResponse } from 'msw';
+import { z } from 'zod';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
+
+const metadataSchema = z.object({ name: z.string() });
 
 type UpdatedDriveFile = {
   id: string;
@@ -72,7 +75,7 @@ const parseMultipartRelated = (bodyBytes: Uint8Array, contentType: string | null
   const fileBytesEnd = closingBoundaryIndex - crlf.length;
 
   const metadataText = textDecoder.decode(bodyBytes.slice(metadataStart, metadataEnd));
-  const metadata = metadataText ? (JSON.parse(metadataText) as { name: string }) : null;
+  const metadata = metadataText ? metadataSchema.parse(JSON.parse(metadataText)) : null;
   const fileBytes = bodyBytes.slice(fileBytesStart, fileBytesEnd);
 
   return { fileBytes, metadata };

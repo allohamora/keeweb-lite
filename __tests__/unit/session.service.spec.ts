@@ -15,13 +15,13 @@ import { expectPersisted } from '../fixtures/kdbx.fixture';
 describe('session.service', () => {
   const createDatabase = async ({
     databaseName = 'Test Database',
-    keyFileContent = null as string | null,
+    keyFileContent,
     password = 'test-password-123',
-  } = {}) => {
+  }: { databaseName?: string; keyFileContent?: string; password?: string } = {}) => {
     const keyFileHashBase64 = keyFileContent
       ? kdbxweb.ByteUtils.bytesToBase64(
           new Uint8Array(
-            await kdbxweb.CryptoEngine.sha256(kdbxweb.ByteUtils.stringToBytes(keyFileContent).buffer as ArrayBuffer),
+            await kdbxweb.CryptoEngine.sha256(kdbxweb.ByteUtils.stringToBytes(keyFileContent).slice().buffer),
           ),
         )
       : undefined;
@@ -101,7 +101,7 @@ describe('session.service', () => {
       expect(testGroup).toBeDefined();
       if (testGroup) {
         expect(testGroup.entries).toHaveLength(1);
-        expect((testGroup.entries[0].fields.get('Title') as kdbxweb.ProtectedValue).getText()).toBe('My Entry');
+        expect(getFieldText(testGroup.entries[0].fields.get('Title'))).toBe('My Entry');
       }
     });
 
@@ -223,7 +223,7 @@ describe('session.service', () => {
       const keyFileHashBytes = keyFileHashBase64 ? kdbxweb.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
       const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyFileHashBytes);
       await credentials.ready;
-      const database = await kdbxweb.Kdbx.load(encryptedBytes.buffer as ArrayBuffer, credentials);
+      const database = await kdbxweb.Kdbx.load(encryptedBytes.slice().buffer, credentials);
 
       const record = await createRecord({
         id: 'gd-keyfile-record',

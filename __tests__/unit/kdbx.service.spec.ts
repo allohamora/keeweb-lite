@@ -1,6 +1,7 @@
 import kdbxweb from '@/lib/kdbxweb.lib';
 import { describe, expect, it } from 'vitest';
 import { cloneKdbx, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
+import { getFieldText as getTextFromField } from '@/services/workspace.service';
 
 type DatabaseRecordInput = {
   name: string;
@@ -80,7 +81,7 @@ describe('kdbx.service', () => {
   };
 
   const getFieldText = (entry: kdbxweb.KdbxEntry, fieldName: string) => {
-    return (entry.fields.get(fieldName) as kdbxweb.ProtectedValue | undefined)?.getText();
+    return getTextFromField(entry.fields.get(fieldName));
   };
 
   const getRecordByTitle = (group: kdbxweb.KdbxGroup, title: string) => {
@@ -194,9 +195,9 @@ describe('kdbx.service', () => {
       const testGroup = getGroupByName(unlockedDatabase, 'Test Group');
       const { entries } = testGroup;
       expect(entries).toHaveLength(1);
-      expect((entries[0].fields.get('Title') as kdbxweb.ProtectedValue)?.getText()).toBe('Test Entry');
-      expect((entries[0].fields.get('UserName') as kdbxweb.ProtectedValue)?.getText()).toBe('test-user');
-      expect((entries[0].fields.get('Password') as kdbxweb.ProtectedValue)?.getText()).toBe('test-entry-password');
+      expect(getTextFromField(entries[0].fields.get('Title'))).toBe('Test Entry');
+      expect(getTextFromField(entries[0].fields.get('UserName'))).toBe('test-user');
+      expect(getTextFromField(entries[0].fields.get('Password'))).toBe('test-entry-password');
     });
 
     it('accepts null for keyFileHashBase64', async () => {
@@ -328,10 +329,8 @@ describe('kdbx.service', () => {
 
       const newGroupReloaded = getGroupByName(reloadedDatabase, 'New Group');
       expect(newGroupReloaded.entries).toHaveLength(1);
-      expect((newGroupReloaded.entries[0].fields.get('Title') as kdbxweb.ProtectedValue)?.getText()).toBe('New Entry');
-      expect((newGroupReloaded.entries[0].fields.get('UserName') as kdbxweb.ProtectedValue)?.getText()).toBe(
-        'new-user',
-      );
+      expect(getTextFromField(newGroupReloaded.entries[0].fields.get('Title'))).toBe('New Entry');
+      expect(getTextFromField(newGroupReloaded.entries[0].fields.get('UserName'))).toBe('new-user');
     });
 
     it('produces different bytes after database modification', async () => {

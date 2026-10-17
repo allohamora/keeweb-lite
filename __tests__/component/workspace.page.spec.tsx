@@ -1,6 +1,6 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
-import type kdbxweb from '@/lib/kdbxweb.lib';
+import kdbxweb from '@/lib/kdbxweb.lib';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import type { SelectFilter } from '@/services/workspace.service';
@@ -9,6 +9,8 @@ import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
+
+const entryUuid = kdbxweb.KdbxUuid.random();
 
 vi.mock('@/components/workspace/menu-pane.component', () => ({
   MenuPane: ({ onSelectFilter }: { onSelectFilter: (filter: SelectFilter) => void }) => (
@@ -31,9 +33,7 @@ vi.mock('@/components/workspace/entry-list.component', () => ({
     return (
       <div>
         <span data-testid="selected-entry-uuid">{selectedEntryUuid?.toString() ?? 'none'}</span>
-        <button onClick={() => onSelectEntry({ toString: () => 'entry-1' } as kdbxweb.KdbxUuid)}>
-          Stub select entry
-        </button>
+        <button onClick={() => onSelectEntry(entryUuid)}>Stub select entry</button>
         <button disabled={isMutating} onClick={onCreateEntry}>
           Stub create entry
         </button>
@@ -71,7 +71,7 @@ describe('workspace.page', () => {
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Stub select entry' }));
 
-      expect(screen.getByTestId('selected-entry-uuid')).toHaveTextContent('entry-1');
+      expect(screen.getByTestId('selected-entry-uuid')).toHaveTextContent(entryUuid.toString());
       expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
     });
 
@@ -109,7 +109,7 @@ describe('workspace.page', () => {
       await user.click(screen.getByRole('button', { name: 'Stub select entry' }));
       await user.click(screen.getByRole('button', { name: 'Discard' }));
 
-      expect(screen.getByTestId('selected-entry-uuid')).toHaveTextContent('entry-1');
+      expect(screen.getByTestId('selected-entry-uuid')).toHaveTextContent(entryUuid.toString());
       expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
 
       // navigation should no longer be blocked, since discarding clears the dirty state
@@ -186,7 +186,7 @@ describe('workspace.page', () => {
 
       resolveCreate({
         nextDatabase: database,
-        nextEntryUuid: { toString: () => 'entry-1' } as kdbxweb.KdbxUuid,
+        nextEntryUuid: entryUuid,
         nextRecord: record,
       });
       await waitFor(() => expect(screen.getByRole('button', { name: 'Stub create entry' })).toBeEnabled());

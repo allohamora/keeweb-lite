@@ -7,8 +7,16 @@ import { UnlockPage } from '@/components/unlock/unlock.page';
 import { mockServer } from '../setup-component-context';
 import { demoFile } from '../utils/demo-file.utils';
 import { render } from '../utils/render.utils';
+import type { PersistedFileRecord } from '@/repositories/record.repository';
+import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 
 describe('unlock.page', () => {
+  const vaultRecord: PersistedFileRecord = {
+    ...createTestRecord(),
+    id: 'local-1',
+    kdbx: { ...createTestRecord().kdbx, name: 'My Vault' },
+  };
+
   it('starts an in-memory demo session when the Demo button is clicked', async () => {
     mockServer.addHandlers(demoFile.ok());
 
@@ -31,9 +39,7 @@ describe('unlock.page', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    using _getRecordsByLastOpened = vi
-      .spyOn(recordService, 'getRecordsByLastOpened')
-      .mockResolvedValue([{ id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never]);
+    using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
 
     let resolveDemo!: (session: sessionService.UnlockSession) => void;
     using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(
@@ -56,7 +62,9 @@ describe('unlock.page', () => {
     await user.click(screen.getByRole('button', { name: 'Unlock' }));
     expect(setSession).not.toHaveBeenCalled();
 
-    resolveDemo({ database: {} as never, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 });
+    const database = await createTestDatabase();
+
+    resolveDemo({ database, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 });
 
     await vi.waitFor(() => {
       expect(setSession).toHaveBeenCalledOnce();
@@ -69,9 +77,7 @@ describe('unlock.page', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    using _getRecordsByLastOpened = vi
-      .spyOn(recordService, 'getRecordsByLastOpened')
-      .mockResolvedValue([{ id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never]);
+    using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
 
     let resolveUnlock!: (session: sessionService.UnlockSession) => void;
     using _unlockSession = vi.spyOn(sessionService, 'unlockSession').mockReturnValue(
@@ -95,16 +101,18 @@ describe('unlock.page', () => {
     await user.click(screen.getByRole('button', { name: 'Demo' }));
     expect(createDemoSession).not.toHaveBeenCalled();
 
+    const database = await createTestDatabase();
+
     resolveUnlock({
-      database: {} as never,
-      record: { id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } } as never,
+      database,
+      record: vaultRecord,
       version: 0,
     });
 
     await vi.waitFor(() => {
       expect(setSession).toHaveBeenCalledOnce();
     });
-    expect(setSession.mock.calls[0]?.[0].record).toEqual({ id: 'local-1', type: 'local', kdbx: { name: 'My Vault' } });
+    expect(setSession.mock.calls[0]?.[0].record).toEqual(vaultRecord);
     expect(screen.getByRole('button', { name: 'Demo' })).toBeEnabled();
   });
 

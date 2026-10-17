@@ -16,6 +16,7 @@ import {
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 import { unlockKdbx } from '@/services/kdbx.service';
 import { getFieldText as getTextFromField } from '@/services/workspace.service';
+import { createFileList } from '../utils/file-list.utils';
 import { unlockSession } from '@/services/session.service';
 
 type DatabaseRecordInput = {
@@ -96,7 +97,7 @@ describe('record.service', () => {
   };
 
   const getFieldText = (entry: kdbxweb.KdbxEntry, fieldName: string) => {
-    return (entry.fields.get(fieldName) as kdbxweb.ProtectedValue | undefined)?.getText();
+    return getTextFromField(entry.fields.get(fieldName));
   };
 
   const getRecordByTitle = (group: kdbxweb.KdbxGroup, title: string) => {
@@ -181,8 +182,6 @@ describe('record.service', () => {
   });
 
   describe('importLocalRecord', () => {
-    const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
-
     it('imports a local record with the database file name and encrypted bytes', async () => {
       const encryptedBytes = new Uint8Array([1, 2, 3, 4, 5]);
       const dbFile = new File([encryptedBytes], 'vault.kdbx');
@@ -242,9 +241,7 @@ describe('record.service', () => {
     });
 
     it('throws when the database FileList is empty', async () => {
-      const emptyFileList = { 0: undefined, length: 0 } as unknown as FileList;
-
-      await expect(importLocalRecord({ databaseFile: emptyFileList })).rejects.toThrow('No database file selected.');
+      await expect(importLocalRecord({ databaseFile: createFileList() })).rejects.toThrow('No database file selected.');
     });
 
     it('throws when a record with the same kdbx name already exists', async () => {
@@ -429,8 +426,6 @@ describe('record.service', () => {
 
     it('rejects a concurrent create and import that target the same name and persists only one record', async () => {
       const dbFile = new File([new Uint8Array([1, 2, 3])], 'My Vault.kdbx');
-      const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
-
       const results = await Promise.allSettled([
         createLocalRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
         importLocalRecord({ databaseFile: createFileList(dbFile) }),
@@ -763,8 +758,6 @@ describe('record.service', () => {
   });
 
   describe('importGoogleDriveRecord', () => {
-    const createFileList = (file: File): FileList => ({ 0: file, length: 1 }) as unknown as FileList;
-
     const testFileId = 'drive-file-id-123';
     const testFileName = 'vault.kdbx';
     const testBytes = new Uint8Array([1, 2, 3, 4, 5]);

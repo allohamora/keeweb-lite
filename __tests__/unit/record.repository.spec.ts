@@ -187,12 +187,14 @@ describe('record.repository', () => {
     });
 
     it('strips source field from local records', async () => {
-      await createRecord({
+      const record = {
         id: 'local-record-1',
         type: 'local',
         kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' },
         source: { id: '1AbCdEfGhIjKlMnOp' },
-      } as unknown as never);
+      } as const;
+
+      await createRecord(record);
 
       expect(await getRecords()).toEqual([
         {
@@ -204,13 +206,15 @@ describe('record.repository', () => {
     });
 
     it('strips unknown keys instead of rejecting records', async () => {
-      await createRecord({
+      const record = {
         id: 'google-drive-record-1',
         type: 'google-drive',
         kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx', unknownNested: 'ignored' },
         source: { id: '1AbCdEfGhIjKlMnOp' },
         unknownTopLevel: 'ignored',
-      } as unknown as never);
+      } as const;
+
+      await createRecord(record);
 
       expect(await getRecords()).toEqual([
         {
