@@ -5,7 +5,9 @@ import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
 import { auth } from '@/repositories/google-drive.repository';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record.repository';
+import { unlockKdbx } from '@/services/kdbx.service';
 import { createDemoSession, syncSession, unlockSession } from '@/services/session.service';
+import { getEntryValues, saveEntry } from '@/services/workspace.service';
 import { demoFile } from '../utils/demo-file.utils';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 
@@ -246,6 +248,39 @@ describe('session.service', () => {
       const updated = records.find(({ id }) => id === 'gd-keyfile-record');
       expect(updated?.kdbx.encryptedBytes).toBeInstanceOf(Uint8Array);
       expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
+    });
+
+    it('saves an entry while a sync is copying the database', async () => {
+      const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
+      await credentials.ready;
+      const initialDatabase = kdbxweb.Kdbx.create(credentials, 'Overlap DB');
+      initialDatabase.createEntry(initialDatabase.getDefaultGroup()).fields.set('Title', 'Original Title');
+      const initialBytes = new Uint8Array(await initialDatabase.save());
+
+      const record = await createRecord({
+        id: 'gd-overlap',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+      const database = await unlockKdbx({ encryptedBytes: initialBytes, password: 'test-password' });
+      const entry = database.getDefaultGroup().entries[0];
+      if (!entry) throw new Error('entry should exist');
+
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: initialBytes }), googleDriveApi.updateFile.ok());
+
+      const [synced, saved] = await Promise.all([
+        syncSession({ database, record }),
+        saveEntry({
+          database,
+          record,
+          entryUuid: entry.uuid.toString(),
+          values: { ...getEntryValues(entry), title: 'Edited Title' },
+        }),
+      ]);
+
+      expect(synced.database).toBeDefined();
+      expect(saved.nextDatabase.getDefaultGroup().entries).toHaveLength(1);
     });
 
     it('accumulates mutations from both concurrent calls in the final merged result', async () => {

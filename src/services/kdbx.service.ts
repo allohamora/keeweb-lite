@@ -27,8 +27,14 @@ export const unlockKdbx = async ({
   }
 };
 
+// kdbxweb's save() regenerates the shared header salts and reads them again after async steps,
+// so two saves of the same database at once produce a file that fails to load with InvalidKey
+const serializeLock = new Lock('kdbx.service.serialize');
+
+const serialize = (database: kdbxweb.Kdbx) => serializeLock.runInLock(() => database.save());
+
 export const toEncryptedBytes = async (database: kdbxweb.Kdbx) => {
-  return asUint8Array(await database.save());
+  return asUint8Array(await serialize(database));
 };
 
 const generateKeyFile = async (databaseName: string) => {
@@ -61,7 +67,7 @@ export const createEmptyKdbx = async ({
 };
 
 export const cloneKdbx = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
-  const databaseBytes = await database.save();
+  const databaseBytes = await serialize(database);
 
   return kdbxweb.Kdbx.load(databaseBytes, database.credentials);
 };

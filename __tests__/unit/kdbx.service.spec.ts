@@ -386,6 +386,23 @@ describe('kdbx.service', () => {
     });
   });
 
+  describe('cloneKdbx', () => {
+    it('clones a database while other saves of the same database are in flight', async () => {
+      const { encryptedBytes, keyFileHashBase64, password } = await createDatabase();
+      const database = await unlockKdbx({ encryptedBytes, keyFileHashBase64, password });
+
+      const [firstClone, secondClone, savedBytes] = await Promise.all([
+        cloneKdbx(database),
+        cloneKdbx(database),
+        toEncryptedBytes(database),
+      ]);
+
+      expect(firstClone.meta.name).toBe(database.meta.name);
+      expect(secondClone.meta.name).toBe(database.meta.name);
+      expect(savedBytes.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('saveKdbx', () => {
     const createUnlockedDatabase = async () => {
       const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('persist-test-password'));
