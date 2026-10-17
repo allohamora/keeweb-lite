@@ -1,5 +1,5 @@
 import { HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   type CreateFileRequestContext,
   type GetFileRequestContext,
@@ -10,12 +10,14 @@ import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '@tests/mocks
 import { mockServer } from '@tests/setup-unit-context';
 import { auth, createFile, getFile, updateFile } from '@/features/unlock/repositories/google-drive';
 
+const useFakeDate = () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+
+  return { [Symbol.dispose]: () => vi.useRealTimers() };
+};
+
 describe('google-drive', () => {
   describe('getAccessToken', () => {
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
     it('returns the access token from Google Identity', async () => {
       const token = await auth.getAccessToken();
 
@@ -33,7 +35,7 @@ describe('google-drive', () => {
     });
 
     it('re-requests a new token after the cached token expires', async () => {
-      vi.useFakeTimers({ toFake: ['Date'] });
+      using _fakeDate = useFakeDate();
 
       const token1 = await auth.getAccessToken();
       expect(token1).toBe('test');
