@@ -4,7 +4,7 @@ import { toEncryptedBytes } from '@/features/unlock/services/kdbx';
 import type { UnlockSession } from '@/features/unlock/services/session';
 import { downloadBytes } from '@/utils/download';
 import { getErrorMessage } from '@/utils/error';
-import { toKdbxFileName } from '@/features/unlock/utils/kdbx';
+import { toKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
 import { toast } from 'sonner';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
 

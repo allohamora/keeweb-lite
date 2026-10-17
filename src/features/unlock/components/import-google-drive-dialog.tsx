@@ -15,7 +15,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { fileListSchema } from '@/utils/zod';
 import { getErrorMessage } from '@/utils/error';
-import { isKdbxFileName } from '@/features/unlock/utils/kdbx';
+import { isKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
 import { importGoogleDriveRecord } from '@/features/unlock/services/record';
 import { driveFileSchema } from '@/features/unlock/repositories/google-drive';
 import { GoogleDriveFilePicker } from './google-drive-file-picker';

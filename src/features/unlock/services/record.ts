@@ -9,7 +9,7 @@ import {
 } from '@/features/unlock/repositories/record';
 import { cloneKdbx, createEmptyKdbx, loadKdbx, toEncryptedBytes } from '@/features/unlock/services/kdbx';
 import { asUint8Array } from '@/utils/buffer';
-import { toKdbxFileName } from '@/features/unlock/utils/kdbx';
+import { toKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
 import { Lock } from '@/utils/lock';
 
 // makes the duplicate-name/source.id check and the write atomic across concurrent calls
