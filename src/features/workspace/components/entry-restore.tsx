@@ -23,10 +23,10 @@ type EntryRestoreProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  onRestore: (result: EntryMutationResult) => void;
+  onEntryRestore: (result: EntryMutationResult) => void;
 };
 
-export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, onEntryRestore }: EntryRestoreProps) => {
   const { guardNavigation } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
   const [open, setOpen] = useState(false);
@@ -36,7 +36,7 @@ export const EntryRestore = ({ database, entry, record, onRestore }: EntryRestor
     try {
       const entryUuid = entry.uuid.toString();
 
-      onRestore(await restoreEntry({ database, record, entryUuid }));
+      onEntryRestore(await restoreEntry({ database, record, entryUuid }));
 
       toast.success('Entry restored.');
     } catch (error) {

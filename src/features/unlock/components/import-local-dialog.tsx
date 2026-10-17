@@ -21,7 +21,7 @@ import { importLocalRecord } from '@/features/unlock/services/record';
 type ImportLocalDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRecordImported: () => void;
+  onRecordImport: () => void;
 };
 
 const importLocalDialogSchema = z.object({
@@ -37,7 +37,7 @@ const importLocalDialogSchema = z.object({
 
 type ImportLocalDialogFormValues = z.infer<typeof importLocalDialogSchema>;
 
-export const ImportLocalDialog = ({ open, onOpenChange, onRecordImported }: ImportLocalDialogProps) => {
+export const ImportLocalDialog = ({ open, onOpenChange, onRecordImport }: ImportLocalDialogProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -51,7 +51,7 @@ export const ImportLocalDialog = ({ open, onOpenChange, onRecordImported }: Impo
     try {
       await importLocalRecord({ databaseFile, keyFile });
 
-      onRecordImported();
+      onRecordImport();
       onOpenChange(false);
 
       toast.success('Record imported.');

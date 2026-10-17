@@ -13,19 +13,19 @@ import { render } from '@tests/utils/render';
 const entryUuid = kdbxweb.KdbxUuid.random();
 
 vi.mock('@/features/workspace/components/menu-pane', () => ({
-  MenuPane: ({ onSelectFilter }: { onSelectFilter: (filter: SelectFilter) => void }) => (
-    <button onClick={() => onSelectFilter({ tag: 'tag-filter' })}>Stub select filter</button>
+  MenuPane: ({ onSelectFilterChange }: { onSelectFilterChange: (filter: SelectFilter) => void }) => (
+    <button onClick={() => onSelectFilterChange({ tag: 'tag-filter' })}>Stub select filter</button>
   ),
 }));
 
 vi.mock('@/features/workspace/components/entry-list', () => ({
   EntryList: ({
-    onSelectEntry,
-    onCreateEntry,
+    onEntrySelect,
+    onEntryCreate,
     selectedEntryUuid,
   }: {
-    onSelectEntry: (uuid: kdbxweb.KdbxUuid) => void;
-    onCreateEntry: () => void;
+    onEntrySelect: (uuid: kdbxweb.KdbxUuid) => void;
+    onEntryCreate: () => void;
     selectedEntryUuid: kdbxweb.KdbxUuid | null;
   }) => {
     const { isMutating } = useEntryMutation();
@@ -33,8 +33,8 @@ vi.mock('@/features/workspace/components/entry-list', () => ({
     return (
       <div>
         <span data-testid="selected-entry-uuid">{selectedEntryUuid?.toString() ?? 'none'}</span>
-        <button onClick={() => onSelectEntry(entryUuid)}>Stub select entry</button>
-        <button disabled={isMutating} onClick={onCreateEntry}>
+        <button onClick={() => onEntrySelect(entryUuid)}>Stub select entry</button>
+        <button disabled={isMutating} onClick={onEntryCreate}>
           Stub create entry
         </button>
       </div>
@@ -57,7 +57,9 @@ vi.mock('@/features/workspace/components/entry-details', () => ({
 }));
 
 vi.mock('@/features/workspace/components/workspace-controls', () => ({
-  WorkspaceControls: ({ onLock }: { onLock: () => void }) => <button onClick={onLock}>Stub lock</button>,
+  WorkspaceControls: ({ onWorkspaceLock }: { onWorkspaceLock: () => void }) => (
+    <button onClick={onWorkspaceLock}>Stub lock</button>
+  ),
 }));
 
 const record = createTestRecord();

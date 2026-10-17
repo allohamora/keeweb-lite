@@ -17,7 +17,7 @@ describe('entry-remove', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />);
+      render(<EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
       expect(screen.getByText('Remove entry?')).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('entry-remove', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />
+          <EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
@@ -46,7 +46,7 @@ describe('entry-remove', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />
+          <EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
@@ -55,20 +55,20 @@ describe('entry-remove', () => {
       expect(screen.getByText('Remove entry?')).toBeInTheDocument();
     });
 
-    it('removes the entry and calls onRemove on confirm', async () => {
+    it('removes the entry and calls onEntryRemove on confirm', async () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      const onRemove = vi.fn();
+      const onEntryRemove = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
       const removeEntry = vi.spyOn(entryService, 'removeEntry').mockResolvedValue(payload);
 
-      render(<EntryRemove database={database} entry={entry} record={record} onRemove={onRemove} />);
+      render(<EntryRemove database={database} entry={entry} record={record} onEntryRemove={onEntryRemove} />);
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
       expect(removeEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
-      expect(onRemove).toHaveBeenCalledWith(payload);
+      expect(onEntryRemove).toHaveBeenCalledWith(payload);
     });
 
     it('disables the trigger and cannot open the dialog while another entry mutation is in progress', async () => {
@@ -78,7 +78,7 @@ describe('entry-remove', () => {
 
       render(
         <MutatingEntryMutation>
-          <EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />
+          <EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />
         </MutatingEntryMutation>,
       );
       const trigger = screen.getByRole('button', { name: 'Remove' });
@@ -97,7 +97,7 @@ describe('entry-remove', () => {
       const remove = Promise.withResolvers<Awaited<ReturnType<typeof entryService.removeEntry>>>();
       vi.spyOn(entryService, 'removeEntry').mockReturnValue(remove.promise);
 
-      render(<EntryRemove database={database} entry={entry} record={record} onRemove={vi.fn()} />);
+      render(<EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 

@@ -59,10 +59,10 @@ type EntryEditFormProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  onSave: (result: EntryMutationResult) => void;
+  onEntrySave: (result: EntryMutationResult) => void;
 };
 
-export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
+export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEditFormProps) => {
   const { setDirty, registerDiscard } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
   const {
@@ -99,7 +99,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
       const result = await saveEntry({ database, record, entryUuid, values });
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
-      onSave?.(result);
+      onEntrySave?.(result);
       toast.success('Entry saved.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
@@ -110,7 +110,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
   const handleSave = (result: EntryMutationResult) => {
     reset(); // Reset the form state after remove/restore (isDirty, touched state, etc)
-    onSave?.(result);
+    onEntrySave?.(result);
   };
 
   const handleApplyHistory = (values: EntryEditValues) => {
@@ -302,7 +302,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
                       </button>
                       <PasswordGenerator
                         currentPassword={field.value}
-                        onApply={(password) => setValue('password', password, { shouldDirty: true })}
+                        onPasswordApply={(password) => setValue('password', password, { shouldDirty: true })}
                       />
                       <button
                         type="button"
@@ -424,8 +424,10 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onRemove={handleSave} />
-            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={handleSave} />}
+            <EntryRemove database={database} entry={entry} record={record} onEntryRemove={handleSave} />
+            {isInTrash && (
+              <EntryRestore database={database} entry={entry} record={record} onEntryRestore={handleSave} />
+            )}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isMutating} type="submit" variant="outline">
             {isSubmitting ? 'Saving...' : 'Save'}
@@ -434,7 +436,7 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
         <Separator className="my-3" />
 
-        <EntryHistory history={entry.history} onApply={handleApplyHistory} />
+        <EntryHistory history={entry.history} onHistoryApply={handleApplyHistory} />
       </div>
     </form>
   );

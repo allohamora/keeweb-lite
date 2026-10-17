@@ -23,7 +23,7 @@ import { getErrorMessage } from '@/utils/error';
 type CreateGoogleDriveDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRecordCreated: () => void;
+  onRecordCreate: () => void;
 };
 
 const createGoogleDriveDialogSchema = z
@@ -40,7 +40,7 @@ const createGoogleDriveDialogSchema = z
 
 type CreateGoogleDriveDialogFormValues = z.infer<typeof createGoogleDriveDialogSchema>;
 
-export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreated }: CreateGoogleDriveDialogProps) => {
+export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreate }: CreateGoogleDriveDialogProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -59,7 +59,7 @@ export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreated }:
         downloadBytes({ bytes: keyFileBytes, fileName: keyFileName });
       }
 
-      onRecordCreated();
+      onRecordCreate();
       onOpenChange(false);
 
       toast.success('Record created.');

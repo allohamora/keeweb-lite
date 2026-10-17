@@ -47,8 +47,8 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
                 >
                   Demo
                 </Button>
-                <ImportMenu onRecordImported={reloadRecords} />
-                <CreateMenu onRecordCreated={reloadRecords} />
+                <ImportMenu onRecordImport={reloadRecords} />
+                <CreateMenu onRecordCreate={reloadRecords} />
               </div>
             </div>
 
@@ -57,7 +57,7 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
               recordsReloadToken={recordsReloadToken}
               runUnlockAction={runUnlockAction}
               setSession={setSession}
-              onRecordRemoved={reloadRecords}
+              onRecordRemove={reloadRecords}
             />
           </div>
         </div>

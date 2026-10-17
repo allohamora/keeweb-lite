@@ -6,8 +6,8 @@ import { render } from '@tests/utils/render';
 
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
-const IdleLockHarness = ({ onLock }: { onLock: () => void }) => {
-  useIdleLock({ onLock });
+const IdleLockHarness = ({ onWorkspaceLock }: { onWorkspaceLock: () => void }) => {
+  useIdleLock({ onWorkspaceLock });
 
   return null;
 };
@@ -16,39 +16,39 @@ describe('use-idle-lock', () => {
   describe('useIdleLock', () => {
     it('locks after 15 minutes without activity', async () => {
       using timers = useFakeTimers();
-      const onLock = vi.fn();
+      const onWorkspaceLock = vi.fn();
 
-      render(<IdleLockHarness onLock={onLock} />);
+      render(<IdleLockHarness onWorkspaceLock={onWorkspaceLock} />);
       await timers.advanceBy(IDLE_TIMEOUT_MS - 1);
-      expect(onLock).not.toHaveBeenCalled();
+      expect(onWorkspaceLock).not.toHaveBeenCalled();
 
       await timers.advanceBy(1);
-      expect(onLock).toHaveBeenCalledOnce();
+      expect(onWorkspaceLock).toHaveBeenCalledOnce();
     });
 
     it('restarts the timer on activity', async () => {
       using timers = useFakeTimers();
-      const onLock = vi.fn();
+      const onWorkspaceLock = vi.fn();
 
-      render(<IdleLockHarness onLock={onLock} />);
+      render(<IdleLockHarness onWorkspaceLock={onWorkspaceLock} />);
       await timers.advanceBy(IDLE_TIMEOUT_MS - 1000);
       fireEvent.keyDown(window);
       await timers.advanceBy(IDLE_TIMEOUT_MS - 1000);
-      expect(onLock).not.toHaveBeenCalled();
+      expect(onWorkspaceLock).not.toHaveBeenCalled();
 
       await timers.advanceBy(1000);
-      expect(onLock).toHaveBeenCalledOnce();
+      expect(onWorkspaceLock).toHaveBeenCalledOnce();
     });
 
     it('does not lock after unmount', async () => {
       using timers = useFakeTimers();
-      const onLock = vi.fn();
+      const onWorkspaceLock = vi.fn();
 
-      const { unmount } = render(<IdleLockHarness onLock={onLock} />);
+      const { unmount } = render(<IdleLockHarness onWorkspaceLock={onWorkspaceLock} />);
       unmount();
       await timers.advanceBy(IDLE_TIMEOUT_MS);
 
-      expect(onLock).not.toHaveBeenCalled();
+      expect(onWorkspaceLock).not.toHaveBeenCalled();
     });
   });
 });

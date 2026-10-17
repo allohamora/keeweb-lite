@@ -55,7 +55,7 @@ export const SafeNetProvider = ({ children }: { children: ReactNode }) => {
         onOpenChange={(open) => {
           if (!open) setPendingNavigation(null);
         }}
-        onConfirm={handleConfirmDiscard}
+        onChangesDiscard={handleConfirmDiscard}
       />
     </SafeNetContext.Provider>
   );

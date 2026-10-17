@@ -17,10 +17,10 @@ import {
 type RecordRemoveProps = {
   recordId: string;
   disabled?: boolean;
-  onRemove: () => void;
+  onRecordRemove: () => void;
 };
 
-export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps) => {
+export const RecordRemove = ({ recordId, disabled, onRecordRemove }: RecordRemoveProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -28,7 +28,7 @@ export const RecordRemove = ({ recordId, disabled, onRemove }: RecordRemoveProps
     setIsRemoving(true);
     try {
       await removeRecord(recordId);
-      onRemove();
+      onRecordRemove();
       setIsOpen(false);
       toast.success('Record removed.');
     } catch (error) {

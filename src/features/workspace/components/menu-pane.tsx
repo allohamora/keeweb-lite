@@ -18,7 +18,7 @@ type MenuPaneProps = {
   className?: string;
   database: kdbxweb.Kdbx;
   selectFilter: SelectFilter;
-  onSelectFilter: (selectFilter: SelectFilter) => void;
+  onSelectFilterChange: (selectFilter: SelectFilter) => void;
 };
 
 const navItemClass = (isSelected: boolean) => {
@@ -28,7 +28,7 @@ const navItemClass = (isSelected: boolean) => {
   );
 };
 
-export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: MenuPaneProps) => {
+export const MenuPane = ({ className, database, selectFilter, onSelectFilterChange }: MenuPaneProps) => {
   const { items, recycleBinGroup } = getGroupTree(database);
   const tags = getAllTags(database);
   const colors = getAllColors(database);
@@ -41,7 +41,11 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
 
       <div aria-label="Workspace groups" className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="p-2 pb-1">
-          <button className={navItemClass(selectFilter === null)} onClick={() => onSelectFilter(null)} type="button">
+          <button
+            className={navItemClass(selectFilter === null)}
+            onClick={() => onSelectFilterChange(null)}
+            type="button"
+          >
             <HugeiconsIcon className="shrink-0" icon={GridViewIcon} size={14} strokeWidth={1.5} />
             <span className="truncate">All Items</span>
           </button>
@@ -59,7 +63,7 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
                     'flex items-center justify-center rounded-none border p-0.5',
                     isColorSelect(selectFilter) && selectFilter.color === null ? 'border-ring' : 'border-transparent',
                   )}
-                  onClick={() => onSelectFilter({ color: null })}
+                  onClick={() => onSelectFilterChange({ color: null })}
                   type="button"
                 >
                   <ColorSwatch color={null} size={14} />
@@ -75,7 +79,7 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
                         : 'border-transparent',
                     )}
                     key={color}
-                    onClick={() => onSelectFilter({ color })}
+                    onClick={() => onSelectFilterChange({ color })}
                     type="button"
                   >
                     <ColorSwatch color={color} size={14} />
@@ -93,7 +97,7 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
                   <button
                     className={navItemClass(isTagSelect(selectFilter) && selectFilter.tag === tag)}
                     key={tag}
-                    onClick={() => onSelectFilter({ tag })}
+                    onClick={() => onSelectFilterChange({ tag })}
                     type="button"
                   >
                     <HugeiconsIcon className="shrink-0" icon={Tag01Icon} size={14} strokeWidth={1.5} />
@@ -114,7 +118,7 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
                     'w-max min-w-full',
                   )}
                   key={group.uuid.toString()}
-                  onClick={() => onSelectFilter(group.uuid)}
+                  onClick={() => onSelectFilterChange(group.uuid)}
                   style={{ paddingLeft: `${8 + depth * 12}px` }}
                   type="button"
                 >
@@ -135,7 +139,7 @@ export const MenuPane = ({ className, database, selectFilter, onSelectFilter }: 
           <div className="border-t border-border p-2">
             <button
               className={navItemClass(isGroupSelect(selectFilter) && recycleBinGroup.uuid.equals(selectFilter))}
-              onClick={() => onSelectFilter(recycleBinGroup.uuid)}
+              onClick={() => onSelectFilterChange(recycleBinGroup.uuid)}
               type="button"
             >
               <HugeiconsIcon className="shrink-0" icon={Delete01Icon} size={14} strokeWidth={1.5} />

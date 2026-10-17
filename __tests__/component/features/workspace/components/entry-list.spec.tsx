@@ -15,8 +15,8 @@ describe('entry-list', () => {
           database={database}
           selectFilter={null}
           selectedEntryUuid={null}
-          onSelectEntry={vi.fn()}
-          onCreateEntry={vi.fn()}
+          onEntrySelect={vi.fn()}
+          onEntryCreate={vi.fn()}
           showMenuButton={false}
           onMenuOpen={vi.fn()}
         />,
@@ -36,8 +36,8 @@ describe('entry-list', () => {
           database={database}
           selectFilter={null}
           selectedEntryUuid={null}
-          onSelectEntry={vi.fn()}
-          onCreateEntry={vi.fn()}
+          onEntrySelect={vi.fn()}
+          onEntryCreate={vi.fn()}
           showMenuButton={false}
           onMenuOpen={vi.fn()}
         />,
@@ -58,8 +58,8 @@ describe('entry-list', () => {
             database={database}
             selectFilter={null}
             selectedEntryUuid={null}
-            onSelectEntry={vi.fn()}
-            onCreateEntry={vi.fn()}
+            onEntrySelect={vi.fn()}
+            onEntryCreate={vi.fn()}
             showMenuButton={false}
             onMenuOpen={vi.fn()}
           />
@@ -78,8 +78,8 @@ describe('entry-list', () => {
           database={database}
           selectFilter={null}
           selectedEntryUuid={null}
-          onSelectEntry={vi.fn()}
-          onCreateEntry={vi.fn()}
+          onEntrySelect={vi.fn()}
+          onEntryCreate={vi.fn()}
           showMenuButton={false}
           onMenuOpen={vi.fn()}
         />,
@@ -100,8 +100,8 @@ describe('entry-list', () => {
           database={database}
           selectFilter={null}
           selectedEntryUuid={null}
-          onSelectEntry={vi.fn()}
-          onCreateEntry={vi.fn()}
+          onEntrySelect={vi.fn()}
+          onEntryCreate={vi.fn()}
           showMenuButton={false}
           onMenuOpen={vi.fn()}
         />,
@@ -121,8 +121,8 @@ describe('entry-list', () => {
           database={database}
           selectFilter={null}
           selectedEntryUuid={null}
-          onSelectEntry={vi.fn()}
-          onCreateEntry={vi.fn()}
+          onEntrySelect={vi.fn()}
+          onEntryCreate={vi.fn()}
           showMenuButton={false}
           onMenuOpen={vi.fn()}
         />,
@@ -141,8 +141,8 @@ describe('entry-list', () => {
           database={database}
           selectFilter={null}
           selectedEntryUuid={null}
-          onSelectEntry={vi.fn()}
-          onCreateEntry={vi.fn()}
+          onEntrySelect={vi.fn()}
+          onEntryCreate={vi.fn()}
           showMenuButton={false}
           onMenuOpen={vi.fn()}
         />,

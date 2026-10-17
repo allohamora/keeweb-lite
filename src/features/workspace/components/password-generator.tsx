@@ -19,7 +19,7 @@ import {
 
 type PasswordGeneratorProps = {
   currentPassword: string;
-  onApply: (password: string) => void;
+  onPasswordApply: (password: string) => void;
 };
 
 const passwordGeneratorSchema = z.object({
@@ -37,7 +37,7 @@ const passwordGeneratorSchema = z.object({
 type PasswordGeneratorFormValues = z.input<typeof passwordGeneratorSchema>;
 type PasswordGeneratorOutputValues = z.output<typeof passwordGeneratorSchema>;
 
-export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGeneratorProps) => {
+export const PasswordGenerator = ({ currentPassword, onPasswordApply }: PasswordGeneratorProps) => {
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState(currentPassword);
@@ -48,7 +48,7 @@ export const PasswordGenerator = ({ currentPassword, onApply }: PasswordGenerato
   });
 
   const handleApply = handleSubmit(() => {
-    onApply(password);
+    onPasswordApply(password);
     setOpen(false);
   });
 

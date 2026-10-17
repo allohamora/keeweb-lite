@@ -12,7 +12,7 @@ type EntryDetailsProps = {
   selectedEntry: kdbxweb.KdbxEntry | null;
   database: kdbxweb.Kdbx;
   record: FileRecord;
-  onSave: (result: EntryMutationResult) => void;
+  onEntrySave: (result: EntryMutationResult) => void;
   showBackButton: boolean;
   onBack: () => void;
 };
@@ -41,7 +41,7 @@ export const EntryDetails = ({
   selectedEntry,
   database,
   record,
-  onSave,
+  onEntrySave,
   showBackButton,
   onBack,
 }: EntryDetailsProps) => {
@@ -70,7 +70,7 @@ export const EntryDetails = ({
         database={database}
         entry={selectedEntry}
         record={record}
-        onSave={onSave}
+        onEntrySave={onEntrySave}
       />
     </aside>
   );

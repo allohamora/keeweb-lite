@@ -17,7 +17,7 @@ describe('entry-restore', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />);
+      render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 
       expect(screen.getByText('Restore entry?')).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('entry-restore', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />
+          <EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
@@ -46,7 +46,7 @@ describe('entry-restore', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />
+          <EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
@@ -55,20 +55,20 @@ describe('entry-restore', () => {
       expect(screen.getByText('Restore entry?')).toBeInTheDocument();
     });
 
-    it('restores the entry and calls onRestore on confirm', async () => {
+    it('restores the entry and calls onEntryRestore on confirm', async () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      const onRestore = vi.fn();
+      const onEntryRestore = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
       const restoreEntry = vi.spyOn(entryService, 'restoreEntry').mockResolvedValue(payload);
 
-      render(<EntryRestore database={database} entry={entry} record={record} onRestore={onRestore} />);
+      render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={onEntryRestore} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 
       expect(restoreEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
-      expect(onRestore).toHaveBeenCalledWith(payload);
+      expect(onEntryRestore).toHaveBeenCalledWith(payload);
     });
 
     it('disables the trigger and cannot open the dialog while another entry mutation is in progress', async () => {
@@ -78,7 +78,7 @@ describe('entry-restore', () => {
 
       render(
         <MutatingEntryMutation>
-          <EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />
+          <EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />
         </MutatingEntryMutation>,
       );
       const trigger = screen.getByRole('button', { name: 'Restore' });
@@ -97,7 +97,7 @@ describe('entry-restore', () => {
       const restore = Promise.withResolvers<Awaited<ReturnType<typeof entryService.restoreEntry>>>();
       vi.spyOn(entryService, 'restoreEntry').mockReturnValue(restore.promise);
 
-      render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />);
+      render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 

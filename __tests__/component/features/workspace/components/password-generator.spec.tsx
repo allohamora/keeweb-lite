@@ -9,7 +9,7 @@ describe('password-generator', () => {
     it('derives the options from the current password', async () => {
       const user = userEvent.setup();
 
-      render(<PasswordGenerator currentPassword="Abc123" onApply={vi.fn()} />);
+      render(<PasswordGenerator currentPassword="Abc123" onPasswordApply={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Generate password' }));
 
       expect(screen.getByLabelText('Length')).toHaveValue('6');
@@ -22,9 +22,9 @@ describe('password-generator', () => {
 
     it('generates a password from the options and applies it', async () => {
       const user = userEvent.setup();
-      const onApply = vi.fn();
+      const onPasswordApply = vi.fn();
 
-      render(<PasswordGenerator currentPassword="abcd" onApply={onApply} />);
+      render(<PasswordGenerator currentPassword="abcd" onPasswordApply={onPasswordApply} />);
       await user.click(screen.getByRole('button', { name: 'Generate password' }));
       await user.clear(screen.getByLabelText('Length'));
       await user.type(screen.getByLabelText('Length'), '12');
@@ -35,14 +35,14 @@ describe('password-generator', () => {
 
       await user.click(screen.getByRole('button', { name: 'Apply' }));
 
-      expect(onApply).toHaveBeenCalledWith(generated);
+      expect(onPasswordApply).toHaveBeenCalledWith(generated);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('does not generate with a length below the minimum', async () => {
       const user = userEvent.setup();
 
-      render(<PasswordGenerator currentPassword="abcd" onApply={vi.fn()} />);
+      render(<PasswordGenerator currentPassword="abcd" onPasswordApply={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Generate password' }));
       await user.clear(screen.getByLabelText('Length'));
       await user.type(screen.getByLabelText('Length'), '3');

@@ -4,12 +4,12 @@ const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'] as const;
 
 type UseIdleLockProps = {
-  onLock: () => void;
+  onWorkspaceLock: () => void;
 };
 
-export const useIdleLock = ({ onLock }: UseIdleLockProps) => {
+export const useIdleLock = ({ onWorkspaceLock }: UseIdleLockProps) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onIdle = useEffectEvent(() => onLock());
+  const onIdle = useEffectEvent(() => onWorkspaceLock());
 
   useEffect(() => {
     const clearTimer = () => {

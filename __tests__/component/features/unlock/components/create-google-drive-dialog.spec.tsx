@@ -9,7 +9,7 @@ import { render } from '@tests/utils/render';
 describe('create-google-drive-dialog', () => {
   describe('CreateGoogleDriveDialog', () => {
     it('renders database name, password, confirm password fields and a use-key-file checkbox', () => {
-      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreate={vi.fn()} open={true} />);
 
       expect(screen.getByLabelText('Database name')).toBeInTheDocument();
       expect(screen.getByLabelText('Password')).toBeInTheDocument();
@@ -21,7 +21,7 @@ describe('create-google-drive-dialog', () => {
       const user = userEvent.setup();
       using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord');
 
-      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreate={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'password-1');
       await user.type(screen.getByLabelText('Confirm password'), 'password-2');
@@ -34,19 +34,19 @@ describe('create-google-drive-dialog', () => {
     it('creates the record without a key file on valid submit', async () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
-      const onRecordCreated = vi.fn();
+      const onRecordCreate = vi.fn();
       using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord').mockResolvedValue({
         keyFileBytes: undefined,
         keyFileName: undefined,
       });
 
-      render(<CreateGoogleDriveDialog onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={onOpenChange} onRecordCreate={onRecordCreate} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'test-password-123');
       await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
-      await waitFor(() => expect(onRecordCreated).toHaveBeenCalledOnce());
+      await waitFor(() => expect(onRecordCreate).toHaveBeenCalledOnce());
       expect(createGoogleDriveRecord).toHaveBeenCalledWith({
         databaseName: 'My Vault',
         password: 'test-password-123',
@@ -64,7 +64,7 @@ describe('create-google-drive-dialog', () => {
       });
       using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
-      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreate={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'test-password-123');
       await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
@@ -84,12 +84,12 @@ describe('create-google-drive-dialog', () => {
     it('keeps the dialog open and does not notify on service failure', async () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
-      const onRecordCreated = vi.fn();
+      const onRecordCreate = vi.fn();
       using _createGoogleDriveRecord = vi
         .spyOn(recordService, 'createGoogleDriveRecord')
         .mockRejectedValue(new Error('Failed to create file.'));
 
-      render(<CreateGoogleDriveDialog onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={onOpenChange} onRecordCreate={onRecordCreate} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'test-password-123');
       await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
@@ -97,7 +97,7 @@ describe('create-google-drive-dialog', () => {
 
       await waitFor(() => expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled());
       expect(onOpenChange).not.toHaveBeenCalledWith(false);
-      expect(onRecordCreated).not.toHaveBeenCalled();
+      expect(onRecordCreate).not.toHaveBeenCalled();
     });
   });
 });

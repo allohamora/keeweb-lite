@@ -50,7 +50,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     guardNavigation(() => setSelectedEntryUuid(uuid));
   };
 
-  const handleSelectFilter = (nextSelectFilter: SelectFilter) => {
+  const handleSelectFilterChange = (nextSelectFilter: SelectFilter) => {
     guardNavigation(() => {
       setSelectFilter(nextSelectFilter);
       setSelectedEntryUuid(null);
@@ -75,16 +75,16 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     setSelectedEntryUuid(nextEntryUuid);
   };
 
-  const onLock = () => {
+  const onWorkspaceLock = () => {
     setSession(null);
     setSelectedEntryUuid(null);
     setIsMobileMenuOpen(false);
   };
 
   // idle lock must not be blockable by a dirty form, so it bypasses guardNavigation on purpose
-  useIdleLock({ onLock });
+  useIdleLock({ onWorkspaceLock });
 
-  const handleLock = () => guardNavigation(onLock);
+  const handleLock = () => guardNavigation(onWorkspaceLock);
 
   const createNewEntry = async () => {
     setMutating(true);
@@ -116,7 +116,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
         recordType={record.type}
         syncStatus={syncStatus}
         syncErrorMessage={syncErrorMessage}
-        onLock={handleLock}
+        onWorkspaceLock={handleLock}
         onSyncRetry={retrySync}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -124,7 +124,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
           <MenuPane
             className="flex"
             database={database}
-            onSelectFilter={handleSelectFilter}
+            onSelectFilterChange={handleSelectFilterChange}
             selectFilter={selectFilter}
           />
         )}
@@ -132,8 +132,8 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
           <EntryList
             className={isMobile ? 'flex w-full border-r-0' : 'flex'}
             database={database}
-            onCreateEntry={handleCreateEntry}
-            onSelectEntry={handleSelectEntry}
+            onEntryCreate={handleCreateEntry}
+            onEntrySelect={handleSelectEntry}
             selectFilter={selectFilter}
             selectedEntryUuid={selectedEntryUuid}
             showMenuButton={isMobile}
@@ -146,7 +146,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
             selectedEntry={selectedEntry}
             database={database}
             record={record}
-            onSave={handleSave}
+            onEntrySave={handleSave}
             showBackButton={isMobile}
             onBack={handleBack}
           />
@@ -157,7 +157,7 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
           open={isMobile && isMobileMenuOpen}
           onOpenChange={setIsMobileMenuOpen}
           database={database}
-          onSelectFilter={handleSelectFilter}
+          onSelectFilterChange={handleSelectFilterChange}
           selectFilter={selectFilter}
         />
       )}

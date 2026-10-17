@@ -23,7 +23,7 @@ const ToggleableEntryEditForm = ({ database, entry, onGuardedAction }: Toggleabl
 
   return (
     <div>
-      {mounted && <EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />}
+      {mounted && <EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />}
       <button onClick={() => setMounted(false)}>Unmount form</button>
       <button onClick={() => guardNavigation(onGuardedAction)}>Run guarded action</button>
     </div>
@@ -35,7 +35,7 @@ describe('entry-edit-form', () => {
     it('disables Save on mount, since the form starts clean', async () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     });
@@ -45,7 +45,7 @@ describe('entry-edit-form', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');
 
       expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
@@ -56,7 +56,7 @@ describe('entry-edit-form', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
@@ -70,7 +70,7 @@ describe('entry-edit-form', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Discard' }));
@@ -86,7 +86,7 @@ describe('entry-edit-form', () => {
       entry.pushHistory();
       entry.fields.set('Title', 'Changed Title');
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       expect(screen.getByLabelText('Title')).toHaveValue('Changed Title');
 
       await user.click(screen.getByRole('button', { name: /History \(1\)/ }));
@@ -100,16 +100,16 @@ describe('entry-edit-form', () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      const onSave = vi.fn();
+      const onEntrySave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
       const saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={onSave} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={onEntrySave} />);
       await user.type(screen.getByLabelText('Title'), '!');
       await user.click(screen.getByRole('button', { name: 'Save' }));
 
       expect(saveEntry).toHaveBeenCalledOnce();
-      expect(onSave).toHaveBeenCalledWith(payload);
+      expect(onEntrySave).toHaveBeenCalledWith(payload);
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     });
 
@@ -117,11 +117,11 @@ describe('entry-edit-form', () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      const onSave = vi.fn();
+      const onEntrySave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
       const saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={onSave} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={onEntrySave} />);
       await user.click(screen.getByRole('button', { name: 'Change icon and color' }));
       await user.click(screen.getByRole('button', { name: 'Color Red' }));
       await user.click(screen.getByRole('button', { name: 'Standard icon 5' }));
@@ -133,7 +133,7 @@ describe('entry-edit-form', () => {
           values: expect.objectContaining({ color: '#FF8080', icon: 5 }),
         }),
       );
-      expect(onSave).toHaveBeenCalledWith(payload);
+      expect(onEntrySave).toHaveBeenCalledWith(payload);
     });
 
     it("keeps a trashed entry's own color choosable in the picker, even if unused elsewhere", async () => {
@@ -145,7 +145,7 @@ describe('entry-edit-form', () => {
       database.move(entry, recycleBin);
       entry.bgColor = '#123456';
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Change icon and color' }));
 
       expect(screen.getByRole('button', { name: 'Color #123456' })).toHaveAttribute('aria-pressed', 'true');
@@ -171,7 +171,7 @@ describe('entry-edit-form', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
 
       expect(screen.getByLabelText('Expires')).toHaveTextContent('No expiration');
 
@@ -189,7 +189,7 @@ describe('entry-edit-form', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
 
       await user.click(screen.getByLabelText('Expires'));
       await user.click(screen.getByRole('button', { name: /^Today,/ }));
@@ -204,7 +204,7 @@ describe('entry-edit-form', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
 
       await user.click(screen.getByLabelText('Expires'));
       await user.click(screen.getByRole('button', { name: /^Today,/ }));
@@ -225,7 +225,7 @@ describe('entry-edit-form', () => {
       entry.times.expires = true;
       entry.times.expiryTime = new Date(2000, 0, 1);
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
 
       expect(screen.getByText(/Jan 1, 2000/)).toHaveClass('line-through');
 
@@ -242,7 +242,7 @@ describe('entry-edit-form', () => {
       const save = Promise.withResolvers<Awaited<ReturnType<typeof entryService.saveEntry>>>();
       vi.spyOn(entryService, 'saveEntry').mockReturnValue(save.promise);
 
-      render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');
       await user.click(screen.getByRole('button', { name: 'Save' }));
 

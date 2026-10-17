@@ -27,7 +27,7 @@ describe('workspace-controls', () => {
           recordType={record.type}
           syncStatus="synced"
           syncErrorMessage={null}
-          onLock={vi.fn()}
+          onWorkspaceLock={vi.fn()}
           onSyncRetry={vi.fn()}
         />,
       );
@@ -49,7 +49,7 @@ describe('workspace-controls', () => {
           recordType="local"
           syncStatus="synced"
           syncErrorMessage={null}
-          onLock={vi.fn()}
+          onWorkspaceLock={vi.fn()}
           onSyncRetry={vi.fn()}
         />,
       );
@@ -71,7 +71,7 @@ describe('workspace-controls', () => {
             recordType={record.type}
             syncStatus="synced"
             syncErrorMessage={null}
-            onLock={vi.fn()}
+            onWorkspaceLock={vi.fn()}
             onSyncRetry={vi.fn()}
           />
         </DirtySafeNet>,
@@ -91,7 +91,7 @@ describe('workspace-controls', () => {
           recordType="demo"
           syncStatus="synced"
           syncErrorMessage={null}
-          onLock={vi.fn()}
+          onWorkspaceLock={vi.fn()}
           onSyncRetry={vi.fn()}
         />,
       );
@@ -112,7 +112,7 @@ describe('workspace-controls', () => {
           recordType="google-drive"
           syncStatus="error"
           syncErrorMessage="Drive sync failed."
-          onLock={vi.fn()}
+          onWorkspaceLock={vi.fn()}
           onSyncRetry={onSyncRetry}
         />,
       );
@@ -134,7 +134,7 @@ describe('workspace-controls', () => {
             recordType="google-drive"
             syncStatus="error"
             syncErrorMessage="Drive sync failed."
-            onLock={vi.fn()}
+            onWorkspaceLock={vi.fn()}
             onSyncRetry={onSyncRetry}
           />
         </DirtySafeNet>,

@@ -16,7 +16,7 @@ type WorkspaceControlsProps = {
   recordType: string;
   syncStatus: SyncStatus;
   syncErrorMessage: string | null;
-  onLock: () => void;
+  onWorkspaceLock: () => void;
   onSyncRetry: () => void;
 };
 
@@ -26,7 +26,7 @@ export const WorkspaceControls = ({
   recordType,
   syncStatus,
   syncErrorMessage,
-  onLock,
+  onWorkspaceLock,
   onSyncRetry,
 }: WorkspaceControlsProps) => {
   const { guardNavigation } = useSafeNet();
@@ -122,7 +122,7 @@ export const WorkspaceControls = ({
         <Button
           aria-label="Lock workspace"
           className="h-6 px-1.5 text-[11px]"
-          onClick={onLock}
+          onClick={onWorkspaceLock}
           size="xs"
           type="button"
           variant="outline"

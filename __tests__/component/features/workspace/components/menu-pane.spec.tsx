@@ -18,7 +18,7 @@ describe('menu-pane', () => {
   describe('MenuPane', () => {
     it('renders nested groups with increasing left padding per depth', async () => {
       const { database } = await createGroupTree();
-      render(<MenuPane database={database} selectFilter={null} onSelectFilter={vi.fn()} />);
+      render(<MenuPane database={database} selectFilter={null} onSelectFilterChange={vi.fn()} />);
 
       const parentPadding = Number(screen.getByRole('button', { name: 'Parent' }).style.paddingLeft.replace('px', ''));
       const childPadding = Number(screen.getByRole('button', { name: 'Child' }).style.paddingLeft.replace('px', ''));
@@ -30,19 +30,19 @@ describe('menu-pane', () => {
       expect(grandchildPadding).toBeGreaterThan(childPadding);
     });
 
-    it('calls onSelectFilter with the nested group uuid when clicked', async () => {
+    it('calls onSelectFilterChange with the nested group uuid when clicked', async () => {
       const { database, grandchild } = await createGroupTree();
-      const onSelectFilter = vi.fn();
-      render(<MenuPane database={database} selectFilter={null} onSelectFilter={onSelectFilter} />);
+      const onSelectFilterChange = vi.fn();
+      render(<MenuPane database={database} selectFilter={null} onSelectFilterChange={onSelectFilterChange} />);
 
       await userEvent.click(screen.getByRole('button', { name: 'Grandchild' }));
 
-      expect(onSelectFilter).toHaveBeenCalledWith(grandchild.uuid);
+      expect(onSelectFilterChange).toHaveBeenCalledWith(grandchild.uuid);
     });
 
     it('marks the selected nested group as selected', async () => {
       const { database, child } = await createGroupTree();
-      render(<MenuPane database={database} selectFilter={child.uuid} onSelectFilter={vi.fn()} />);
+      render(<MenuPane database={database} selectFilter={child.uuid} onSelectFilterChange={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: 'Child' })).toHaveClass('bg-accent');
       expect(screen.getByRole('button', { name: 'Parent' })).not.toHaveClass('bg-accent');
@@ -50,7 +50,7 @@ describe('menu-pane', () => {
 
     it('does not render a Colors row when no entry has a color', async () => {
       const { database } = await createGroupTree();
-      render(<MenuPane database={database} selectFilter={null} onSelectFilter={vi.fn()} />);
+      render(<MenuPane database={database} selectFilter={null} onSelectFilterChange={vi.fn()} />);
 
       expect(screen.queryByLabelText('Workspace colors')).not.toBeInTheDocument();
     });
@@ -62,22 +62,22 @@ describe('menu-pane', () => {
       first.bgColor = '#FF0000';
       second.bgColor = '#00FF00';
 
-      render(<MenuPane database={database} selectFilter={null} onSelectFilter={vi.fn()} />);
+      render(<MenuPane database={database} selectFilter={null} onSelectFilterChange={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: 'Color #FF0000' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Color #00FF00' })).toBeInTheDocument();
     });
 
-    it('calls onSelectFilter with the color when a swatch is clicked', async () => {
+    it('calls onSelectFilterChange with the color when a swatch is clicked', async () => {
       const { database, parent } = await createGroupTree();
       const entry = database.createEntry(parent);
       entry.bgColor = '#FF0000';
-      const onSelectFilter = vi.fn();
+      const onSelectFilterChange = vi.fn();
 
-      render(<MenuPane database={database} selectFilter={null} onSelectFilter={onSelectFilter} />);
+      render(<MenuPane database={database} selectFilter={null} onSelectFilterChange={onSelectFilterChange} />);
       await userEvent.click(screen.getByRole('button', { name: 'Color #FF0000' }));
 
-      expect(onSelectFilter).toHaveBeenCalledWith({ color: '#FF0000' });
+      expect(onSelectFilterChange).toHaveBeenCalledWith({ color: '#FF0000' });
     });
 
     it('marks the selected color swatch as pressed', async () => {
@@ -85,7 +85,7 @@ describe('menu-pane', () => {
       const entry = database.createEntry(parent);
       entry.bgColor = '#FF0000';
 
-      render(<MenuPane database={database} selectFilter={{ color: '#FF0000' }} onSelectFilter={vi.fn()} />);
+      render(<MenuPane database={database} selectFilter={{ color: '#FF0000' }} onSelectFilterChange={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: 'Color #FF0000' })).toHaveAttribute('aria-pressed', 'true');
     });
@@ -95,22 +95,22 @@ describe('menu-pane', () => {
       const entry = database.createEntry(parent);
       entry.bgColor = '#FF0000';
 
-      render(<MenuPane database={database} selectFilter={null} onSelectFilter={vi.fn()} />);
+      render(<MenuPane database={database} selectFilter={null} onSelectFilterChange={vi.fn()} />);
 
       const colorButtons = screen.getByLabelText('Workspace colors').querySelectorAll('button');
       expect(colorButtons[0]).toHaveAccessibleName('No color');
     });
 
-    it('calls onSelectFilter with a null color when "No color" is clicked', async () => {
+    it('calls onSelectFilterChange with a null color when "No color" is clicked', async () => {
       const { database, parent } = await createGroupTree();
       const entry = database.createEntry(parent);
       entry.bgColor = '#FF0000';
-      const onSelectFilter = vi.fn();
+      const onSelectFilterChange = vi.fn();
 
-      render(<MenuPane database={database} selectFilter={null} onSelectFilter={onSelectFilter} />);
+      render(<MenuPane database={database} selectFilter={null} onSelectFilterChange={onSelectFilterChange} />);
       await userEvent.click(screen.getByRole('button', { name: 'No color' }));
 
-      expect(onSelectFilter).toHaveBeenCalledWith({ color: null });
+      expect(onSelectFilterChange).toHaveBeenCalledWith({ color: null });
     });
 
     it('marks "No color" as pressed when it is the active filter', async () => {
@@ -118,7 +118,7 @@ describe('menu-pane', () => {
       const entry = database.createEntry(parent);
       entry.bgColor = '#FF0000';
 
-      render(<MenuPane database={database} selectFilter={{ color: null }} onSelectFilter={vi.fn()} />);
+      render(<MenuPane database={database} selectFilter={{ color: null }} onSelectFilterChange={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: 'No color' })).toHaveAttribute('aria-pressed', 'true');
     });

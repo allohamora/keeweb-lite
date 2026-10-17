@@ -7,7 +7,7 @@ import { createTestDatabase, createTestEntry } from '@tests/utils/kdbx';
 describe('entry-history', () => {
   describe('EntryHistory', () => {
     it('disables the toggle when there is no history', () => {
-      render(<EntryHistory history={[]} onApply={vi.fn()} />);
+      render(<EntryHistory history={[]} onHistoryApply={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: /History \(0\)/ })).toBeDisabled();
     });
@@ -20,7 +20,7 @@ describe('entry-history', () => {
       entry.pushHistory();
       entry.pushHistory();
 
-      render(<EntryHistory history={entry.history} onApply={vi.fn()} />);
+      render(<EntryHistory history={entry.history} onHistoryApply={vi.fn()} />);
 
       expect(screen.queryByText('#2')).not.toBeInTheDocument();
 
@@ -40,16 +40,16 @@ describe('entry-history', () => {
       entry.fields.set('Title', 'Second title');
       entry.pushHistory();
 
-      const onApply = vi.fn();
-      render(<EntryHistory history={entry.history} onApply={onApply} />);
+      const onHistoryApply = vi.fn();
+      render(<EntryHistory history={entry.history} onHistoryApply={onHistoryApply} />);
       await user.click(screen.getByRole('button', { name: /History \(2\)/ }));
 
       const firstRevisionRow = screen.getByText('#1').parentElement;
       if (!firstRevisionRow) throw new Error('revision row not found');
       await user.click(within(firstRevisionRow).getByRole('button', { name: 'Apply' }));
 
-      expect(onApply).toHaveBeenCalledOnce();
-      expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ title: 'First title' }));
+      expect(onHistoryApply).toHaveBeenCalledOnce();
+      expect(onHistoryApply).toHaveBeenCalledWith(expect.objectContaining({ title: 'First title' }));
     });
   });
 });

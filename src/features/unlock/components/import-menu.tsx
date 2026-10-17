@@ -10,10 +10,10 @@ import { ImportGoogleDriveDialog } from './import-google-drive-dialog';
 import { ImportLocalDialog } from './import-local-dialog';
 
 type ImportMenuProps = {
-  onRecordImported: () => void;
+  onRecordImport: () => void;
 };
 
-export const ImportMenu = ({ onRecordImported }: ImportMenuProps) => {
+export const ImportMenu = ({ onRecordImport }: ImportMenuProps) => {
   const [isImportLocalOpen, setIsImportLocalOpen] = useState(false);
   const [isImportGoogleDriveOpen, setIsImportGoogleDriveOpen] = useState(false);
 
@@ -31,16 +31,12 @@ export const ImportMenu = ({ onRecordImported }: ImportMenuProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ImportLocalDialog
-        open={isImportLocalOpen}
-        onOpenChange={setIsImportLocalOpen}
-        onRecordImported={onRecordImported}
-      />
+      <ImportLocalDialog open={isImportLocalOpen} onOpenChange={setIsImportLocalOpen} onRecordImport={onRecordImport} />
 
       <ImportGoogleDriveDialog
         open={isImportGoogleDriveOpen}
         onOpenChange={setIsImportGoogleDriveOpen}
-        onRecordImported={onRecordImported}
+        onRecordImport={onRecordImport}
       />
     </>
   );

@@ -10,10 +10,10 @@ import { CreateGoogleDriveDialog } from './create-google-drive-dialog';
 import { CreateLocalDialog } from './create-local-dialog';
 
 type CreateMenuProps = {
-  onRecordCreated: () => void;
+  onRecordCreate: () => void;
 };
 
-export const CreateMenu = ({ onRecordCreated }: CreateMenuProps) => {
+export const CreateMenu = ({ onRecordCreate }: CreateMenuProps) => {
   const [isCreateLocalOpen, setIsCreateLocalOpen] = useState(false);
   const [isCreateGoogleDriveOpen, setIsCreateGoogleDriveOpen] = useState(false);
 
@@ -31,15 +31,11 @@ export const CreateMenu = ({ onRecordCreated }: CreateMenuProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CreateLocalDialog
-        onOpenChange={setIsCreateLocalOpen}
-        onRecordCreated={onRecordCreated}
-        open={isCreateLocalOpen}
-      />
+      <CreateLocalDialog onOpenChange={setIsCreateLocalOpen} onRecordCreate={onRecordCreate} open={isCreateLocalOpen} />
 
       <CreateGoogleDriveDialog
         onOpenChange={setIsCreateGoogleDriveOpen}
-        onRecordCreated={onRecordCreated}
+        onRecordCreate={onRecordCreate}
         open={isCreateGoogleDriveOpen}
       />
     </>

@@ -6,13 +6,13 @@ import { UnsavedChangesDialog } from '@/features/workspace/components/unsaved-ch
 describe('unsaved-changes-dialog', () => {
   describe('UnsavedChangesDialog', () => {
     it('renders nothing when closed', () => {
-      render(<UnsavedChangesDialog open={false} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
+      render(<UnsavedChangesDialog open={false} onOpenChange={vi.fn()} onChangesDiscard={vi.fn()} />);
 
       expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
     });
 
     it('shows the discard prompt when open', () => {
-      render(<UnsavedChangesDialog open onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
+      render(<UnsavedChangesDialog open onOpenChange={vi.fn()} onChangesDiscard={vi.fn()} />);
 
       expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
       expect(screen.getByText('Your changes have not been saved and will be lost.')).toBeInTheDocument();
@@ -22,20 +22,20 @@ describe('unsaved-changes-dialog', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
 
-      render(<UnsavedChangesDialog open onOpenChange={onOpenChange} onConfirm={vi.fn()} />);
+      render(<UnsavedChangesDialog open onOpenChange={onOpenChange} onChangesDiscard={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
       expect(onOpenChange).toHaveBeenCalledWith(false);
     });
 
-    it('calls onConfirm when Discard is clicked', async () => {
+    it('calls onChangesDiscard when Discard is clicked', async () => {
       const user = userEvent.setup();
-      const onConfirm = vi.fn();
+      const onChangesDiscard = vi.fn();
 
-      render(<UnsavedChangesDialog open onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+      render(<UnsavedChangesDialog open onOpenChange={vi.fn()} onChangesDiscard={onChangesDiscard} />);
       await user.click(screen.getByRole('button', { name: 'Discard' }));
 
-      expect(onConfirm).toHaveBeenCalledOnce();
+      expect(onChangesDiscard).toHaveBeenCalledOnce();
     });
   });
 });

@@ -8,7 +8,7 @@ type WorkspaceMobileMenuProps = {
   onOpenChange: (open: boolean) => void;
   database: kdbxweb.Kdbx;
   selectFilter: SelectFilter;
-  onSelectFilter: (selectFilter: SelectFilter) => void;
+  onSelectFilterChange: (selectFilter: SelectFilter) => void;
 };
 
 export const WorkspaceMobileMenu = ({
@@ -16,7 +16,7 @@ export const WorkspaceMobileMenu = ({
   onOpenChange,
   database,
   selectFilter,
-  onSelectFilter,
+  onSelectFilterChange,
 }: WorkspaceMobileMenuProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,7 +32,7 @@ export const WorkspaceMobileMenu = ({
             className="min-h-0 w-full flex-1 border-r-0"
             database={database}
             selectFilter={selectFilter}
-            onSelectFilter={onSelectFilter}
+            onSelectFilterChange={onSelectFilterChange}
           />
         </div>
       </DialogContent>

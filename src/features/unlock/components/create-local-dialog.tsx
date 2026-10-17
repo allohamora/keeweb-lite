@@ -22,7 +22,7 @@ import { getErrorMessage } from '@/utils/error';
 type CreateLocalDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRecordCreated: () => void;
+  onRecordCreate: () => void;
 };
 
 const createLocalDialogSchema = z
@@ -39,7 +39,7 @@ const createLocalDialogSchema = z
 
 type CreateLocalDialogFormValues = z.infer<typeof createLocalDialogSchema>;
 
-export const CreateLocalDialog = ({ open, onOpenChange, onRecordCreated }: CreateLocalDialogProps) => {
+export const CreateLocalDialog = ({ open, onOpenChange, onRecordCreate }: CreateLocalDialogProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -58,7 +58,7 @@ export const CreateLocalDialog = ({ open, onOpenChange, onRecordCreated }: Creat
         downloadBytes({ bytes: keyFileBytes, fileName: keyFileName });
       }
 
-      onRecordCreated();
+      onRecordCreate();
       onOpenChange(false);
 
       toast.success('Record created.');

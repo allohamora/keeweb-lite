@@ -23,7 +23,7 @@ import { GoogleDriveFilePicker } from './google-drive-file-picker';
 type ImportGoogleDriveDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRecordImported: () => void;
+  onRecordImport: () => void;
 };
 
 const importGoogleDriveDialogSchema = z.object({
@@ -35,7 +35,7 @@ const importGoogleDriveDialogSchema = z.object({
 
 type ImportGoogleDriveDialogFormValues = z.infer<typeof importGoogleDriveDialogSchema>;
 
-export const ImportGoogleDriveDialog = ({ open, onOpenChange, onRecordImported }: ImportGoogleDriveDialogProps) => {
+export const ImportGoogleDriveDialog = ({ open, onOpenChange, onRecordImport }: ImportGoogleDriveDialogProps) => {
   const {
     control,
     formState: { isSubmitting },
@@ -49,7 +49,7 @@ export const ImportGoogleDriveDialog = ({ open, onOpenChange, onRecordImported }
     try {
       await importGoogleDriveRecord({ fileId: driveFile.id, fileName: driveFile.name, keyFile });
 
-      onRecordImported();
+      onRecordImport();
       onOpenChange(false);
 
       toast.success('Record imported.');

@@ -34,8 +34,8 @@ type EntryListProps = {
   database: kdbxweb.Kdbx;
   selectFilter: SelectFilter;
   selectedEntryUuid: kdbxweb.KdbxUuid | null;
-  onSelectEntry: (uuid: kdbxweb.KdbxUuid) => void;
-  onCreateEntry: () => void;
+  onEntrySelect: (uuid: kdbxweb.KdbxUuid) => void;
+  onEntryCreate: () => void;
   showMenuButton: boolean;
   onMenuOpen: () => void;
 };
@@ -45,8 +45,8 @@ export const EntryList = ({
   database,
   selectFilter,
   selectedEntryUuid,
-  onSelectEntry,
-  onCreateEntry,
+  onEntrySelect,
+  onEntryCreate,
   showMenuButton = false,
   onMenuOpen,
 }: EntryListProps) => {
@@ -125,7 +125,7 @@ export const EntryList = ({
           aria-label="Create entry"
           className="size-7 shrink-0 rounded-sm"
           disabled={isMutating}
-          onClick={onCreateEntry}
+          onClick={onEntryCreate}
           size="icon"
           type="button"
           variant="outline"
@@ -158,7 +158,7 @@ export const EntryList = ({
                     : 'text-foreground hover:bg-muted hover:text-foreground',
                 )}
                 key={entry.uuid.toString()}
-                onClick={() => onSelectEntry(entry.uuid)}
+                onClick={() => onEntrySelect(entry.uuid)}
                 type="button"
               >
                 <span className="flex min-w-0 items-center gap-2">

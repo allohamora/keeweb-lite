@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 type UnsavedChangesDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onChangesDiscard: () => void;
 };
 
-export const UnsavedChangesDialog = ({ open, onOpenChange, onConfirm }: UnsavedChangesDialogProps) => (
+export const UnsavedChangesDialog = ({ open, onOpenChange, onChangesDiscard }: UnsavedChangesDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent showCloseButton={false} className="sm:max-w-xs">
       <DialogHeader className="grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center">
@@ -29,7 +29,7 @@ export const UnsavedChangesDialog = ({ open, onOpenChange, onConfirm }: UnsavedC
           </Button>
         </DialogClose>
         <DialogClose asChild>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
+          <Button type="button" variant="destructive" onClick={onChangesDiscard}>
             Discard
           </Button>
         </DialogClose>

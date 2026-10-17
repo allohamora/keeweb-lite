@@ -27,7 +27,7 @@ type UnlockFormProps = {
   recordsReloadToken: number;
   runUnlockAction: (fn: () => Promise<void>) => Promise<void>;
   setSession: (session: UnlockSession) => void;
-  onRecordRemoved: () => void;
+  onRecordRemove: () => void;
 };
 
 export const UnlockForm = ({
@@ -35,7 +35,7 @@ export const UnlockForm = ({
   recordsReloadToken,
   runUnlockAction,
   setSession,
-  onRecordRemoved,
+  onRecordRemove,
 }: UnlockFormProps) => {
   const {
     control,
@@ -86,7 +86,7 @@ export const UnlockForm = ({
   });
 
   const handleRemove = () => {
-    onRecordRemoved();
+    onRecordRemove();
     setShowPassword(false);
     reset();
   };
@@ -202,7 +202,7 @@ export const UnlockForm = ({
         <RecordRemove
           recordId={selectedRecordId}
           disabled={!selectedRecordId || isSubmitting || isUnlocking}
-          onRemove={handleRemove}
+          onRecordRemove={handleRemove}
         />
         <Button
           className="ml-auto h-8 px-4 text-xs"
