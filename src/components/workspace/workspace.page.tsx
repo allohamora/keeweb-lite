@@ -18,6 +18,7 @@ import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 import { getDatabaseProvider } from '@/providers/registry';
 import { ProviderError } from '@/providers/database-provider';
 import { replaceDatabaseCredentials } from '@/services/record.service';
+import { createSessionLifecycle } from '@/services/session-lifecycle.service';
 import { WebDavCredentialsModal } from '@/components/workspace/webdav-credentials.modal';
 
 type WorkspacePageProps = {
@@ -36,6 +37,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbx.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
+  const credentialReplacementController = useRef<AbortController | null>(null);
   const isMobile = useMedia('(max-width: 768px)');
   const { guardNavigation } = useSafeNet();
   const { setMutating } = useEntryMutation();
@@ -105,27 +107,90 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   const handleLock = () => guardNavigation(onLock);
 
   const handleReplaceCredentials = async (values: { url: string; username: string; password: string }) => {
-    if (record.type !== 'webdav') return;
-
-    const result = await replaceDatabaseCredentials({
-      record,
-      database,
-      setupInput: values,
-    });
     const currentSession = sessionRef.current;
-    if (!currentSession || currentSession.record.id !== record.id) {
-      result.providerSession.dispose();
-      return;
+    if (!currentSession || currentSession.record.type !== 'webdav') return;
+
+    credentialReplacementController.current?.abort();
+    const controller = new AbortController();
+    credentialReplacementController.current = controller;
+    const capturedSessionId = currentSession.sessionId ?? currentSession.lifecycle?.sessionId;
+    let connectionChangeStarted = false;
+
+    try {
+      const result = await replaceDatabaseCredentials({
+        record: currentSession.record,
+        database: currentSession.database,
+        setupInput: values,
+        lifecycle: currentSession.lifecycle,
+        signal: controller.signal,
+        isSessionCurrent: () => {
+          const latestSession = sessionRef.current;
+          return Boolean(
+            latestSession &&
+            latestSession.record.id === currentSession.record.id &&
+            (latestSession.sessionId ?? latestSession.lifecycle?.sessionId) === capturedSessionId,
+          );
+        },
+        onWillReplaceConnection: () => {
+          connectionChangeStarted = true;
+        },
+      });
+      const latestSession = sessionRef.current;
+      if (
+        !latestSession ||
+        latestSession.record.id !== currentSession.record.id ||
+        (latestSession.sessionId ?? latestSession.lifecycle?.sessionId) !== capturedSessionId
+      ) {
+        result.lifecycle.dispose();
+        return;
+      }
+
+      const nextSession = {
+        ...latestSession,
+        record: result.record,
+        providerSession: result.providerSession,
+        providerSessionError: undefined,
+        lifecycle: result.lifecycle,
+        sessionId: result.sessionId,
+      };
+      sessionRef.current = nextSession;
+      setSession(nextSession);
+      toast.success('WebDAV connection saved. Synchronization resumed.');
+    } catch (error) {
+      const latestSession = sessionRef.current;
+      if (
+        connectionChangeStarted &&
+        latestSession &&
+        latestSession.record.id === currentSession.record.id &&
+        (latestSession.sessionId ?? latestSession.lifecycle?.sessionId) === capturedSessionId &&
+        latestSession.lifecycle?.signal.aborted &&
+        !latestSession.lifecycle.isDisposed
+      ) {
+        if (latestSession.providerSession) latestSession.lifecycle.detachProviderSession(latestSession.providerSession);
+        const restoredLifecycle = createSessionLifecycle();
+        if (latestSession.providerSession) restoredLifecycle.ownProviderSession(latestSession.providerSession);
+        const restoredSession = {
+          ...latestSession,
+          lifecycle: restoredLifecycle,
+          sessionId: restoredLifecycle.sessionId,
+        };
+        sessionRef.current = restoredSession;
+        setSession(restoredSession);
+      }
+      throw error;
+    } finally {
+      if (credentialReplacementController.current === controller) {
+        credentialReplacementController.current = null;
+      }
     }
-    const nextSession = {
-      ...currentSession,
-      record: result.record,
-      providerSession: result.providerSession,
-      providerSessionError: undefined,
-    };
-    sessionRef.current = nextSession;
-    setSession(nextSession);
-    toast.success('WebDAV connection saved. Synchronization resumed.');
+  };
+
+  const handleCredentialsModalOpenChange = (open: boolean) => {
+    if (!open) {
+      credentialReplacementController.current?.abort();
+      credentialReplacementController.current = null;
+    }
+    setIsCredentialsModalOpen(open);
   };
 
   const createNewEntry = async () => {
@@ -165,6 +230,12 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
         ? 'saved'
         : 'synced';
   const providerLabel = record.type === 'demo' ? 'Demo' : (getDatabaseProvider(record.type)?.label ?? record.type);
+  const recoveryAction = canReplaceCredentials
+    ? {
+        label: canUpdateWebDavUrl ? 'Update WebDAV connection' : 'Replace credentials',
+        onAction: () => setIsCredentialsModalOpen(true),
+      }
+    : undefined;
   const isDesktopMode = !isMobile;
   const showListPane = isDesktopMode || !selectedEntryUuid;
   const showDetailsPane = isDesktopMode || Boolean(selectedEntryUuid);
@@ -174,16 +245,15 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
       <WorkspaceControls
         database={database}
         recordName={record.kdbx.name}
-        recordType={providerLabel}
+        providerLabel={providerLabel}
+        canDownload={record.type !== 'demo'}
         canSync={canSync}
         hasPendingChanges={hasPendingChanges}
         syncStatus={visibleSyncStatus}
         syncErrorMessage={syncErrorMessage}
-        canReplaceCredentials={canReplaceCredentials}
-        credentialActionLabel={canUpdateWebDavUrl ? 'Update WebDAV connection' : 'Replace credentials'}
+        recoveryAction={recoveryAction}
         onLock={handleLock}
         onSyncRetry={retrySync}
-        onReplaceCredentials={() => setIsCredentialsModalOpen(true)}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {isDesktopMode && (
@@ -231,7 +301,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
         open={isCredentialsModalOpen}
         currentUrl={record.type === 'webdav' ? record.source.url : ''}
         allowUrlChange={canUpdateWebDavUrl}
-        onOpenChange={setIsCredentialsModalOpen}
+        onOpenChange={handleCredentialsModalOpenChange}
         onSubmit={handleReplaceCredentials}
       />
     </div>

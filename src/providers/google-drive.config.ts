@@ -5,6 +5,10 @@ export const hasGoogleDriveConfiguration = (clientId?: string, appId?: string) =
 
 export const googleDriveEnabled = hasGoogleDriveConfiguration(PUBLIC_GOOGLE_CLIENT_ID, PUBLIC_GOOGLE_APP_ID);
 
+if (!googleDriveEnabled) {
+  console.info('Google Drive actions are disabled until both public Google Drive identifiers are configured.');
+}
+
 export const requireGoogleDriveConfiguration = () => {
   const clientId = PUBLIC_GOOGLE_CLIENT_ID;
   const appId = PUBLIC_GOOGLE_APP_ID;

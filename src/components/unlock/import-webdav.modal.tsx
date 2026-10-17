@@ -15,6 +15,8 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { importWebDavRecord } from '@/services/record.service';
 import { getErrorMessage } from '@/utils/error.utils';
+import { webdavConnectionSchema } from '@/providers/webdav.provider';
+import { useSetupOperation } from '@/hooks/use-setup-operation.hook';
 
 export type ImportWebDavModalProps = {
   open: boolean;
@@ -22,10 +24,7 @@ export type ImportWebDavModalProps = {
   onRecordImported: () => void;
 };
 
-const schema = z.object({
-  url: z.string().trim().min(1, 'Enter the full HTTPS WebDAV file URL.'),
-  username: z.string().trim().min(1, 'Enter a WebDAV username.'),
-  password: z.string().min(1, 'Enter a WebDAV password or app password.'),
+const schema = webdavConnectionSchema.extend({
   databasePassword: z.string().min(1, 'Enter the database password.'),
   keyFile: z.instanceof(FileList).optional(),
 });
@@ -33,6 +32,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export const ImportWebDavModal = ({ open, onOpenChange, onRecordImported }: ImportWebDavModalProps) => {
+  const { abort, begin, finish } = useSetupOperation(open);
   const {
     control,
     formState: { isSubmitting },
@@ -43,19 +43,27 @@ export const ImportWebDavModal = ({ open, onOpenChange, onRecordImported }: Impo
     resolver: zodResolver(schema),
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) abort();
+    onOpenChange(nextOpen);
+  };
+
   const submit = handleSubmit(async ({ url, username, password, databasePassword, keyFile }) => {
+    const controller = begin();
     try {
-      await importWebDavRecord({ url, username, password, databasePassword, keyFile });
+      await importWebDavRecord({ url, username, password, databasePassword, keyFile, signal: controller.signal });
       onRecordImported();
-      onOpenChange(false);
+      handleOpenChange(false);
       toast.success('WebDAV database imported.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'WebDAV import failed.' }));
+      if (!controller.signal.aborted) toast.error(getErrorMessage({ error, fallback: 'WebDAV import failed.' }));
+    } finally {
+      finish(controller);
     }
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
         onAnimationEnd={(event) => {

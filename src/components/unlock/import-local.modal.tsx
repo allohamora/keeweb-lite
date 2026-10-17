@@ -15,6 +15,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { getErrorMessage } from '@/utils/error.utils';
 import { importLocalRecord } from '@/services/record.service';
+import { useSetupOperation } from '@/hooks/use-setup-operation.hook';
 
 export type ImportLocalModalProps = {
   open: boolean;
@@ -37,6 +38,7 @@ const importLocalModalSchema = z.object({
 type ImportLocalModalFormValues = z.infer<typeof importLocalModalSchema>;
 
 export const ImportLocalModal = ({ open, onOpenChange, onRecordImported }: ImportLocalModalProps) => {
+  const { abort, begin, finish } = useSetupOperation(open);
   const {
     control,
     formState: { isSubmitting },
@@ -47,20 +49,28 @@ export const ImportLocalModal = ({ open, onOpenChange, onRecordImported }: Impor
   });
 
   const handleImportRecordSubmit = handleSubmit(async ({ databaseFile, keyFile }) => {
+    const controller = begin();
     try {
-      await importLocalRecord({ databaseFile, keyFile });
+      await importLocalRecord({ databaseFile, keyFile, signal: controller.signal });
 
       onRecordImported();
       onOpenChange(false);
 
       toast.success('Record imported.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Record import failed.' }));
+      if (!controller.signal.aborted) toast.error(getErrorMessage({ error, fallback: 'Record import failed.' }));
+    } finally {
+      finish(controller);
     }
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) abort();
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
+    <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
         // Reset form after the close animation finishes so the stale state

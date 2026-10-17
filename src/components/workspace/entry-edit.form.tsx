@@ -1,6 +1,6 @@
 import type kdbx from '@/lib/kdbx.lib';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -28,9 +28,11 @@ import {
   getAllTags,
   getAllUsernames,
   getEntryValues,
+  findEntryByUuid,
   isEntryInRecycleBin,
   saveEntry,
 } from '@/services/workspace.service';
+import { entriesHaveSameContent } from '@/services/conflict-copy.service';
 import type { FileRecord } from '@/repositories/record.repository';
 import { EntryHistory } from '@/components/workspace/entry-history.component';
 import { EntryRemove } from '@/components/workspace/entry-remove.component';
@@ -59,11 +61,15 @@ type EntryEditFormProps = {
   entry: kdbx.KdbxEntry;
   record: FileRecord;
   onSave: (payload: { nextDatabase: kdbx.Kdbx; nextEntryUuid?: kdbx.KdbxUuid | null; nextRecord: FileRecord }) => void;
+  onDraftChange?: (isDirty: boolean, entry?: kdbx.KdbxEntry) => void;
 };
 
-export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditFormProps) => {
+export const EntryEditForm = ({ database, entry, record, onSave, onDraftChange }: EntryEditFormProps) => {
   const { setDirty, registerDiscard } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
+  const [baseline, setBaseline] = useState(() => ({ database, entry }));
+  const latestPropsRef = useRef({ database, entry });
+  const hasDeferredRemoteUpdate = useRef(false);
   const {
     control,
     handleSubmit,
@@ -79,33 +85,83 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
   useEffect(() => {
     setDirty(isDirty);
-  }, [isDirty, setDirty]);
+    onDraftChange?.(isDirty, isDirty ? entry : undefined);
+  }, [entry, isDirty, onDraftChange, setDirty]);
+
+  useEffect(() => {
+    const propsChanged = latestPropsRef.current.database !== database || latestPropsRef.current.entry !== entry;
+    latestPropsRef.current = { database, entry };
+    if (propsChanged && isDirty) {
+      hasDeferredRemoteUpdate.current = true;
+      return;
+    }
+    if (isDirty || (!propsChanged && !hasDeferredRemoteUpdate.current)) return;
+    const latestEntry = findEntryByUuid(database, entry.uuid);
+    if (!latestEntry) {
+      hasDeferredRemoteUpdate.current = false;
+      return;
+    }
+    reset(getEntryValues(latestEntry));
+    hasDeferredRemoteUpdate.current = false;
+  }, [database, entry, isDirty, reset]);
 
   useEffect(() => {
     return () => setDirty(false);
   }, [setDirty]);
 
+  const discardDraft = useCallback(() => {
+    const latestEntry = findEntryByUuid(database, entry.uuid);
+    if (latestEntry) {
+      reset(getEntryValues(latestEntry));
+      setBaseline({ database, entry: latestEntry });
+      hasDeferredRemoteUpdate.current = false;
+    } else {
+      reset(getEntryValues(baseline.entry));
+      hasDeferredRemoteUpdate.current = false;
+    }
+  }, [baseline.entry, database, entry.uuid, reset]);
+
   useEffect(() => {
-    registerDiscard(reset);
+    registerDiscard(discardDraft);
 
     return () => registerDiscard(null);
-  }, [registerDiscard, reset]);
+  }, [discardDraft, registerDiscard]);
 
-  const handleSaveSubmit = handleSubmit(async (values) => {
-    setMutating(true);
-    try {
-      const entryUuid = entry.uuid.toString();
-      const result = await saveEntry({ database, record, entryUuid, values });
+  const remoteEntry = findEntryByUuid(database, entry.uuid);
+  const baselineWasInRecycleBin = isEntryInRecycleBin(baseline.database, baseline.entry);
+  const remoteIsDeleted = !remoteEntry || (!baselineWasInRecycleBin && isEntryInRecycleBin(database, remoteEntry));
+  const remoteChanged = Boolean(remoteEntry && !entriesHaveSameContent(baseline.entry, remoteEntry));
+  const needsConflictCopy = isDirty && (remoteIsDeleted || remoteChanged);
 
-      reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
-      onSave?.(result);
-      toast.success('Entry saved.');
-    } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
-    } finally {
-      setMutating(false);
-    }
-  });
+  const handleSaveSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void handleSubmit(async (values) => {
+      setMutating(true);
+      try {
+        const entryUuid = entry.uuid.toString();
+        const result = await saveEntry({
+          database,
+          record,
+          entryUuid,
+          values,
+          ...(needsConflictCopy ? { draftBaseline: { database: baseline.database, entryUuid } } : {}),
+        });
+
+        reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
+        setBaseline({
+          database: result.nextDatabase,
+          entry: findEntryByUuid(result.nextDatabase, result.nextEntryUuid) ?? baseline.entry,
+        });
+        hasDeferredRemoteUpdate.current = false;
+        onSave?.(result);
+        toast.success(needsConflictCopy ? 'Draft saved as a conflict copy.' : 'Entry saved.');
+      } catch (error) {
+        toast.error(getErrorMessage({ error, fallback: 'Entry save failed.' }));
+      } finally {
+        setMutating(false);
+      }
+    })(event);
+  };
 
   const handleSave = (payload: {
     nextDatabase: kdbx.Kdbx;
@@ -113,6 +169,8 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
     nextRecord: FileRecord;
   }) => {
     reset(); // Reset the form state after remove/restore (isDirty, touched state, etc)
+    setBaseline({ database: payload.nextDatabase, entry: findEntryByUuid(payload.nextDatabase, entry.uuid) ?? entry });
+    hasDeferredRemoteUpdate.current = false;
     onSave?.(payload);
   };
 
@@ -168,11 +226,27 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
   return (
     <form
       className="flex min-h-0 flex-1 flex-col"
-      onSubmit={(e) => {
-        void handleSaveSubmit(e);
+      onChangeCapture={() => {
+        if (!isDirty) setBaseline({ database, entry });
       }}
+      onSubmit={handleSaveSubmit}
     >
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {needsConflictCopy && (
+          <div
+            role="status"
+            className="flex items-start justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs"
+          >
+            <p>
+              {remoteIsDeleted
+                ? 'This entry was deleted remotely. Saving keeps your draft as a conflict copy.'
+                : 'This entry changed remotely. Saving keeps your draft as a conflict copy.'}
+            </p>
+            <Button className="h-7 shrink-0 px-2 text-xs" onClick={discardDraft} type="button" variant="outline">
+              Discard draft
+            </Button>
+          </div>
+        )}
         <section className="space-y-3">
           <Controller
             control={control}
@@ -427,11 +501,15 @@ export const EntryEditForm = ({ database, entry, record, onSave }: EntryEditForm
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onRemove={handleSave} />
-            {isInTrash && <EntryRestore database={database} entry={entry} record={record} onRestore={handleSave} />}
+            {!needsConflictCopy && (
+              <EntryRemove database={database} entry={entry} record={record} onRemove={handleSave} />
+            )}
+            {!needsConflictCopy && isInTrash && (
+              <EntryRestore database={database} entry={entry} record={record} onRestore={handleSave} />
+            )}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isMutating} type="submit" variant="outline">
-            {isSubmitting ? 'Saving...' : 'Save'}
+            {isSubmitting ? 'Saving...' : needsConflictCopy ? 'Save as conflict copy' : 'Save'}
           </Button>
         </div>
 

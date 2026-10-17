@@ -13,12 +13,6 @@ import {
 } from './database-provider';
 import { encryptedBytesSchema, synchronizationSchema } from './record.schema';
 
-const setupInputSchema = z.object({
-  url: z.string().min(1),
-  username: z.string().min(1, 'Enter a WebDAV username.'),
-  password: z.string().min(1, 'Enter a WebDAV password or app password.'),
-});
-
 const canonicalFileUrl = (input: unknown) => {
   const urlText = z.string().min(1).parse(input);
   let url: URL;
@@ -33,16 +27,58 @@ const canonicalFileUrl = (input: unknown) => {
     !url.hostname ||
     url.username ||
     url.password ||
-    url.search ||
-    url.hash ||
+    urlText.includes('?') ||
+    urlText.includes('#') ||
     url.pathname === '/' ||
     url.pathname.endsWith('/')
   ) {
     throw new Error('Enter a full HTTPS WebDAV file URL without embedded credentials, query, or fragment.');
   }
 
+  if (
+    url.pathname.split('/').some((segment) => {
+      try {
+        decodeURIComponent(segment);
+        return false;
+      } catch {
+        return true;
+      }
+    })
+  ) {
+    throw new Error('The WebDAV file URL contains malformed percent-encoding in its path.');
+  }
+
   return url.href;
 };
+
+const webdavFileUrlSchema = z
+  .string()
+  .trim()
+  .min(1, 'Enter the full HTTPS WebDAV file URL.')
+  .superRefine((value, ctx) => {
+    try {
+      canonicalFileUrl(value);
+    } catch (error) {
+      ctx.addIssue({
+        code: 'custom',
+        message: error instanceof Error ? error.message : 'Enter a valid WebDAV file URL.',
+      });
+    }
+  });
+
+export const webdavConnectionSchema = z.object({
+  url: webdavFileUrlSchema,
+  username: z
+    .string()
+    .trim()
+    .min(1, 'Enter a WebDAV username.')
+    .refine((value) => !value.includes(':'), {
+      message: 'WebDAV usernames cannot contain a colon when using Basic authentication.',
+    }),
+  password: z.string().min(1, 'Enter a WebDAV password or app password.'),
+});
+
+const setupInputSchema = webdavConnectionSchema;
 
 const sourceSchema = z.object({
   url: z.url().refine((value) => {
@@ -233,8 +269,9 @@ const webdavProvider = {
     return {
       displayName,
       duplicateIdentity: setup.url,
-      import: async () => {
-        const snapshot = await readSnapshot(setup.url, basicAuthorization(setup.username, setup.password));
+      import: async (signal) => {
+        signal?.throwIfAborted();
+        const snapshot = await readSnapshot(setup.url, basicAuthorization(setup.username, setup.password), signal);
         return {
           name: displayName,
           bytes: snapshot.bytes,

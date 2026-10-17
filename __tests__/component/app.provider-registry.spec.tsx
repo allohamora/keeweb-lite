@@ -10,6 +10,21 @@ import { RECORDS_STORAGE_KEY } from '@/repositories/record.repository';
 import { mockServer } from '../setup-component-context';
 import { render } from '../utils/render.utils';
 
+const webDavCorsPreflight = (url: string) =>
+  http.options(
+    url,
+    () =>
+      new HttpResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+          'Access-Control-Allow-Headers': 'authorization, content-type, if-match, if-none-match',
+          'Access-Control-Expose-Headers': 'ETag',
+        },
+      }),
+  );
+
 describe('App database providers', () => {
   it('round-trips KDBX files in the component environment', async () => {
     const password = 'database-password';
@@ -195,14 +210,18 @@ describe('App database providers', () => {
     expect(JSON.stringify(recordsAfterForgetting)).not.toContain(endpoint);
   });
 
-  it('creates a WebDAV database without replacing an existing destination', async () => {
+  it('creates a WebDAV database with conditional creation', async () => {
     const endpoint = 'https://dav.example.test/files/created-vault.kdbx';
     let createHeaders: Headers | undefined;
+    let createdBytes = new Uint8Array();
     mockServer.addHandlers(
-      http.put(endpoint, ({ request }) => {
+      webDavCorsPreflight(endpoint),
+      http.put(endpoint, async ({ request }) => {
         createHeaders = request.headers;
+        createdBytes = new Uint8Array(await request.arrayBuffer());
         return new HttpResponse(null, { status: 201, headers: { ETag: '"created-revision-1"' } });
       }),
+      http.get(endpoint, () => new HttpResponse(createdBytes.slice(), { headers: { ETag: '"created-revision-1"' } })),
     );
 
     const user = userEvent.setup();
@@ -239,6 +258,57 @@ describe('App database providers', () => {
     expect(new TextDecoder().decode(encryptedCredentialRecord)).not.toContain('create-app-password');
   });
 
+  it('keeps a local recovery record when conditional creation finds an existing destination', async () => {
+    const endpoint = 'https://dav.example.test/files/existing-vault.kdbx';
+    let createHeaders: Headers | undefined;
+    let createRequests = 0;
+    mockServer.addHandlers(
+      webDavCorsPreflight(endpoint),
+      http.put(endpoint, ({ request }) => {
+        createHeaders = request.headers;
+        createRequests++;
+        return new HttpResponse(null, { status: 412 });
+      }),
+      http.get(endpoint, () => new HttpResponse(new Uint8Array([1, 2, 3]), { headers: { ETag: '"existing"' } })),
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: 'Create' }));
+    await user.click(screen.getByRole('menuitem', { name: 'WebDAV' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Create WebDAV Database' });
+    await user.type(screen.getByLabelText('Database name'), 'Existing vault');
+    await user.type(screen.getByLabelText('HTTPS destination file URL'), endpoint);
+    await user.type(screen.getByLabelText('WebDAV username'), 'bob');
+    await user.type(screen.getByLabelText('WebDAV password or app password'), 'create-app-password');
+    await user.type(screen.getByLabelText('Database master password'), 'create-database-password');
+    await user.type(screen.getByLabelText('Confirm master password'), 'create-database-password');
+    await user.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
+    await screen.findByRole('option', { name: 'Existing vault.kdbx (WebDAV)' });
+    expect(createHeaders?.get('If-None-Match')).toBe('*');
+    expect(createHeaders?.get('If-Match')).toBeNull();
+    expect(createRequests).toBe(1);
+    const storedRecordState = (await get<unknown>(RECORDS_STORAGE_KEY)) as {
+      records: {
+        kdbx: { encryptedBytes: Uint8Array };
+        source?: { url?: string };
+        synchronization?: { createPending?: boolean; creationRecovery?: { attemptedBytes: Uint8Array } };
+        type: string;
+      }[];
+    };
+    const recoveryRecord = storedRecordState.records.find(
+      ({ source, type }) => type === 'webdav' && source?.url === endpoint,
+    );
+    expect(recoveryRecord?.synchronization?.createPending).toBe(true);
+    expect(recoveryRecord?.synchronization?.creationRecovery?.attemptedBytes).toEqual(
+      recoveryRecord?.kdbx.encryptedBytes,
+    );
+    expect(recoveryRecord?.kdbx.encryptedBytes).toBeInstanceOf(Uint8Array);
+  });
+
   it('updates a moved WebDAV URL after validating the replacement database', async () => {
     const oldEndpoint = 'https://dav.example.test/files/moved-vault.kdbx';
     const newEndpoint = 'https://dav.example.test/archive/moved-vault.kdbx';
@@ -250,6 +320,8 @@ describe('App database providers', () => {
     let oldEndpointReads = 0;
     const newEndpointHeaders: string[] = [];
     mockServer.addHandlers(
+      webDavCorsPreflight(oldEndpoint),
+      webDavCorsPreflight(newEndpoint),
       http.get(oldEndpoint, () => {
         oldEndpointReads++;
         return oldEndpointReads === 1

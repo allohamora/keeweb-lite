@@ -10,9 +10,15 @@ export class SessionLifecycle {
   readonly sessionId = crypto.randomUUID();
   private readonly controller = new AbortController();
   private readonly cleanup = new Set<() => void>();
+  private readonly providerSessionCleanup = new Map<ProviderSession, { dispose: () => void; release: () => void }>();
+  private disposed = false;
 
   get signal() {
     return this.controller.signal;
+  }
+
+  get isDisposed() {
+    return this.disposed;
   }
 
   capture(recordId: string, generation: number): SessionCapture {
@@ -27,18 +33,37 @@ export class SessionLifecycle {
   }
 
   ownProviderSession(session: ProviderSession) {
+    const existing = this.providerSessionCleanup.get(session);
+    if (existing) return existing.dispose;
+
     let owned = true;
-    const dispose = () => {
+    let dispose = () => {};
+    const release = () => {
       if (!owned) return;
       owned = false;
-      session.dispose();
       this.cleanup.delete(dispose);
+      this.providerSessionCleanup.delete(session);
+    };
+    dispose = () => {
+      if (!owned) return;
+      release();
+      session.dispose();
     };
 
-    if (this.signal.aborted) dispose();
-    else this.cleanup.add(dispose);
+    if (this.signal.aborted) {
+      owned = false;
+      session.dispose();
+    } else {
+      this.cleanup.add(dispose);
+      this.providerSessionCleanup.set(session, { dispose, release });
+    }
 
     return dispose;
+  }
+
+  detachProviderSession(session: ProviderSession) {
+    this.providerSessionCleanup.get(session)?.release();
+    return session;
   }
 
   addCleanup(cleanup: () => void) {
@@ -47,10 +72,15 @@ export class SessionLifecycle {
   }
 
   dispose() {
-    if (this.signal.aborted) return;
-    this.controller.abort();
+    if (this.disposed) return;
+    this.disposed = true;
+    this.abortOperations();
     for (const cleanup of [...this.cleanup]) cleanup();
     this.cleanup.clear();
+  }
+
+  abortOperations() {
+    if (!this.signal.aborted) this.controller.abort();
   }
 }
 

@@ -1229,6 +1229,73 @@ describe('workspace.service', () => {
       expect(nextRecord.id).toBe('update-record');
       expect(expectPersisted(nextRecord).kdbx.encryptedBytes).not.toEqual(initialBytes);
     });
+
+    it('keeps a draft as a conflict copy when the selected entry changes remotely', async () => {
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
+      const remoteDatabase = await cloneDatabase(database);
+      const remoteEntry = findEntryByUuid(remoteDatabase, entry.uuid);
+      if (!remoteEntry) throw new Error('Expected the remotely changed entry.');
+      remoteEntry.fields.set('UserName', kdbx.ProtectedValue.fromString('remote username'));
+      const { record: remoteRecord } = await saveDatabase({ database: remoteDatabase, record });
+
+      const { nextDatabase, nextEntryUuid } = await saveEntry({
+        database: remoteDatabase,
+        record: remoteRecord,
+        entryUuid: entry.uuid.toString(),
+        values: {
+          title: 'Local draft title',
+          username: 'local draft username',
+          password: 'local draft password',
+          url: 'https://local.example.com',
+          notes: 'local draft notes',
+          tags: ['local'],
+          expiryTime: '',
+          icon: 0,
+          color: null,
+        },
+        draftBaseline: { database, entryUuid: entry.uuid.toString() },
+      });
+
+      const original = findEntryByUuid(nextDatabase, entry.uuid);
+      const copy = findEntryByUuid(nextDatabase, nextEntryUuid);
+      expect(getFieldText(original?.fields.get('UserName'))).toBe('remote username');
+      expect(getFieldText(copy?.fields.get('Title'))).toBe('Local draft title (Conflict copy)');
+      expect(getFieldText(copy?.fields.get('UserName'))).toBe('local draft username');
+    });
+
+    it('keeps a dirty draft as a new conflict copy when the selected entry was deleted remotely', async () => {
+      const { database, entry, record } = await createPersistedDatabaseWithEntry();
+      const remoteDatabase = await cloneDatabase(database);
+      const remoteEntry = findEntryByUuid(remoteDatabase, entry.uuid);
+      if (!remoteEntry) throw new Error('Expected the remotely deleted entry.');
+      remoteDatabase.remove(remoteEntry);
+      const { record: remoteRecord } = await saveDatabase({ database: remoteDatabase, record });
+
+      const { nextDatabase, nextEntryUuid } = await saveEntry({
+        database: remoteDatabase,
+        record: remoteRecord,
+        entryUuid: entry.uuid.toString(),
+        values: {
+          title: 'Deleted draft title',
+          username: 'local draft username',
+          password: 'local draft password',
+          url: 'https://local.example.com',
+          notes: 'local draft notes',
+          tags: ['local'],
+          expiryTime: '',
+          icon: 0,
+          color: null,
+        },
+        draftBaseline: { database, entryUuid: entry.uuid.toString() },
+      });
+
+      const copy = findEntryByUuid(nextDatabase, nextEntryUuid);
+      const original = findEntryByUuid(nextDatabase, entry.uuid);
+      expect(original).not.toBeNull();
+      expect(original && isEntryInRecycleBin(nextDatabase, original)).toBe(true);
+      expect(getFieldText(copy?.fields.get('Title'))).toBe('Deleted draft title (Conflict copy)');
+      expect(getFieldText(copy?.fields.get('UserName'))).toBe('local draft username');
+    });
   });
 
   describe('createEntry', () => {
@@ -1835,6 +1902,20 @@ describe('workspace.service', () => {
       expect(updated?.kdbx.name).toBe('persist.kdbx');
     });
 
+    it('increments the local generation on save', async () => {
+      const database = await createUnlockedDatabase();
+      const initialBytes = new Uint8Array(await database.save());
+      const persistRecord = await createRecord({
+        id: 'local-generation-record',
+        type: 'local',
+        kdbx: { encryptedBytes: initialBytes, name: 'persist.kdbx' },
+      });
+      database.createEntry(database.getDefaultGroup()).fields.set('Title', 'Stale save');
+
+      const { record: savedRecord } = await saveDatabase({ database, record: persistRecord });
+      expect(savedRecord.type === 'local' && savedRecord.generation).toBe(1);
+    });
+
     it('marks a saved remote edit pending without advancing its common version', async () => {
       const database = await createUnlockedDatabase();
       const commonVersionBytes = new Uint8Array(await database.save());
@@ -1849,6 +1930,10 @@ describe('workspace.service', () => {
       database.createEntry(database.getDefaultGroup()).fields.set('Title', 'Pending Edit');
 
       await saveDatabase({ database, record: persistRecord });
+
+      await expect(saveDatabase({ database, record: persistRecord })).rejects.toThrow(
+        'The database changed while it was being saved. Please retry.',
+      );
 
       const updated = await getRecord('drive-persist-record');
       const synchronization = (updated as typeof persistRecord).synchronization;

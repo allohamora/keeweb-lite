@@ -19,8 +19,8 @@ import {
   unlockKdbx,
 } from '@/services/record.service';
 import { unlockForSession } from '@/services/session.service';
-import { LocalRecoveryRecordSavedError } from '@/services/record.service';
 import { readCredentialContainer } from '@/services/kdbx.service';
+import { createSessionLifecycle } from '@/services/session-lifecycle.service';
 
 type DatabaseRecordInput = {
   name: string;
@@ -774,8 +774,7 @@ describe('record.service', () => {
 
       const records = await getRecords();
       expect(records[0].key).toBeUndefined();
-      expect(result.keyFileBytes).toBeUndefined();
-      expect(result.keyFileName).toBeUndefined();
+      expect(result.generatedKeyFile).toBeUndefined();
     });
 
     it('stores a generated key and returns keyFileBytes when useKeyFile is true', async () => {
@@ -789,8 +788,8 @@ describe('record.service', () => {
       expect(records[0].key).toBeDefined();
       expect(records[0].key?.name).toBe('My Vault.keyx');
       expect(typeof records[0].key?.hash).toBe('string');
-      expect(result.keyFileBytes).toBeInstanceOf(Uint8Array);
-      expect(result.keyFileName).toBe('My Vault.keyx');
+      expect(result.generatedKeyFile?.bytes).toBeInstanceOf(Uint8Array);
+      expect(result.generatedKeyFile?.name).toBe('My Vault.keyx');
     });
 
     it('creates a database that unlocks with the given password and starts with an empty default group', async () => {
@@ -807,12 +806,12 @@ describe('record.service', () => {
     });
 
     it('creates a database that unlocks with the given password and generated key file', async () => {
-      const { keyFileBytes } = await createLocalRecord({
+      const { generatedKeyFile } = await createLocalRecord({
         databaseName: 'My Vault',
         password: 'test-password-123',
         useKeyFile: true,
       });
-      expect(keyFileBytes).toBeDefined();
+      expect(generatedKeyFile?.bytes).toBeDefined();
 
       const [record] = await getRecords();
       const unlockedDatabase = await unlockKdbx({
@@ -1010,8 +1009,7 @@ describe('record.service', () => {
 
       const records = await getRecords();
       expect(records[0].key).toBeUndefined();
-      expect(result.keyFileBytes).toBeUndefined();
-      expect(result.keyFileName).toBeUndefined();
+      expect(result.generatedKeyFile).toBeUndefined();
     });
 
     it('stores a generated key and returns keyFileBytes when useKeyFile is true', async () => {
@@ -1027,8 +1025,8 @@ describe('record.service', () => {
       expect(records[0].key).toBeDefined();
       expect(records[0].key?.name).toBe('My Vault.keyx');
       expect(typeof records[0].key?.hash).toBe('string');
-      expect(result.keyFileBytes).toBeInstanceOf(Uint8Array);
-      expect(result.keyFileName).toBe('My Vault.keyx');
+      expect(result.generatedKeyFile?.bytes).toBeInstanceOf(Uint8Array);
+      expect(result.generatedKeyFile?.name).toBe('My Vault.keyx');
     });
 
     it('creates a database that unlocks with the given password and starts with an empty default group', async () => {
@@ -1049,12 +1047,12 @@ describe('record.service', () => {
     it('creates a database that unlocks with the given password and generated key file', async () => {
       mockServer.addHandlers(googleDriveApi.createFile.ok({ file: { id: 'drive-file-id-xyz' } }));
 
-      const { keyFileBytes } = await createGoogleDriveRecord({
+      const { generatedKeyFile } = await createGoogleDriveRecord({
         databaseName: 'My Vault',
         password: 'test-password-123',
         useKeyFile: true,
       });
-      expect(keyFileBytes).toBeDefined();
+      expect(generatedKeyFile?.bytes).toBeDefined();
 
       const [record] = await getRecords();
       const unlockedDatabase = await unlockKdbx({
@@ -1248,13 +1246,90 @@ describe('record.service', () => {
       await expect(getRecords()).resolves.toEqual([]);
     });
 
+    it('cancels a WebDAV import during its download before saving a record or credentials', async () => {
+      const controller = new AbortController();
+      let requestStarted = () => {};
+      const started = new Promise<void>((resolve) => {
+        requestStarted = resolve;
+      });
+      mockServer.addHandlers(
+        http.get(endpoint, ({ request }) => {
+          requestStarted();
+          return new Promise((resolve) => {
+            request.signal.addEventListener('abort', () => resolve(new HttpResponse(null, { status: 499 })), {
+              once: true,
+            });
+          });
+        }),
+      );
+
+      const importing = importWebDavRecord({
+        url: endpoint,
+        username: 'alice',
+        password: 'app-password',
+        databasePassword: 'database-password',
+        signal: controller.signal,
+      });
+      await started;
+      controller.abort();
+
+      await expect(importing).rejects.toMatchObject({ name: 'AbortError' });
+      await expect(getRecords()).resolves.toEqual([]);
+    });
+
+    it('keeps WebDAV creation recovery and the generated key when its upload is canceled', async () => {
+      const createEndpoint = 'https://dav.example.test/files/cancelled-create.kdbx';
+      const controller = new AbortController();
+      let requestStarted = () => {};
+      const started = new Promise<void>((resolve) => {
+        requestStarted = resolve;
+      });
+      mockServer.addHandlers(
+        http.put(createEndpoint, ({ request }) => {
+          requestStarted();
+          return new Promise((resolve) => {
+            request.signal.addEventListener('abort', () => resolve(new HttpResponse(null, { status: 499 })), {
+              once: true,
+            });
+          });
+        }),
+      );
+
+      const creating = createDatabaseRecord({
+        providerId: 'webdav',
+        databaseName: 'Canceled Vault',
+        password: 'database-password',
+        useKeyFile: true,
+        setupInput: { url: createEndpoint, username: 'alice', password: 'app-password' },
+        signal: controller.signal,
+      });
+      await started;
+      controller.abort();
+      const result = await creating;
+
+      expect(result.outcome).toBe('saved-locally');
+      expect(result.generatedKeyFile?.name).toBe('Canceled Vault.keyx');
+      expect(result.generatedKeyFile?.bytes).toBeInstanceOf(Uint8Array);
+      expect(result.record.type).toBe('webdav');
+      if (result.record.type !== 'webdav') throw new Error('Expected a recoverable WebDAV record.');
+      expect(result.record.synchronization).toMatchObject({ pending: true, createPending: true });
+      expect(await getCredentialRecord(result.record.source.credentialRecordId)).toBeInstanceOf(Uint8Array);
+    });
+
     it('uses conditional create and persists an exportable local copy if creation fails', async () => {
       const conditions: string[] = [];
+      let createdBytes: Uint8Array | undefined;
       mockServer.addHandlers(
-        http.put(endpoint, ({ request }) => {
+        http.put(endpoint, async ({ request }) => {
           conditions.push(request.headers.get('If-None-Match') ?? '');
+          createdBytes = new Uint8Array(await request.arrayBuffer());
           return new HttpResponse(null, { status: 201, headers: { ETag: '"created-1"' } });
         }),
+        http.get(endpoint, () =>
+          createdBytes
+            ? new HttpResponse(createdBytes.slice(), { headers: { ETag: '"created-1"' } })
+            : new HttpResponse(null, { status: 404 }),
+        ),
       );
 
       await createDatabaseRecord({
@@ -1273,18 +1348,21 @@ describe('record.service', () => {
 
       const racedEndpoint = 'https://dav.example.test/files/raced-vault.kdbx';
       mockServer.addHandlers(http.put(racedEndpoint, () => new HttpResponse(null, { status: 412 })));
-      await expect(
-        createDatabaseRecord({
-          providerId: 'webdav',
-          databaseName: 'Recovery Vault',
-          password: 'database-password',
-          setupInput: { url: racedEndpoint, username: 'alice', password: 'app-password' },
-        }),
-      ).rejects.toBeInstanceOf(LocalRecoveryRecordSavedError);
+      const recoveryResult = await createDatabaseRecord({
+        providerId: 'webdav',
+        databaseName: 'Recovery Vault',
+        password: 'database-password',
+        useKeyFile: true,
+        setupInput: { url: racedEndpoint, username: 'alice', password: 'app-password' },
+      });
 
       const records = await getRecords();
       expect(records).toHaveLength(2);
       expect(records[1]?.synchronization).toMatchObject({ pending: true, createPending: true });
+      expect(recoveryResult.outcome).toBe('saved-locally');
+      expect(recoveryResult.record.id).toBe(records[1]?.id);
+      expect(recoveryResult.generatedKeyFile?.bytes).toBeInstanceOf(Uint8Array);
+      expect(recoveryResult.generatedKeyFile?.name).toBe('Recovery Vault.keyx');
     });
 
     it('validates a replacement connection before switching the encrypted credential record and URL', async () => {
@@ -1340,6 +1418,7 @@ describe('record.service', () => {
       expect(result.record.type).toBe('webdav');
       if (result.record.type !== 'webdav') throw new Error('Expected a WebDAV database record.');
       expect(result.record.source.url).toBe(nextUrl);
+      expect(result.record.synchronization?.generation).toBe((record.synchronization?.generation ?? 0) + 1);
       expect(result.record.source.credentialRecordId).not.toBe(oldCredentialRecordId);
       expect(await getCredentialRecord(oldCredentialRecordId)).toBeUndefined();
       const encryptedCredentials = await getCredentialRecord(result.record.source.credentialRecordId);
@@ -1348,7 +1427,67 @@ describe('record.service', () => {
         { Username: 'bob', Password: 'new-app-password' },
       );
       expect(authorizationHeaders).toEqual([`Basic ${btoa('alice:old-app-password')}`, nextAuthorization]);
-      result.providerSession.dispose();
+      result.lifecycle.dispose();
+    });
+
+    it('cancels replacement validation without changing the saved connection', async () => {
+      const { encryptedBytes, password } = await createDatabase({
+        databaseName: 'WebDAV Vault',
+        keyFile: null,
+        records: [],
+      });
+      mockServer.addHandlers(
+        http.get(endpoint, () => new HttpResponse(encryptedBytes, { headers: { ETag: '"remote-1"' } })),
+      );
+      await importWebDavRecord({
+        url: endpoint,
+        username: 'alice',
+        password: 'old-app-password',
+        databasePassword: password,
+      });
+      const record = (await getRecords())[0];
+      if (record?.type !== 'webdav') throw new Error('Expected a WebDAV database record.');
+      const database = await unlockKdbx({ encryptedBytes: record.kdbx.encryptedBytes, password });
+      const controller = new AbortController();
+      const lifecycle = createSessionLifecycle();
+      const nextUrl = 'https://dav.example.test/cancelled/vault.kdbx';
+      let requestStarted = () => {};
+      const started = new Promise<void>((resolve) => {
+        requestStarted = resolve;
+      });
+      let willReplace = false;
+      mockServer.addHandlers(
+        http.get(nextUrl, ({ request }) => {
+          requestStarted();
+          return new Promise((resolve) => {
+            request.signal.addEventListener('abort', () => resolve(new HttpResponse(null, { status: 499 })), {
+              once: true,
+            });
+          });
+        }),
+      );
+
+      const replacement = replaceDatabaseCredentials({
+        record,
+        database,
+        setupInput: { url: nextUrl, username: 'bob', password: 'new-app-password' },
+        lifecycle,
+        signal: controller.signal,
+        onWillReplaceConnection: () => {
+          willReplace = true;
+        },
+      });
+      await started;
+      controller.abort();
+
+      await expect(replacement).rejects.toMatchObject({ name: 'AbortError' });
+      const [savedRecord] = await getRecords();
+      expect(savedRecord?.source).toEqual(record.source);
+      expect(savedRecord?.synchronization?.generation).toBe(record.synchronization?.generation);
+      expect(await getCredentialRecord(record.source.credentialRecordId)).toBeDefined();
+      expect(willReplace).toBe(false);
+      expect(lifecycle.signal.aborted).toBe(false);
+      lifecycle.dispose();
     });
   });
 });

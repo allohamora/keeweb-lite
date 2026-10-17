@@ -12,31 +12,29 @@ type SyncStatus = 'saved' | 'synced' | 'syncing' | 'error';
 type WorkspaceControlsProps = {
   database: UnlockSession['database'];
   recordName: string;
-  recordType: string;
+  providerLabel: string;
+  canDownload: boolean;
   canSync: boolean;
   hasPendingChanges: boolean;
   syncStatus: SyncStatus;
   syncErrorMessage: string | null;
-  canReplaceCredentials: boolean;
-  credentialActionLabel: string;
+  recoveryAction?: { label: string; onAction: () => void };
   onLock: () => void;
   onSyncRetry: () => void;
-  onReplaceCredentials: () => void;
 };
 
 export const WorkspaceControls = ({
   database,
   recordName,
-  recordType,
+  providerLabel,
+  canDownload,
   canSync,
   hasPendingChanges,
   syncStatus,
   syncErrorMessage,
-  canReplaceCredentials,
-  credentialActionLabel,
+  recoveryAction,
   onLock,
   onSyncRetry,
-  onReplaceCredentials,
 }: WorkspaceControlsProps) => {
   const { guardNavigation } = useSafeNet();
   const download = async () => {
@@ -91,7 +89,7 @@ export const WorkspaceControls = ({
       <div className="min-w-0 text-[11px] text-muted-foreground">
         <p className="flex flex-wrap items-center gap-1.5">
           <span className="min-w-0 truncate font-medium text-foreground">
-            {recordName} ({recordType})
+            {recordName} ({providerLabel})
           </span>
           {canSync && (
             <button
@@ -128,19 +126,19 @@ export const WorkspaceControls = ({
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        {canReplaceCredentials && (
+        {recoveryAction && (
           <Button
             aria-label="Replace connection credentials"
             className="h-6 px-1.5 text-[11px]"
-            onClick={onReplaceCredentials}
+            onClick={recoveryAction.onAction}
             size="xs"
             type="button"
             variant="outline"
           >
-            {credentialActionLabel}
+            {recoveryAction.label}
           </Button>
         )}
-        {recordType !== 'demo' && (
+        {canDownload && (
           <Button
             aria-label="Download database"
             className="h-6 px-1.5 text-[11px]"

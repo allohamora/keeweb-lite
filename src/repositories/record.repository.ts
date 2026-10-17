@@ -182,18 +182,37 @@ type AtomicStoreUpdate<T> = {
   credentialDeletes?: string[];
 };
 
-const updateRecordStoreAtomically = async <T>(updater: (value: unknown) => AtomicStoreUpdate<T>): Promise<T> =>
+const updateRecordStoreAtomically = async <T>(
+  updater: (value: unknown) => AtomicStoreUpdate<T>,
+  signal?: AbortSignal,
+): Promise<T> =>
   keyValueStore('readwrite', (store) => {
     const transaction = store.transaction;
 
     return new Promise<T>((resolve, reject) => {
       let settled = false;
       let result!: T;
+      let abortTransaction = () => {};
+      const removeAbortListener = () => signal?.removeEventListener('abort', abortTransaction);
       const finishWithError = (error: unknown) => {
         if (settled) return;
         settled = true;
+        removeAbortListener();
         reject(error);
       };
+      abortTransaction = () => {
+        try {
+          transaction.abort();
+        } catch {
+          // The transaction may have already completed.
+        }
+        finishWithError(signal?.reason ?? new DOMException('The saved database update was aborted.', 'AbortError'));
+      };
+      if (signal?.aborted) {
+        abortTransaction();
+        return;
+      }
+      signal?.addEventListener('abort', abortTransaction, { once: true });
       const request = store.get(RECORDS_STORAGE_KEY);
 
       request.onsuccess = () => {
@@ -222,6 +241,7 @@ const updateRecordStoreAtomically = async <T>(updater: (value: unknown) => Atomi
       transaction.oncomplete = () => {
         if (settled) return;
         settled = true;
+        removeAbortListener();
         resolve(result);
       };
       transaction.onabort = () =>
@@ -498,7 +518,7 @@ export type RecordCommitResult =
   | { status: 'forgotten' };
 
 const recordGeneration = (record: PersistedFileRecord) =>
-  record.type === 'local' ? 0 : (record.synchronization?.generation ?? 0);
+  record.type === 'local' ? (record.generation ?? 0) : (record.synchronization?.generation ?? 0);
 
 const replaceRecord = (current: ReturnType<typeof toMutableStore>, recordId: string, record: PersistedFileRecord) => ({
   ...current,
@@ -540,10 +560,20 @@ export const commitSynchronizedRecord = async (
 export const commitConnection = async (
   recordId: string,
   expectedGeneration: number,
-  preparedConnection: { source: unknown; credentialRecordId: string; encryptedBytes: Uint8Array },
+  preparedConnection: {
+    source: unknown;
+    credentialRecordId: string;
+    encryptedBytes: Uint8Array;
+    isSessionCurrent?: () => boolean;
+  },
+  signal?: AbortSignal,
 ): Promise<RecordCommitResult> => {
   return lock.runInLock(() =>
     updateRecordStoreAtomically<RecordCommitResult>((value) => {
+      signal?.throwIfAborted();
+      if (preparedConnection.isSessionCurrent && !preparedConnection.isSessionCurrent()) {
+        throw new DOMException('The database session is no longer current.', 'AbortError');
+      }
       const current = toMutableStore(value);
       if (current.forgottenRecordIds.includes(recordId)) {
         return { value, result: { status: 'forgotten' }, write: false };
@@ -578,7 +608,7 @@ export const commitConnection = async (
         credentialWrites: [[preparedConnection.credentialRecordId, preparedConnection.encryptedBytes]],
         credentialDeletes,
       };
-    }),
+    }, signal),
   );
 };
 

@@ -29,16 +29,15 @@ describe('workspace-controls.component', () => {
         <WorkspaceControls
           database={database}
           recordName={record.kdbx.name}
-          recordType={record.type}
+          providerLabel="Local"
+          canDownload
           canSync={record.type === 'google-drive'}
           hasPendingChanges={false}
           syncStatus="synced"
           syncErrorMessage={null}
-          canReplaceCredentials={false}
-          credentialActionLabel="Replace credentials"
+          recoveryAction={undefined}
           onLock={vi.fn()}
           onSyncRetry={vi.fn()}
-          onReplaceCredentials={vi.fn()}
         />,
       );
       await user.click(screen.getByRole('button', { name: 'Download database' }));
@@ -60,16 +59,15 @@ describe('workspace-controls.component', () => {
           <WorkspaceControls
             database={database}
             recordName={record.kdbx.name}
-            recordType={record.type}
+            providerLabel="Local"
+            canDownload
             canSync={record.type === 'google-drive'}
             hasPendingChanges={false}
             syncStatus="synced"
             syncErrorMessage={null}
-            canReplaceCredentials={false}
-            credentialActionLabel="Replace credentials"
+            recoveryAction={undefined}
             onLock={vi.fn()}
             onSyncRetry={vi.fn()}
-            onReplaceCredentials={vi.fn()}
           />
         </DirtySafeNet>,
       );
@@ -86,16 +84,15 @@ describe('workspace-controls.component', () => {
         <WorkspaceControls
           database={database}
           recordName="Demo"
-          recordType="demo"
+          providerLabel="Demo"
+          canDownload={false}
           canSync={false}
           hasPendingChanges={false}
           syncStatus="synced"
           syncErrorMessage={null}
-          canReplaceCredentials={false}
-          credentialActionLabel="Replace credentials"
+          recoveryAction={undefined}
           onLock={vi.fn()}
           onSyncRetry={vi.fn()}
-          onReplaceCredentials={vi.fn()}
         />,
       );
 
@@ -111,16 +108,15 @@ describe('workspace-controls.component', () => {
         <WorkspaceControls
           database={database}
           recordName={record.kdbx.name}
-          recordType="google-drive"
+          providerLabel="Google Drive"
+          canDownload
           canSync
           hasPendingChanges
           syncStatus="error"
           syncErrorMessage="Drive sync failed."
-          canReplaceCredentials={false}
-          credentialActionLabel="Replace credentials"
+          recoveryAction={undefined}
           onLock={vi.fn()}
           onSyncRetry={onSyncRetry}
-          onReplaceCredentials={vi.fn()}
         />,
       );
       await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
@@ -136,16 +132,15 @@ describe('workspace-controls.component', () => {
         <WorkspaceControls
           database={database}
           recordName={record.kdbx.name}
-          recordType="Google Drive"
+          providerLabel="Google Drive"
+          canDownload
           canSync
           hasPendingChanges
           syncStatus="saved"
           syncErrorMessage={null}
-          canReplaceCredentials={false}
-          credentialActionLabel="Replace credentials"
+          recoveryAction={undefined}
           onLock={vi.fn()}
           onSyncRetry={onSyncRetry}
-          onReplaceCredentials={vi.fn()}
         />,
       );
 
@@ -163,16 +158,15 @@ describe('workspace-controls.component', () => {
           <WorkspaceControls
             database={database}
             recordName={record.kdbx.name}
-            recordType="google-drive"
+            providerLabel="Google Drive"
+            canDownload
             canSync
             hasPendingChanges
             syncStatus="error"
             syncErrorMessage="Drive sync failed."
-            canReplaceCredentials={false}
-            credentialActionLabel="Replace credentials"
+            recoveryAction={undefined}
             onLock={vi.fn()}
             onSyncRetry={onSyncRetry}
-            onReplaceCredentials={vi.fn()}
           />
         </DirtySafeNet>,
       );

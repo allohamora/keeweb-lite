@@ -12,4 +12,6 @@ export const synchronizationSchema = z.object({
     })
     .optional(),
   localEditState: z.unknown().optional(),
+  bootstrapRecovery: z.object({ encryptedBytes: encryptedBytesSchema }).optional(),
+  creationRecovery: z.object({ attemptedBytes: encryptedBytesSchema }).optional(),
 });

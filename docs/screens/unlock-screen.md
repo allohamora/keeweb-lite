@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-like open-screen model with quick actions, recent records, and credential-based unlock for local and Google Drive records.
+Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-like open-screen model with recent records and provider-specific import, create, and unlock actions.
 
 ## Scope
 
@@ -11,14 +11,16 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 - Unlock supports:
   - loading and rendering recent records from `record.repository`
   - quick unlock actions inspired by KeeWeb open flow (`Open`, `Import`, `Create`, and additional source actions)
-  - creating a brand-new, empty local record (database name, master password, optional generated key file)
+  - creating a brand-new Local, Google Drive, or WebDAV database with a master password and optional generated key file
   - selecting an existing recent record
   - entering password and optional key file
   - submitting unlock for the selected record context
   - storing successful unlock result in runtime app state (in-memory store)
-- Unlock must support both record types:
+- Import and create forms own a cancellable setup operation. Closing a form aborts pending work. If WebDAV creation was already saved locally, the recovery record and generated key remain available.
+- Unlock must support persisted record types:
   - `local`
   - `google-drive`
+  - `webdav`
 - Unlock preselects the latest accessed record by `lastOpenedAt`.
 - Unlock also offers a `Demo` quick action that starts an in-memory-only, non-persisted `demo` session (see `docs/features/demo-mode.md`).
 
@@ -28,12 +30,13 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
    - Shows unlock/load/import feedback.
    - Supports dismissing transient messages.
 2. Quick actions area
-   - Primary actions for opening existing records, importing records, and creating a new local record.
-   - `Create` is a menu with `Local` and `Google Drive` options (mirrors the `Import` menu shape).
+   - Primary actions for opening existing records and importing or creating a database with an available provider.
+   - `Create` and `Import` menus show the available registered providers: Local, WebDAV, and Google Drive when both public Google identifiers are configured.
+   - Missing Google configuration hides Drive setup actions but does not make cached Drive records invalid.
    - `Demo` is a single button (no menu, no form) that immediately starts a demo session.
-   - Secondary source actions for lite-supported providers.
+   - Provider setup actions are lazy-loaded with a visible loading state and a retryable load failure.
 3. Source context selector
-   - Values: `Local`, `Google Drive`.
+   - Provider choices: `Local`, `Google Drive`, and `WebDAV`.
    - Controls import/open context.
 4. Unlock credentials area
    - Password input.
@@ -51,6 +54,7 @@ Define the startup and re-entry unlock screen for keeweb-lite, using a KeeWeb-li
 - Unlock and remove actions remain full-width touch targets in mobile layout.
 - Import-record dialogs use viewport-aware max-height with internal scrolling to prevent clipped controls.
 - Google Picker remains actionable when opened above the Google Drive import dialog.
+- WebDAV forms accept a full HTTPS file URL and that database's connection credentials.
 
 ## State Model
 
@@ -71,9 +75,9 @@ View states:
 Transient operation flags (not top-level view states):
 
 - `isImportingRecord`
-  - `true` while `importLocalRecord`/`importGoogleDriveRecord` is in flight.
+  - `true` while the selected provider import workflow is in flight.
 - `isCreatingRecord`
-  - `true` while `createLocalRecord`/`createGoogleDriveRecord` is in flight.
+  - `true` while the selected provider creation workflow is in flight.
 - `isUnlocking`
   - `true` while unlock request is in flight.
 - `inlineMessage`
@@ -93,13 +97,18 @@ View-state transitions:
 Repository source of truth:
 
 - `src/repositories/record.repository.ts`
-- Type: `FileRecord`
+- Type: `PersistedFileRecord` (or the in-memory-only `demo` session)
 - Methods used by Unlock:
+  - `readRecordStore`
+  - `getRecordIssues`
   - `getRecords`
   - `createRecord`
-  - `updateRecord`
-- `createLocalRecord` (`src/services/record.service.ts`) builds a brand-new empty `local` record (calls `createRecord` internally) from a database name, master password, and optional generated key file.
-- `createGoogleDriveRecord` (`src/services/record.service.ts`) builds a brand-new empty `google-drive` record (uploads it to Drive via `createFile`, then calls `createRecord` internally) from a database name, master password, and optional generated key file; `source.id` is taken from the Drive API response, not caller-supplied.
+  - `mutateRecord`
+  - `forgetDatabase`
+- `createLocalRecord` (`src/services/record.service.ts`) builds a new `local` record from a database name, master password, and optional generated key file.
+- `createGoogleDriveRecord` builds a new Drive record. Its `source.id` comes from the Drive API response.
+- `importWebDavRecord` downloads and unlocks the selected database before saving its connection in a separate encrypted credential record.
+- `createDatabaseRecord` may return `created` or `saved-locally`. A locally saved remote creation includes its generated key file and can be recovered without claiming remote success.
 
 Fields used by Unlock list and selection:
 
@@ -108,8 +117,11 @@ Fields used by Unlock list and selection:
   - `type`
   - `kdbx.name`
   - `lastOpenedAt` (optional in schema, used for default ordering when present)
-- Google Drive specific on selected record:
+- Google Drive-specific selected record data:
   - `source.id`
+- WebDAV-specific selected record data:
+  - `source.url`
+  - a reference to the separate encrypted credential record
 
 Default selection contract:
 
@@ -119,7 +131,7 @@ Default selection contract:
 
 Unlock-success persistence contract:
 
-- After successful unlock, update selected record using `updateRecord` with refreshed `lastOpenedAt` timestamp.
+- After successful unlock, update `lastOpenedAt` on the latest persisted record while preserving its current database bytes and connection.
 
 Unlock-success runtime state contract:
 
@@ -143,14 +155,15 @@ Unlock-success runtime state contract:
    - User chooses open/import action and source context.
    - Unlock updates active open/import context without leaving screen.
 3. Import record
-   - User picks source (`Local` or `Google Drive`).
+   - User selects a provider menu action.
    - User triggers `Import`.
-   - Unlock sets `isImportingRecord = true`, calls `importLocalRecord`/`importGoogleDriveRecord`, refreshes records, selects imported record, then clears `isImportingRecord`.
+   - Unlock runs the selected provider's import workflow, refreshes records, selects the imported record, then clears `isImportingRecord`.
+   - For WebDAV, the record is committed only after the downloaded database unlocks successfully; closing the form cancels pending setup.
 4. Create record
-   - User opens the `Create` menu and selects `Local` or `Google Drive`.
+   - User opens `Create` and selects an available provider.
    - User enters a database name, master password, and confirms the password; optionally enables a generated key file.
-   - Unlock sets `isCreatingRecord = true`, calls `createLocalRecord`/`createGoogleDriveRecord`.
-   - If a key file was requested, the generated key file bytes are downloaded automatically once creation succeeds.
+   - Unlock sets `isCreatingRecord = true` and starts the provider creation workflow.
+   - If a key file was requested, it downloads once the database is saved, including a remote creation saved locally after an uncertain result.
    - Refreshes records, selects the newly created record, then clears `isCreatingRecord`.
 5. Select record
    - User selects a record in recent list.
@@ -159,7 +172,7 @@ Unlock-success runtime state contract:
    - User enters password and optional key file.
    - Press `Enter` or click unlock action.
    - Unlock sets `isUnlocking = true`.
-   - On success: writes unlocked session to runtime store, transitions to workspace, and persists `lastOpenedAt` through `updateRecord`.
+   - On success: writes unlocked session to runtime store, transitions to workspace, and persists `lastOpenedAt` on the current record.
    - On failure: sets `inlineMessage`, clears `isUnlocking`, and stays on Unlock.
 7. Drag-and-drop local open
    - User drags local `.kdbx` onto drop area.
@@ -182,6 +195,8 @@ Unlock-success runtime state contract:
 - Source selector labels are fixed:
   - `Local`
   - `Google Drive`
+- Google Drive setup is available only when both public identifiers are configured. Cached Drive records remain recognized and can be unlocked or downloaded while remote actions are unavailable.
+- WebDAV setup requires HTTPS and a full file URL. Basic-auth usernames cannot contain a colon.
 - Drag-and-drop open accepts supported local `.kdbx` file input only.
 
 ## Accessibility Requirements
@@ -210,40 +225,45 @@ Unlock-success runtime state contract:
   - keep existing list/selection state unchanged
   - show inline actionable message
 - Create failure:
-  - keep existing list/selection state unchanged
-  - show inline actionable message (for example, duplicate name)
+  - keep existing list/selection state unchanged when no local record was committed
+  - if a remote creation result is uncertain after local persistence, retain the record, expose its generated key file, and report that remote confirmation is pending
 - Unlock failure:
   - remain on Unlock
   - show explicit error and retry path
 - Invalid or unsupported dropped file:
   - remain on current unlock context
   - show actionable validation message
-- `updateRecord` failure after successful unlock:
+- Metadata update failure after successful unlock:
   - workspace transition is not blocked
   - show non-blocking status feedback for metadata update failure
+- Invalid or unsupported saved records:
+  - report the affected record individually while keeping other valid records available
+- Forget database:
+  - warn when changes are pending, remove local database and encrypted connection state after confirmation, and leave the remote file untouched
 
 ## Acceptance Criteria
 
 1. Startup and re-entry both land on Unlock before workspace is available.
 2. Empty repository shows empty state and unlock is unavailable until open/import context exists.
-3. Mixed `local` and `google-drive` records render and can be selected.
+3. Mixed Local, Google Drive, and WebDAV records render and can be selected.
 4. Latest `lastOpenedAt` record is preselected on startup when available.
 5. Quick action area supports open/import flow selection without leaving Unlock.
 6. Importing a `local` record adds it and makes it selected immediately.
 7. Importing a `google-drive` record with valid `source.id` adds it and makes it selected immediately.
-8. Creating a `local` record adds it and makes it selected immediately; when a key file is requested, it downloads automatically on success.
-9. Creating a `google-drive` record adds it, uploads a new file to Drive root, and is automatically sync-eligible thereafter; when a key file is requested, it downloads automatically on success.
-10. Pressing `Enter` triggers unlock for the current selected/open context.
-11. Unlock failure keeps Unlock visible and surfaces actionable error text.
-12. Unlock success transitions to workspace and updates selected record `lastOpenedAt`.
-13. Unlock success writes unlocked DB/session into runtime app state (in-memory, non-persistent).
-14. Optional key-file path is supported for both record types.
-15. Accessibility requirements pass for keyboard flow, focus order, and `aria-live` status updates.
-16. At viewport width `<=768px`, unlock controls remain visible and usable while virtual keyboard is open.
-17. At viewport width `<=768px`, import local/drive dialogs remain scrollable without clipped footers, and the Google Picker remains actionable when opened from the Drive dialog.
+8. Importing a WebDAV database persists its encrypted connection only after a successful unlock.
+9. Creating a Local record adds it and selects it. Creating a remote record retains an explicit local recovery outcome when server confirmation fails.
+10. A generated key file downloads after local persistence, including when remote creation is uncertain.
+11. Pressing `Enter` triggers unlock for the current selected/open context.
+12. Unlock failure keeps Unlock visible and surfaces actionable error text.
+13. Unlock success transitions to workspace and updates selected record `lastOpenedAt` without replacing newer bytes.
+14. Unlock success writes unlocked DB/session into runtime app state (in-memory, non-persistent).
+15. Optional key-file unlock works for Local, Google Drive, and WebDAV.
+16. Accessibility requirements pass for keyboard flow, focus order, and `aria-live` status updates.
+17. At viewport width `<=768px`, unlock controls remain visible and usable while virtual keyboard is open.
+18. At viewport width `<=768px`, provider dialogs remain scrollable without clipped footers, and the Google Picker remains actionable when opened from the Drive dialog.
 
 ## Out of Scope
 
 - Detailed post-unlock workspace behavior (covered by `workspace-screen.md`).
-- Non-lite provider behaviors outside `local` and `google-drive`.
+- Non-lite provider behaviors outside Local, Google Drive, and WebDAV.
 - Introducing additional persistence repositories beyond `record.repository`.

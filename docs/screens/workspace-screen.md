@@ -11,20 +11,22 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
   - rendering unlocked record context
   - navigating groups and entries
   - selecting entries and showing editable details
-  - showing sync status dot for Drive-backed records
-  - exposing source-aware actions (`Download` for all opened records, `Sync` for Drive-backed records when last sync failed)
+  - showing synchronization status for remote records
+  - exposing source-aware actions (`Download` for persisted records, retry and recovery actions when available)
   - rendering standard KeePass icons for groups and entries, and picking an entry's icon when editing
   - rendering an entry's background color, and filtering entries by color from the left menu pane
-- Workspace must support both record types:
+- Workspace must support persisted record types:
   - `local`
   - `google-drive`
+  - `webdav`
 - Workspace keeps unlocked data in runtime memory only and returns to Unlock when session is locked or closed.
 
 ## Layout Regions
 
 1. Top workspace status bar
-   - Shows three-state sync status element for `google-drive` records (always visible, never for `local`): orange "Syncing" while in progress, green "Synced" on success, red "Sync error" on failure; clicking "Sync error" retries sync and shows an error toast.
-   - Shows `Download` action.
+   - Shows sync status for `google-drive` and `webdav` records: "Syncing", "Saved locally", "Synced", or "Sync error". A pending local save remains visible alongside an error.
+   - A recoverable status can retry synchronization. Authentication or a missing WebDAV file can expose a provider recovery action.
+   - Shows `Download` for persisted records. Demo sessions do not expose a database download.
 2. Left menu pane
    - Displays workspace navigation (groups, tags, smart filters, and similar navigation items).
    - Tag items are clickable and filter the entry list to only entries that carry the selected tag.
@@ -56,7 +58,7 @@ Define the post-home workspace screen for keeweb-lite, including navigation, ent
   - `Back to list` action in details returns to list pane
 - Left menu pane is hidden by default and opened through a menu button in the list header.
 - Mobile menu is shown in an overlay drawer and closes after filter/tag/group selection.
-- Top status bar actions (`Download`, `Lock`, and Drive sync status) remain visible and usable without horizontal clipping.
+- Top status bar actions (`Download`, `Lock`, and remote sync status) remain visible and usable without horizontal clipping.
 
 ## State Model
 
@@ -74,7 +76,7 @@ View states:
 Transient operation flags (not top-level view states):
 
 - `syncStatus`
-  - `'syncing' | 'synced' | 'error'` for Drive-backed records; derived from background sync job state.
+  - `'syncing' | 'saved' | 'synced' | 'error'` for remote records; derived from running work, pending state, and the latest sync error.
 - `inlineStatusMessage`
   - Holds actionable sync/panel feedback while keeping current view state.
 
@@ -110,17 +112,22 @@ View-state transitions:
    - User edits selected entry fields (title, username, password, URL, tags, notes, icon, color).
    - The username field offers autocomplete suggestions drawn from other entries' usernames in the same database; free text is always allowed.
    - The combined icon/color picker shows the fixed set of standard KeePass icons and the fixed 6-color palette; selecting an icon or color updates the entry's icon/color shown in the list and details pane.
-   - User clicks the Save button to persist changes.
+   - User clicks the Save button to persist changes. Typing alone does not save the database.
+   - The encrypted local record and pending marker are written before remote synchronization starts.
    - On success, a confirmation notification is shown.
    - On failure, an error notification is shown with the failure reason.
-5. Sync feedback for Drive-backed records
-   - On unlock, sync runs as a background job; sync status shows orange "Syncing" then resolves to green "Synced" or red "Sync error".
-   - On each save, sync fires again in background.
-   - Clicking the "Sync error" element retries sync.
-6. Download current encrypted state
+5. Sync feedback for remote records
+   - Google Drive and WebDAV request sync after unlock and completed saves, when returning to a visible tab, on relevant online events, and on manual retry. They do not poll on a timer.
+   - Status distinguishes "Saved locally" from "Synced". A remote failure does not clear pending local data.
+   - Manual retry is blocked for failures that need a provider-specific recovery action.
+6. Preserve an entry draft during refresh
+   - A clean form updates when an accepted database refresh changes the selected entry.
+   - A dirty form keeps its draft and original baseline when incoming data changes or deletes the entry.
+   - Saving a draft that conflicts with a remote edit or deletion creates a separate conflict copy. Discarding the draft accepts the refreshed state.
+7. Download current encrypted state
    - User triggers `Download`.
    - Current encrypted record state is exported without changing sync state.
-7. Lock/close session
+8. Lock/close session
    - User locks or closes active record.
    - Workspace session is cleared from runtime memory.
    - App returns to Unlock.
@@ -129,7 +136,9 @@ View-state transitions:
 
 - Workspace actions requiring an opened record are blocked when no unlocked session exists.
 - Entry-edit actions are blocked when no entry is selected.
-- Sync status element is shown only for `google-drive` records; never for `local` records.
+- Sync status is shown for `google-drive` and `webdav` records, not for `local` or `demo` sessions.
+- Download is available for persisted records and hidden for the in-memory demo session.
+- Remote refresh does not replace a dirty form draft or install a new database during an active entry mutation.
 - Recycle Bin entries are excluded from `All Items`, tag-derived, and color-derived entry lists unless Recycle Bin itself is explicitly selected.
 
 ## Accessibility Requirements
@@ -159,9 +168,9 @@ View-state transitions:
 - Save failure:
   - keep unsaved/error status visible
   - keep retry/recovery path available
-- Sync failure (Drive-backed):
-  - keep "Sync error" status element visible
-  - clicking it retries sync
+- Sync failure (remote records):
+  - keep "Sync error" visible and show "Saved locally" when changes remain pending
+  - allow retry for recoverable network failures; use the available provider action for authentication or connection failures
 - Download failure:
   - show explicit error and retry path
 - Non-blocking metadata update failures:
@@ -171,10 +180,10 @@ View-state transitions:
 ## Acceptance Criteria
 
 1. After successful Unlock, app transitions to Workspace and renders status bar, menu, list, details, and footer regions.
-2. Workspace supports both `local` and `google-drive` record contexts.
-3. Top bar shows three-state sync status element for Drive-backed records and `Download` action for all records.
-4. `Download` action is visible for opened records.
-5. Sync status element shows "Syncing" (orange), "Synced" (green), or "Sync error" (red); clicking "Sync error" retries and shows toast.
+2. Workspace supports Local, Google Drive, and WebDAV records, plus an in-memory demo session.
+3. Remote records show "Syncing", "Saved locally", "Synced", or "Sync error"; Local and demo sessions show no sync control.
+4. Persisted records can be downloaded; demo does not expose Download.
+5. Recoverable sync errors offer retry, and provider-specific connection errors offer the matching recovery action.
 6. Entry selection updates details context without leaving workspace.
 7. Search input in the entry list filters by title with a debounce delay, updates the record count, and shows "No matching entries." when nothing matches.
 8. Temporary panel flows can open and close without breaking main workspace state.
@@ -185,6 +194,7 @@ View-state transitions:
 13. Groups in the menu pane and entries in the list pane render their standard KeePass icon, falling back to a folder/key icon respectively when unset.
 14. Entry editing exposes a combined icon and color picker; icon selection is limited to the standard 69 KeePass icons and color selection to a fixed 6-color palette, "no color", and colors already used elsewhere in the database, and the selected icon/color is reflected in list and details rendering.
 15. The menu pane shows a `Colors` row with a "No color" option plus every distinct background color present on entries; clicking "No color" filters to uncolored entries, clicking a swatch filters to entries with that color, and the row is absent when no entry has a color.
+16. A clean form accepts refreshed values. A dirty form retains its draft and baseline through a competing edit or deletion until the user saves or discards it.
 
 ## Out of Scope
 

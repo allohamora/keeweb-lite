@@ -40,8 +40,12 @@ describe('create-local.modal', () => {
       const onOpenChange = vi.fn();
       const onRecordCreated = vi.fn();
       const createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
-        keyFileBytes: undefined,
-        keyFileName: undefined,
+        outcome: 'created',
+        record: {
+          id: 'local-record',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array(), name: 'My Vault.kdbx' },
+        },
       });
 
       render(<CreateLocalModal onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
@@ -54,6 +58,7 @@ describe('create-local.modal', () => {
       expect(createLocalRecord).toHaveBeenCalledWith({
         databaseName: 'My Vault',
         password: 'test-password-123',
+        signal: expect.any(AbortSignal),
         useKeyFile: false,
       });
       expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -63,8 +68,13 @@ describe('create-local.modal', () => {
       const user = userEvent.setup();
       const keyFileBytes = new Uint8Array([1, 2, 3]);
       const createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
-        keyFileBytes,
-        keyFileName: 'My Vault.keyx',
+        outcome: 'created',
+        record: {
+          id: 'local-record',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array(), name: 'My Vault.kdbx' },
+        },
+        generatedKeyFile: { bytes: keyFileBytes, name: 'My Vault.keyx' },
       });
       const downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
@@ -79,6 +89,7 @@ describe('create-local.modal', () => {
         expect(createLocalRecord).toHaveBeenCalledWith({
           databaseName: 'My Vault',
           password: 'test-password-123',
+          signal: expect.any(AbortSignal),
           useKeyFile: true,
         }),
       );

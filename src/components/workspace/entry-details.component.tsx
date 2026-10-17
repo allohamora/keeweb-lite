@@ -1,4 +1,5 @@
 import type kdbx from '@/lib/kdbx.lib';
+import { useCallback, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
@@ -44,7 +45,15 @@ export const EntryDetails = ({
   showBackButton,
   onBack,
 }: EntryDetailsProps) => {
-  if (!selectedEntry) {
+  const [hasDirtyDraft, setHasDirtyDraft] = useState(false);
+  const [retainedEntry, setRetainedEntry] = useState(selectedEntry);
+  const handleDraftChange = useCallback((isDirty: boolean, entry?: kdbx.KdbxEntry) => {
+    setHasDirtyDraft(isDirty);
+    if (isDirty && entry) setRetainedEntry(entry);
+  }, []);
+  const entryToEdit = selectedEntry ?? (hasDirtyDraft ? retainedEntry : null);
+
+  if (!entryToEdit) {
     return (
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
         {showBackButton && <BackToListButton onBack={onBack} />}
@@ -65,11 +74,12 @@ export const EntryDetails = ({
         <p className="truncate text-xs font-medium text-foreground">Entry</p>
       </div>
       <EntryEditForm
-        key={selectedEntry.uuid.toString()}
+        key={entryToEdit.uuid.toString()}
         database={database}
-        entry={selectedEntry}
+        entry={entryToEdit}
         record={record}
         onSave={onSave}
+        onDraftChange={handleDraftChange}
       />
     </aside>
   );

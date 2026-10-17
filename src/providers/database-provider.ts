@@ -44,6 +44,8 @@ export type ProviderSynchronization = {
   createPending?: boolean;
   commonVersion?: RemoteSnapshot;
   localEditState?: unknown;
+  bootstrapRecovery?: { encryptedBytes: Uint8Array };
+  creationRecovery?: { attemptedBytes: Uint8Array };
 };
 
 type ProviderRecordEnvelope<TType extends DatabaseProviderId> = {
@@ -58,6 +60,7 @@ type ProviderRecordEnvelope<TType extends DatabaseProviderId> = {
 export type LocalProviderRecord = ProviderRecordEnvelope<'local'> & {
   source?: never;
   synchronization?: never;
+  generation?: number;
 };
 
 export type GoogleDriveProviderRecord = ProviderRecordEnvelope<'google-drive'> & {
@@ -99,14 +102,14 @@ export type ProviderCredentialsPreparation = {
 export type ProviderImportPreparation = {
   displayName: string;
   duplicateIdentity: string | null;
-  import: () => Promise<ProviderImportResult>;
+  import: (signal?: AbortSignal) => Promise<ProviderImportResult>;
   credentials?: ProviderCredentialsPreparation;
 };
 
 export type ProviderCreatePreparation = {
   displayName: string;
   duplicateIdentity: string | null;
-  connectForSetup?: () => Promise<ProviderSession>;
+  connectForSetup?: (signal?: AbortSignal) => Promise<ProviderSession>;
   credentials?: ProviderCredentialsPreparation;
 };
 

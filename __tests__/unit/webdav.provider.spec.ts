@@ -98,6 +98,46 @@ describe('webdav.provider', () => {
     session.dispose();
   });
 
+  it.each([
+    [403, 'permission'],
+    [404, 'missing-resource'],
+    [409, 'remote-conflict'],
+    [423, 'locked-resource'],
+    [507, 'capacity'],
+    [501, 'unsupported'],
+  ] as const)('maps HTTP %s to the shared %s provider error', async (status, kind) => {
+    const session = await createSession();
+    mockServer.addHandlers(http.get(endpoint, () => new HttpResponse(null, { status })));
+
+    if (session.read.kind !== 'remote') throw new Error('Expected a WebDAV read operation.');
+    await expect(session.read.read()).rejects.toMatchObject({ kind });
+    session.dispose();
+  });
+
+  it('rejects Basic-auth usernames with colons and malformed URL escapes', () => {
+    expect(() => webdavProvider.prepareImport({ url: endpoint, username: 'alice:team', password: 'secret' })).toThrow(
+      'cannot contain a colon',
+    );
+    expect(() =>
+      webdavProvider.prepareImport({
+        url: 'https://dav.example.test/files/%ZZ/vault.kdbx',
+        username: 'alice',
+        password: 'secret',
+      }),
+    ).toThrow('malformed percent-encoding');
+  });
+
+  it('preserves valid encoded path segments when canonicalizing', () => {
+    const prepared = webdavProvider.prepareImport({
+      url: 'https://dav.example.test/files/folder%20name/vault%20copy.kdbx',
+      username: 'alice',
+      password: 'secret',
+    });
+
+    expect(prepared.displayName).toBe('vault copy.kdbx');
+    expect(prepared.duplicateIdentity).toBe('https://dav.example.test/files/folder%20name/vault%20copy.kdbx');
+  });
+
   it('does not retain a usable session after disposal', async () => {
     const session = await createSession();
     session.dispose();

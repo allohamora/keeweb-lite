@@ -14,6 +14,7 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { getErrorMessage } from '@/utils/error.utils';
+import { webdavConnectionSchema } from '@/providers/webdav.provider';
 
 export type WebDavCredentialsModalProps = {
   open: boolean;
@@ -24,9 +25,9 @@ export type WebDavCredentialsModalProps = {
 };
 
 const schema = z.object({
-  url: z.url({ error: 'Enter a valid WebDAV file URL.' }),
-  username: z.string().trim().min(1, 'Enter a WebDAV username.'),
-  password: z.string().min(1, 'Enter a WebDAV password or app password.'),
+  url: webdavConnectionSchema.shape.url,
+  username: webdavConnectionSchema.shape.username,
+  password: webdavConnectionSchema.shape.password,
 });
 
 type FormValues = z.infer<typeof schema>;

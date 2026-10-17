@@ -1,10 +1,11 @@
 import kdbx from '@/lib/kdbx.lib';
 import { toEncryptedBytes } from '@/services/record.service';
 import { Lock } from '@/utils/lock.utils';
-import { updateRecordWith, type FileRecord } from '@/repositories/record.repository';
+import { commitSynchronizedRecord, mutateRecord, type FileRecord } from '@/repositories/record.repository';
 import { getDatabaseProvider } from '@/providers/registry';
 import { getEntryIcon } from '@/services/icon.service';
 import { getEntryColor } from '@/services/color.service';
+import { createConflictCopyFromEntry, entriesHaveSameContent } from '@/services/conflict-copy.service';
 
 export type SelectFilter = kdbx.KdbxUuid | { tag: string } | { color: string | null } | null;
 
@@ -168,6 +169,7 @@ type UpdateEntryInput = {
   record: FileRecord;
   entryUuid: string;
   values: EntryUpdateValues;
+  draftBaseline?: { database: kdbx.Kdbx; entryUuid: string };
 };
 
 export const cloneDatabase = async (database: kdbx.Kdbx): Promise<kdbx.Kdbx> => {
@@ -225,10 +227,23 @@ export const saveDatabase = async ({
   return saveDatabaseLock.runInLock(async () => {
     const localEditState = record.type !== 'local' ? database.getLocalEditState() : undefined;
     const encryptedBytes = await toEncryptedBytes(database);
-    const savedRecord = await updateRecordWith(record.id, (currentRecord) => {
+    if (record.type === 'local') {
+      const savedRecord = await mutateRecord(record.id, (currentRecord) => {
+        if (currentRecord.type !== 'local') throw new Error('This database is no longer stored locally.');
+        return {
+          ...currentRecord,
+          generation: (currentRecord.generation ?? 0) + 1,
+          kdbx: { ...currentRecord.kdbx, encryptedBytes },
+        };
+      });
+      return { record: savedRecord };
+    }
+
+    const expectedGeneration = record.synchronization?.generation ?? 0;
+    const saved = await commitSynchronizedRecord(record.id, expectedGeneration, (currentRecord) => {
       const provider = getDatabaseProvider(currentRecord.type);
       if (!provider || provider.capabilities.kind === 'local' || currentRecord.type === 'local') {
-        return { ...currentRecord, kdbx: { ...currentRecord.kdbx, encryptedBytes } };
+        throw new Error('This database is no longer connected to a remote provider.');
       }
 
       const currentSync = currentRecord.synchronization;
@@ -245,7 +260,10 @@ export const saveDatabase = async ({
       };
     });
 
-    return { record: savedRecord };
+    if (saved.status === 'forgotten') throw new Error('This database was forgotten before the save completed.');
+    if (saved.status === 'superseded') throw new Error('The database changed while it was being saved. Please retry.');
+
+    return { record: saved.record };
   });
 };
 
@@ -254,6 +272,7 @@ export const saveEntry = async ({
   record,
   entryUuid,
   values,
+  draftBaseline,
 }: UpdateEntryInput): Promise<{
   nextDatabase: kdbx.Kdbx;
   nextEntryUuid: kdbx.KdbxUuid;
@@ -262,15 +281,34 @@ export const saveEntry = async ({
   const nextDatabase = await cloneDatabase(database);
   const nextEntry = findEntryByUuid(nextDatabase, entryUuid);
 
-  if (!nextEntry) {
-    throw new Error('Entry not found.');
-  }
+  let nextEntryUuid: kdbx.KdbxUuid;
+  if (draftBaseline) {
+    const baselineDatabase = await cloneDatabase(draftBaseline.database);
+    const baselineEntry = findEntryByUuid(baselineDatabase, draftBaseline.entryUuid);
+    if (!baselineEntry) throw new Error('The original entry draft could not be restored.');
 
-  updateEntry(nextEntry, values);
+    if (!nextEntry || !entriesHaveSameContent(baselineEntry, nextEntry)) {
+      updateEntry(baselineEntry, values);
+      const copy = createConflictCopyFromEntry({
+        database: nextDatabase,
+        sourceDatabase: baselineDatabase,
+        sourceEntry: baselineEntry,
+        originalId: entryUuid,
+      });
+      nextEntryUuid = copy.uuid;
+    } else {
+      updateEntry(nextEntry, values);
+      nextEntryUuid = nextEntry.uuid;
+    }
+  } else {
+    if (!nextEntry) throw new Error('Entry not found.');
+    updateEntry(nextEntry, values);
+    nextEntryUuid = nextEntry.uuid;
+  }
 
   const { record: nextRecord } = await saveDatabase({ database: nextDatabase, record });
 
-  return { nextDatabase, nextEntryUuid: nextEntry.uuid, nextRecord };
+  return { nextDatabase, nextEntryUuid, nextRecord };
 };
 
 type CreateEntryInput = {

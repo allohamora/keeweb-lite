@@ -8,6 +8,7 @@ import { EntryEditForm } from '@/components/workspace/entry-edit.form';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { createTestDatabase, createTestEntry, createTestRecord } from '../fixtures/kdbx.fixture';
 import { render } from '../utils/render.utils';
+import { cloneDatabase } from '@/services/workspace.service';
 
 const record = createTestRecord();
 
@@ -53,6 +54,37 @@ describe('entry-edit.form', () => {
       await user.type(screen.getByLabelText('Title'), '!');
 
       expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
+    it('refreshes a clean form when the accepted database changes', async () => {
+      const remoteDatabase = await cloneDatabase(database);
+      const remoteEntry = workspaceService.findEntryByUuid(remoteDatabase, entry.uuid);
+      if (!remoteEntry) throw new Error('Expected the refreshed entry.');
+      remoteEntry.fields.set('Title', 'Remote title');
+      const view = render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+
+      view.rerender(<EntryEditForm database={remoteDatabase} entry={remoteEntry} record={record} onSave={vi.fn()} />);
+
+      await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Remote title'));
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    it('keeps a dirty form draft when the selected entry changes remotely', async () => {
+      const user = userEvent.setup();
+      const remoteDatabase = await cloneDatabase(database);
+      const remoteEntry = workspaceService.findEntryByUuid(remoteDatabase, entry.uuid);
+      if (!remoteEntry) throw new Error('Expected the refreshed entry.');
+      remoteEntry.fields.set('UserName', 'Remote username');
+      const view = render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
+      await user.type(screen.getByLabelText('Title'), '!');
+
+      view.rerender(<EntryEditForm database={remoteDatabase} entry={remoteEntry} record={record} onSave={vi.fn()} />);
+
+      expect(screen.getByLabelText('Title')).toHaveValue('Test Entry!');
+      expect(
+        screen.getByText('This entry changed remotely. Saving keeps your draft as a conflict copy.'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save as conflict copy' })).toBeEnabled();
     });
 
     it('defers the remove trigger behind the discard prompt without discarding edits', async () => {

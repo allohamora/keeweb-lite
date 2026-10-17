@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { createGoogleDriveRecord } from '@/services/record.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
+import { useSetupOperation } from '@/hooks/use-setup-operation.hook';
 
 export type CreateGoogleDriveModalProps = {
   open: boolean;
@@ -41,6 +42,7 @@ const createGoogleDriveModalSchema = z
 type CreateGoogleDriveModalFormValues = z.infer<typeof createGoogleDriveModalSchema>;
 
 export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: CreateGoogleDriveModalProps) => {
+  const { abort, begin, finish } = useSetupOperation(open);
   const {
     control,
     formState: { isSubmitting },
@@ -52,24 +54,32 @@ export const CreateGoogleDriveModal = ({ open, onOpenChange, onRecordCreated }: 
   });
 
   const handleCreateRecordSubmit = handleSubmit(async ({ databaseName, password, useKeyFile }) => {
+    const controller = begin();
     try {
-      const { keyFileBytes, keyFileName } = await createGoogleDriveRecord({ databaseName, password, useKeyFile });
+      const result = await createGoogleDriveRecord({ databaseName, password, useKeyFile, signal: controller.signal });
 
-      if (keyFileBytes && keyFileName) {
-        downloadBytes({ bytes: keyFileBytes, fileName: keyFileName });
+      if (result.generatedKeyFile) {
+        downloadBytes({ bytes: result.generatedKeyFile.bytes, fileName: result.generatedKeyFile.name });
       }
 
       onRecordCreated();
       onOpenChange(false);
-
-      toast.success('Record created.');
+      if (result.outcome === 'created') toast.success('Record created.');
+      else toast.error(getErrorMessage({ error: result.error, fallback: 'Database saved locally.' }));
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Record creation failed.' }));
+      if (!controller.signal.aborted) toast.error(getErrorMessage({ error, fallback: 'Record creation failed.' }));
+    } finally {
+      finish(controller);
     }
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) abort();
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
+    <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
         // Reset form after the close animation finishes so the stale state

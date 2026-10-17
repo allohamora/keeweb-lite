@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { getErrorMessage } from '@/utils/error.utils';
 import { importGoogleDriveRecord } from '@/services/record.service';
 import { GoogleDriveFilePicker } from './google-drive.file-picker';
+import { useSetupOperation } from '@/hooks/use-setup-operation.hook';
 
 export type ImportGoogleDriveModalProps = {
   open: boolean;
@@ -38,6 +39,7 @@ const importGoogleDriveModalSchema = z.object({
 type ImportGoogleDriveModalFormValues = z.infer<typeof importGoogleDriveModalSchema>;
 
 export const ImportGoogleDriveModal = ({ open, onOpenChange, onRecordImported }: ImportGoogleDriveModalProps) => {
+  const { abort, begin, finish } = useSetupOperation(open);
   const {
     control,
     formState: { isSubmitting },
@@ -48,20 +50,33 @@ export const ImportGoogleDriveModal = ({ open, onOpenChange, onRecordImported }:
   });
 
   const handleImportRecordSubmit = handleSubmit(async ({ driveFile, keyFile }) => {
+    const controller = begin();
     try {
-      await importGoogleDriveRecord({ fileId: driveFile.id, fileName: driveFile.name, keyFile });
+      await importGoogleDriveRecord({
+        fileId: driveFile.id,
+        fileName: driveFile.name,
+        keyFile,
+        signal: controller.signal,
+      });
 
       onRecordImported();
       onOpenChange(false);
 
       toast.success('Record imported.');
     } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Record import failed.' }));
+      if (!controller.signal.aborted) toast.error(getErrorMessage({ error, fallback: 'Record import failed.' }));
+    } finally {
+      finish(controller);
     }
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) abort();
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
+    <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
         // Reset form after the close animation finishes so the stale state

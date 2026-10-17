@@ -15,48 +15,44 @@ type EntryResolution = {
   conflict: boolean;
 };
 
-const serializableValue = (value: unknown): unknown => {
+const fieldText = (value: string | kdbx.ProtectedValue) =>
+  value instanceof kdbx.ProtectedValue ? value.getText() : value;
+
+const binaryState = (value: kdbx.KdbxBinary | kdbx.KdbxBinaryWithHash) => {
+  if (kdbx.KdbxBinaries.isKdbxBinaryWithHash(value)) return { hash: value.hash };
   if (value instanceof kdbx.ProtectedValue) return { protectedText: value.getText() };
-  if (value instanceof Uint8Array) return Array.from(value);
-  if (value instanceof Date) return value.toISOString();
-  if (value instanceof Map) {
-    return [...value.entries()]
-      .map(([key, entryValue]) => [String(key), serializableValue(entryValue)])
-      .toSorted(([left], [right]) => String(left).localeCompare(String(right)));
-  }
-  if (Array.isArray(value)) return value.map(serializableValue);
-  if (value && typeof value === 'object') {
-    const objectValue = value as Record<string, unknown>;
-    if (typeof objectValue.id === 'string' && Object.keys(objectValue).length === 1) return objectValue.id;
-
-    return Object.fromEntries(
-      Object.entries(objectValue)
-        .filter(([key]) => !key.startsWith('_'))
-        .toSorted(([left], [right]) => left.localeCompare(right))
-        .map(([key, entryValue]) => [key, serializableValue(entryValue)]),
-    );
-  }
-
-  return value;
+  return Array.from(new Uint8Array(value));
 };
+
+const customDataState = (customData: kdbx.KdbxEntry['customData']) =>
+  [...(customData ?? new Map())]
+    .map(([key, item]) => [key, item?.value ?? null])
+    .toSorted(([left], [right]) => left.localeCompare(right));
 
 const entryState = (entry: kdbx.KdbxEntry, isConflictCopy = false) => {
   const fields = [...entry.fields.entries()]
     .filter(([name]) => name !== CONFLICT_COPY_MARKER)
     .map(([name, value]) => {
       if (isConflictCopy && name === 'Title') {
-        const title = typeof value === 'string' ? value : value instanceof kdbx.ProtectedValue ? value.getText() : '';
+        const title = fieldText(value);
         return [name, title.endsWith(CONFLICT_COPY_SUFFIX) ? title.slice(0, -CONFLICT_COPY_SUFFIX.length) : title];
       }
 
-      return [name, serializableValue(value)];
+      return [name, fieldText(value)];
     })
     .toSorted(([left], [right]) => String(left).localeCompare(String(right)));
 
   return JSON.stringify({
-    autoType: serializableValue(entry.autoType),
-    binaries: serializableValue(entry.binaries),
-    customData: serializableValue(entry.customData),
+    autoType: {
+      enabled: entry.autoType.enabled,
+      obfuscation: entry.autoType.obfuscation,
+      defaultSequence: entry.autoType.defaultSequence,
+      items: entry.autoType.items.map(({ window, keystrokeSequence }) => ({ window, keystrokeSequence })),
+    },
+    binaries: [...entry.binaries.entries()]
+      .map(([name, value]) => [name, binaryState(value)])
+      .toSorted(([left], [right]) => String(left).localeCompare(String(right))),
+    customData: customDataState(entry.customData),
     customIcon: entry.customIcon?.id,
     fields,
     fgColor: entry.fgColor,
@@ -64,13 +60,43 @@ const entryState = (entry: kdbx.KdbxEntry, isConflictCopy = false) => {
     icon: entry.icon,
     overrideUrl: entry.overrideUrl,
     parentGroup: entry.parentGroup?.uuid.id,
+    previousParentGroup: entry.previousParentGroup?.id,
     qualityCheck: entry.qualityCheck,
-    tags: entry.tags,
+    tags: [...entry.tags].toSorted(),
     times: {
       expires: entry.times.expires,
       expiryTime: entry.times.expiryTime?.toISOString(),
     },
   });
+};
+
+const cloneBinary = (value: kdbx.KdbxBinary) => {
+  if (value instanceof kdbx.ProtectedValue) return value.clone();
+  return value.slice(0);
+};
+
+const cloneCustomData = (customData: kdbx.KdbxEntry['customData']) =>
+  customData
+    ? new Map(
+        [...customData.entries()].map(([key, item]) => [
+          key,
+          { value: item.value, lastModified: item.lastModified ? new Date(item.lastModified) : undefined },
+        ]),
+      )
+    : undefined;
+
+const preserveComparedProperties = (target: kdbx.KdbxEntry, source: kdbx.KdbxEntry) => {
+  target.binaries = new Map(
+    [...source.binaries.entries()].map(([name, value]) => [
+      name,
+      kdbx.KdbxBinaries.isKdbxBinaryWithHash(value)
+        ? { hash: value.hash, value: cloneBinary(value.value) }
+        : cloneBinary(value),
+    ]),
+  );
+  target.customData = cloneCustomData(source.customData);
+  target.qualityCheck = source.qualityCheck;
+  target.previousParentGroup = source.previousParentGroup;
 };
 
 const indexEntries = (database: kdbx.Kdbx) => {
@@ -239,8 +265,7 @@ const forceVariant = (database: kdbx.Kdbx, id: string, variant: kdbx.KdbxEntry |
 
   if (entry.parentGroup !== targetGroup) database.move(entry, targetGroup);
   entry.copyFrom(variant);
-  entry.customData = variant.customData;
-  entry.previousParentGroup = variant.previousParentGroup;
+  preserveComparedProperties(entry, variant);
 };
 
 const preserveDeletion = (database: kdbx.Kdbx, resolution: EntryResolution) => {
@@ -258,6 +283,30 @@ const preserveDeletion = (database: kdbx.Kdbx, resolution: EntryResolution) => {
   }
 };
 
+export function createConflictCopyFromEntry({
+  database,
+  sourceDatabase,
+  sourceEntry,
+  originalId,
+}: {
+  database: kdbx.Kdbx;
+  sourceDatabase: kdbx.Kdbx;
+  sourceEntry: kdbx.KdbxEntry;
+  originalId: string;
+}) {
+  const sourceGroupUuid = sourceEntry.parentGroup?.uuid;
+  const parentGroup = sourceGroupUuid ? findGroupByUuid(database, sourceGroupUuid) : null;
+  const copy = database.importEntry(sourceEntry, parentGroup ?? database.getDefaultGroup(), sourceDatabase);
+  copy.uuid = kdbx.KdbxUuid.random();
+  preserveComparedProperties(copy, sourceEntry);
+  const title = getFieldText(copy.fields.get('Title')) || 'Untitled';
+
+  copy.fields.set('Title', title.endsWith(CONFLICT_COPY_SUFFIX) ? title : `${title}${CONFLICT_COPY_SUFFIX}`);
+  copy.fields.set(CONFLICT_COPY_MARKER, originalId);
+  copy.times.update();
+  return copy;
+}
+
 const hasMatchingConflictCopy = (database: kdbx.Kdbx, resolution: EntryResolution) => {
   if (!resolution.variant) return false;
 
@@ -269,14 +318,63 @@ const hasMatchingConflictCopy = (database: kdbx.Kdbx, resolution: EntryResolutio
 
 const createConflictCopy = (database: kdbx.Kdbx, resolution: EntryResolution) => {
   if (!resolution.variant) return;
-  const sourceGroupUuid = resolution.variant.parentGroup?.uuid;
-  const parentGroup = sourceGroupUuid ? findGroupByUuid(database, sourceGroupUuid) : null;
-  const copy = database.importEntry(resolution.variant, parentGroup ?? database.getDefaultGroup(), resolution.source);
-  const title = getFieldText(copy.fields.get('Title')) || 'Untitled';
+  createConflictCopyFromEntry({
+    database,
+    sourceDatabase: resolution.source,
+    sourceEntry: resolution.variant,
+    originalId: resolution.id,
+  });
+};
 
-  copy.fields.set('Title', title.endsWith(CONFLICT_COPY_SUFFIX) ? title : `${title}${CONFLICT_COPY_SUFFIX}`);
-  copy.fields.set(CONFLICT_COPY_MARKER, resolution.id);
-  copy.times.update();
+export const entriesHaveSameContent = (left: kdbx.KdbxEntry, right: kdbx.KdbxEntry) =>
+  entryState(left) === entryState(right);
+
+export const mergeWithoutCommonVersion = ({
+  localDatabase,
+  remoteDatabase,
+}: {
+  localDatabase: kdbx.Kdbx;
+  remoteDatabase: kdbx.Kdbx;
+}) => {
+  if (!localDatabase.getDefaultGroup().uuid.equals(remoteDatabase.getDefaultGroup().uuid)) {
+    throw new Error('The remote file is a different KeePass database. Download the local copy before recovering it.');
+  }
+
+  const localEntries = indexEntries(localDatabase);
+  const remoteEntries = indexEntries(remoteDatabase);
+  const resolutions: EntryResolution[] = [];
+
+  for (const [id, localEntry] of localEntries) {
+    if (getFieldText(localEntry.fields.get(CONFLICT_COPY_MARKER))) continue;
+
+    const remoteEntry = remoteEntries.get(id);
+    if (remoteEntry && entryState(localEntry) === entryState(remoteEntry)) continue;
+    resolutions.push({
+      id,
+      variant: localEntry,
+      source: localDatabase,
+      deletionVariant: null,
+      deletionSource: remoteDatabase,
+      originalVariant: remoteEntry ?? null,
+      originalStaysDeleted: !remoteEntry,
+      conflict: true,
+    });
+  }
+
+  for (const resolution of resolutions) {
+    if (!hasMatchingConflictCopy(localDatabase, resolution) && !hasMatchingConflictCopy(remoteDatabase, resolution)) {
+      createConflictCopy(localDatabase, resolution);
+    }
+  }
+
+  localDatabase.merge(remoteDatabase);
+
+  for (const resolution of resolutions) {
+    if (resolution.originalStaysDeleted) preserveDeletion(localDatabase, resolution);
+    else forceVariant(localDatabase, resolution.id, resolution.originalVariant ?? null);
+  }
+
+  return localDatabase;
 };
 
 export const mergeWithConflictCopies = ({

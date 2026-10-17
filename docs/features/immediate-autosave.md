@@ -1,65 +1,49 @@
-# Immediate Autosave
+# Save and synchronization
 
 ## Purpose
 
-Define a single save pipeline that persists every edit immediately.
+Describe how an explicit workspace Save persists encrypted database bytes and starts remote synchronization.
 
 ## Scope
 
-- Entry/group edits.
-- Local file-input source and Drive-backed sources.
+- Local, Google Drive, and WebDAV records.
+- Entry edits, history changes, entry creation, removal, and restore.
+- The in-memory-only demo session, which does not persist edits.
 
 ## Functional Requirements
 
-- Autosave-on-change is a fixed lite default (not user-configurable).
-- KeeWeb-parity trigger semantics for lite defaults:
-  - `autoSave = true`
-  - `autoSaveInterval = -1` (sync/save on each dirty change event)
-- Any data mutation triggers save immediately.
-- Save pipeline is serialized (one write in flight).
-- Save serialization uses browser Web Locks API (`navigator.locks`) with a single save lock name (`workspace.service.saveDatabase`).
-- If edits happen during save, queue another save run through the same Web Locks queue.
-- Never drop pending edits; queued save requests execute in lock-queue order.
-- Save runs may coalesce rapid dirty events into one write of the latest encrypted state before releasing the lock.
-- Source-specific persistence:
-  - local file-input source: update encrypted cache and latest downloadable export state
-  - `local-cache` fallback mode: update encrypted cache/export state
-  - Drive-backed: save pipeline writes to IndexedDB only; Drive sync runs as a separate background job after each save
+- Typing in an entry form changes only the in-memory draft. It does not save the database.
+- The user chooses `Save` to apply an entry draft. Unsaved drafts remain protected by the navigation guard and can be explicitly discarded.
+- A save serializes the updated KDBX database and persists it before requesting remote synchronization.
+- Local records update their encrypted bytes and local generation.
+- Remote records atomically compare the captured generation, store encrypted bytes, increment the generation, preserve the verified common snapshot, and mark pending changes.
+- A remote save is complete when the local encrypted write succeeds. It does not wait for server confirmation.
+- Remote synchronization starts after unlock and a completed save. It can also be requested when returning to a visible tab, when connectivity returns with pending work or a network error, and by manual retry. It does not poll on an interval.
+- At most one sync pass runs per session, with at most one requested follow-up pass. A new local save cannot be replaced by an older in-flight result.
 
-## UI Requirements
+## Status
 
-- Show save state continuously:
-  - `saving`
-  - `saved`
-  - `error`
-- Save status must reflect real persistence result, not optimistic completion.
-- Save UI semantics:
-  - `saving` while save lock is held or save requests are queued
-  - `saved` when queue is drained and latest write succeeded
-  - `error` when latest queued write fails
-
-## Data and Storage
-
-- Queue/save state is maintained in runtime app state (in-memory, non-persistent).
-- Save queue state includes lock/queue indicators used for status rendering.
-- Persisted targets depend on source adapter and configuration:
-  - local file-input source: Encrypted Offline Cache (IndexedDB) plus on-demand browser download export
-  - `local-cache` mode/fallback: Encrypted Offline Cache (IndexedDB)
-  - Drive-backed sync state: maintained in runtime component state (loading/error from `useAsyncFn`)
+- `Syncing`: a remote pass is running.
+- `Saved locally`: the encrypted bytes are persisted and remote confirmation is pending.
+- `Synced`: remote synchronization has no pending work.
+- `Sync error`: the latest remote pass failed. If data is pending, the UI also shows `Saved locally`.
+- Local records have no remote synchronization status. Demo records are not saved to IndexedDB.
 
 ## Failure Handling
 
-- Save errors keep unsaved/error indicators visible.
-- Retry path must exist (auto-retry and/or explicit user action).
-- Failed save must never be marked as successful.
-- Failed Drive sync must not overwrite the locally-stored encrypted bytes; sync state is updated independently of the save pipeline.
+- A local persistence error keeps the entry form available for correction or retry; it is not shown as a successful save.
+- A remote synchronization error keeps the last saved encrypted bytes, common snapshot, and pending marker.
+- Recoverable network failures can retry on an online or visibility event, or by explicit action. Authentication, missing-resource, and unsupported-operation failures wait for their recovery action.
+- Locking, forgetting, or replacing a connection invalidates outstanding work. A completed remote request cannot authorize a stale local commit.
 
 ## Security and Privacy
 
-- Do not log plaintext unlock credentials or decrypted secret fields.
+- Persist encrypted KDBX bytes and synchronization metadata only.
+- Keep entered passwords, key-file bytes, decrypted fields, and active provider credentials in runtime memory.
 
 ## Acceptance Criteria
 
-- Every edit results in a persistence attempt.
-- Rapid edit bursts do not corrupt data or lose updates.
-- Failure states are explicit and recoverable.
+- Database changes persist only after the user chooses `Save`.
+- Remote saves update the local encrypted cache before network synchronization starts.
+- A remote failure leaves saved local bytes and pending status available for later recovery.
+- Sync event bursts do not start duplicate concurrent passes, and synchronization does not run on a timer.

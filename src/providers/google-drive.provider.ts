@@ -51,8 +51,8 @@ export const googleDriveProvider = {
     return {
       displayName: parsedInput.fileName,
       duplicateIdentity: parsedInput.fileId,
-      import: async () => ({
-        bytes: await getFile(parsedInput.fileId),
+      import: async (signal) => ({
+        bytes: await getFile(parsedInput.fileId, signal),
         name: parsedInput.fileName,
         source: { id: parsedInput.fileId },
       }),

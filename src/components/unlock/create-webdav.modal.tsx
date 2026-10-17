@@ -15,9 +15,11 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createDatabaseRecord, LocalRecoveryRecordSavedError } from '@/services/record.service';
+import { createDatabaseRecord } from '@/services/record.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
+import { webdavConnectionSchema } from '@/providers/webdav.provider';
+import { useSetupOperation } from '@/hooks/use-setup-operation.hook';
 
 export type CreateWebDavModalProps = {
   open: boolean;
@@ -28,9 +30,9 @@ export type CreateWebDavModalProps = {
 const schema = z
   .object({
     databaseName: z.string().trim().min(1, 'Enter a database name.'),
-    url: z.string().trim().min(1, 'Enter the full HTTPS WebDAV destination file URL.'),
-    username: z.string().trim().min(1, 'Enter a WebDAV username.'),
-    serverPassword: z.string().min(1, 'Enter a WebDAV password or app password.'),
+    url: webdavConnectionSchema.shape.url,
+    username: webdavConnectionSchema.shape.username,
+    serverPassword: webdavConnectionSchema.shape.password,
     password: z.string().min(1, 'Enter a master password.'),
     confirmPassword: z.string().min(1, 'Confirm your master password.'),
     useKeyFile: z.boolean(),
@@ -43,6 +45,7 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 export const CreateWebDavModal = ({ open, onOpenChange, onRecordCreated }: CreateWebDavModalProps) => {
+  const { abort, begin, finish } = useSetupOperation(open);
   const {
     control,
     formState: { isSubmitting },
@@ -61,7 +64,13 @@ export const CreateWebDavModal = ({ open, onOpenChange, onRecordCreated }: Creat
     resolver: zodResolver(schema),
   });
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) abort();
+    onOpenChange(nextOpen);
+  };
+
   const submit = handleSubmit(async ({ databaseName, url, username, serverPassword, password, useKeyFile }) => {
+    const controller = begin();
     try {
       const result = await createDatabaseRecord({
         providerId: 'webdav',
@@ -69,16 +78,20 @@ export const CreateWebDavModal = ({ open, onOpenChange, onRecordCreated }: Creat
         password,
         useKeyFile,
         setupInput: { url, username, password: serverPassword },
+        signal: controller.signal,
       });
 
-      if (result.keyFileBytes && result.keyFileName)
-        downloadBytes({ bytes: result.keyFileBytes, fileName: result.keyFileName });
+      if (result.generatedKeyFile)
+        downloadBytes({ bytes: result.generatedKeyFile.bytes, fileName: result.generatedKeyFile.name });
       onRecordCreated();
-      onOpenChange(false);
-      toast.success('WebDAV database created.');
+      if (!controller.signal.aborted) handleOpenChange(false);
+      if (result.outcome === 'created') toast.success('WebDAV database created.');
+      else toast.error(getErrorMessage({ error: result.error, fallback: 'WebDAV database saved locally.' }));
     } catch (error) {
-      if (error instanceof LocalRecoveryRecordSavedError) onRecordCreated();
-      toast.error(getErrorMessage({ error, fallback: 'WebDAV database creation failed.' }));
+      if (!controller.signal.aborted)
+        toast.error(getErrorMessage({ error, fallback: 'WebDAV database creation failed.' }));
+    } finally {
+      finish(controller);
     }
   });
 
@@ -102,7 +115,7 @@ export const CreateWebDavModal = ({ open, onOpenChange, onRecordCreated }: Creat
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-lg"
         onAnimationEnd={(event) => {

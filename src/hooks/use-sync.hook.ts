@@ -1,9 +1,20 @@
-import { useEffect, useEffectEvent, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { syncForSession, type UnlockSession } from '@/services/session.service';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
+import type { UnlockSession } from '@/services/session.service';
+import { synchronizeRecord } from '@/services/synchronization.service';
 import { getDatabaseProvider } from '@/providers/registry';
 import { ProviderError } from '@/providers/database-provider';
 import { onRecordForgotten } from '@/repositories/record.repository';
 import { createSessionLifecycle } from '@/services/session-lifecycle.service';
+import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 
 type UseSyncProps = UnlockSession & {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;
@@ -12,7 +23,35 @@ type UseSyncProps = UnlockSession & {
 type State = {
   loading: boolean;
   error?: Error;
+  providerSession?: UnlockSession['providerSession'];
 };
+
+type CurrentSession = {
+  record: UnlockSession['record'];
+  database: UnlockSession['database'];
+  version: number;
+  sessionId: string;
+  lifecycle: NonNullable<UnlockSession['lifecycle']>;
+  providerSession?: UnlockSession['providerSession'];
+  providerSessionError?: Error;
+  setSession: Dispatch<SetStateAction<UnlockSession | null>>;
+};
+
+const isNetworkError = (error?: Error) => error instanceof ProviderError && error.kind === 'network';
+const isBlockingRecoveryError = (error?: Error) =>
+  error instanceof ProviderError &&
+  [
+    'authentication',
+    'permission',
+    'missing-resource',
+    'locked-resource',
+    'capacity',
+    'unsupported',
+    'remote-conflict',
+  ].includes(error.kind);
+
+const hasPendingChanges = (record: UnlockSession['record']) =>
+  record.type !== 'demo' && record.type !== 'local' && Boolean(record.synchronization?.pending);
 
 export const useSync = ({
   record,
@@ -24,128 +63,217 @@ export const useSync = ({
   providerSession,
   providerSessionError,
 }: UseSyncProps) => {
+  const { isMutating } = useEntryMutation();
   const [fallbackLifecycle] = useState(() => createSessionLifecycle());
   const lifecycle = suppliedLifecycle ?? fallbackLifecycle;
   const sessionId = suppliedSessionId ?? lifecycle.sessionId;
-  const generation = record.type === 'local' || record.type === 'demo' ? 0 : (record.synchronization?.generation ?? 0);
-  const lastCallId = useRef(0);
-  const activeController = useRef<AbortController | null>(null);
-  const [state, set] = useState<State>(() => ({ loading: false, error: providerSessionError }));
+  const [state, setState] = useState<State>(() => ({ loading: false, error: providerSessionError, providerSession }));
+  const displayedState: State = useMemo(
+    () =>
+      providerSessionError
+        ? { loading: false, error: providerSessionError, providerSession }
+        : state.providerSession === providerSession
+          ? state
+          : { loading: false, providerSession },
+    [providerSessionError, providerSession, state],
+  );
+  const stateRef = useRef<State>(displayedState);
+  const currentRef = useRef<CurrentSession>({
+    record,
+    database,
+    version,
+    sessionId,
+    lifecycle,
+    providerSession,
+    providerSessionError,
+    setSession,
+  });
+  const running = useRef(false);
+  const followupRequested = useRef(false);
+  const isMutatingRef = useRef(isMutating);
+  const deferredSessionUpdate = useRef<(() => void) | null>(null);
+  const triggerSyncRef = useRef<() => void>(() => {});
 
-  const sync = async (signal: AbortSignal) => {
-    const capture = lifecycle.capture(record.id, generation);
-    const operationSignal = AbortSignal.any([signal, lifecycle.signal]);
-    const syncedSession = await syncForSession({ record, database, providerSession, signal: operationSignal });
-    lifecycle.assertCurrent(capture);
+  useLayoutEffect(() => {
+    currentRef.current = {
+      record,
+      database,
+      version,
+      sessionId,
+      lifecycle,
+      providerSession,
+      providerSessionError,
+      setSession,
+    };
+    stateRef.current = displayedState;
+    isMutatingRef.current = isMutating;
+  }, [
+    record,
+    database,
+    version,
+    sessionId,
+    lifecycle,
+    providerSession,
+    providerSessionError,
+    setSession,
+    displayedState,
+    isMutating,
+  ]);
 
-    setSession((previousSession) => {
-      if (
-        signal.aborted ||
-        !previousSession ||
-        (previousSession.sessionId ?? sessionId) !== sessionId ||
-        previousSession.record.id !== record.id
-      ) {
-        return previousSession;
+  const updateState = useCallback((next: State) => {
+    const status = { ...next, providerSession: currentRef.current.providerSession };
+    stateRef.current = status;
+    setState(status);
+  }, []);
+
+  const runPass = useCallback(
+    async (requestedSession: CurrentSession): Promise<Error | undefined> => {
+      const {
+        record: requestedRecord,
+        database: requestedDatabase,
+        sessionId: requestedId,
+        lifecycle: requestedLifecycle,
+      } = requestedSession;
+      const requestedProviderSession = requestedSession.providerSession;
+      if (!requestedProviderSession) return;
+
+      const generation =
+        requestedRecord.type === 'local' || requestedRecord.type === 'demo'
+          ? 0
+          : (requestedRecord.synchronization?.generation ?? 0);
+      const capture = requestedLifecycle.capture(requestedRecord.id, generation);
+
+      try {
+        const synchronized = await synchronizeRecord({
+          recordId: requestedRecord.id,
+          credentials: requestedDatabase.credentials,
+          providerSession: requestedProviderSession,
+          signal: requestedLifecycle.signal,
+          lifecycle: requestedLifecycle,
+        });
+        requestedLifecycle.assertCurrent(capture);
+        if (synchronized.superseded) followupRequested.current = true;
+
+        const applySynchronizedSession = () => {
+          requestedSession.setSession((previousSession) => {
+            if (
+              requestedLifecycle.signal.aborted ||
+              !previousSession ||
+              (previousSession.sessionId ?? previousSession.lifecycle?.sessionId) !== requestedId ||
+              previousSession.record.id !== requestedRecord.id ||
+              previousSession.version !== requestedSession.version
+            ) {
+              return previousSession;
+            }
+
+            return {
+              ...previousSession,
+              ...synchronized,
+              version: requestedSession.version,
+              sessionId: requestedId,
+              lifecycle: requestedLifecycle,
+            };
+          });
+        };
+        if (isMutatingRef.current) deferredSessionUpdate.current = applySynchronizedSession;
+        else applySynchronizedSession();
+        return;
+      } catch (error) {
+        if (requestedLifecycle.signal.aborted) return;
+        const normalizedError = error instanceof Error ? error : new Error('Database synchronization failed.');
+        const latestSession = currentRef.current;
+        if (latestSession.sessionId === requestedId && latestSession.record.id === requestedRecord.id) {
+          updateState({ error: normalizedError, loading: false });
+        }
+        return normalizedError;
       }
+    },
+    [updateState],
+  );
 
-      if (previousSession.version !== version) {
-        return previousSession;
-      }
-
-      return {
-        ...previousSession,
-        ...syncedSession,
-        version,
-        sessionId,
-        lifecycle,
-      };
-    });
-  };
-
-  const triggerSync = () => {
+  const triggerSync = useCallback(() => {
+    const requestedSession = currentRef.current;
+    const requestedRecord = requestedSession.record;
     if (
-      record.type === 'demo' ||
-      getDatabaseProvider(record.type)?.capabilities.kind !== 'remote' ||
-      (!providerSession && providerSessionError)
+      requestedRecord.type === 'demo' ||
+      getDatabaseProvider(requestedRecord.type)?.capabilities.kind !== 'remote' ||
+      (!requestedSession.providerSession && requestedSession.providerSessionError)
     ) {
       return;
     }
-
-    const callId = ++lastCallId.current;
-    activeController.current?.abort();
-    const controller = new AbortController();
-    activeController.current = controller;
-
-    set({ error: undefined, loading: true });
-
-    void sync(controller.signal)
-      .then(() => {
-        if (!controller.signal.aborted && callId === lastCallId.current) {
-          set({ error: undefined, loading: false });
-        }
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted && callId === lastCallId.current) {
-          set({ error, loading: false });
-        }
-      });
-  };
-
-  const retrySync = () => {
-    const hasPendingChanges =
-      record.type !== 'demo' && record.type !== 'local' && Boolean(record.synchronization?.pending);
-    if (state.error instanceof ProviderError && state.error.kind === 'authentication') return;
-    if (providerSessionError) return;
-    if (!state.error && !hasPendingChanges) {
+    if (requestedSession.lifecycle.signal.aborted) return;
+    if (isMutating) {
+      followupRequested.current = true;
+      return;
+    }
+    if (running.current) {
+      followupRequested.current = true;
       return;
     }
 
+    running.current = true;
+    updateState({ error: undefined, loading: true });
+    void runPass(requestedSession)
+      .then((error) => {
+        const latestSession = currentRef.current;
+        if (
+          !requestedSession.lifecycle.signal.aborted &&
+          latestSession.sessionId === requestedSession.sessionId &&
+          latestSession.record.id === requestedSession.record.id
+        ) {
+          updateState({ error, loading: false });
+        }
+      })
+      .finally(() => {
+        running.current = false;
+        if (!followupRequested.current) return;
+        followupRequested.current = false;
+        const latestError = stateRef.current.error;
+        if (latestError && !isNetworkError(latestError)) return;
+        triggerSyncRef.current();
+      });
+  }, [isMutating, runPass, updateState]);
+
+  useLayoutEffect(() => {
+    triggerSyncRef.current = triggerSync;
+  }, [triggerSync]);
+
+  useEffect(() => {
+    if (isMutating) return;
+    deferredSessionUpdate.current?.();
+    deferredSessionUpdate.current = null;
+    if (!followupRequested.current) return;
+    followupRequested.current = false;
+    triggerSyncRef.current();
+  }, [isMutating]);
+
+  const retrySync = () => {
+    const current = currentRef.current;
+    const error = stateRef.current.error;
+    if (isBlockingRecoveryError(error) || current.providerSessionError) return;
+    if (!error && !hasPendingChanges(current.record)) return;
     triggerSync();
   };
 
   const previousProviderSession = useRef(providerSession);
-  const handleVersionSync = useEffectEvent((providerChanged: boolean) => {
-    if (providerSessionError) {
-      set({ error: providerSessionError, loading: false });
-      return;
-    }
-
-    if (state.error && !providerChanged) {
-      return;
-    }
-
-    if (providerChanged) set({ error: undefined, loading: false });
-
-    triggerSync();
-  });
-
-  const handleVisible = useEffectEvent(() => {
-    if (!state.error || (state.error instanceof ProviderError && state.error.kind === 'network')) {
-      triggerSync();
-    }
-  });
-
-  const handleOnline = useEffectEvent(() => {
-    if (state.error instanceof ProviderError && state.error.kind === 'network') {
-      triggerSync();
-    }
-  });
-
   useEffect(() => {
     const providerChanged = previousProviderSession.current !== providerSession;
     previousProviderSession.current = providerSession;
-    handleVersionSync(providerChanged);
-    return () => {
-      activeController.current?.abort();
-      activeController.current = null;
-    };
-  }, [record.id, version, providerSession, providerSessionError]);
+    if (providerSessionError) return;
+
+    if (stateRef.current.error && !providerChanged) return;
+    triggerSync();
+  }, [record.id, version, providerSession, providerSessionError, triggerSync]);
 
   useEffect(() => {
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') handleVisible();
+      const error = stateRef.current.error;
+      if (!error || isNetworkError(error)) triggerSync();
     };
-    const onOnline = () => handleOnline();
+    const onOnline = () => {
+      const current = currentRef.current;
+      if (isNetworkError(stateRef.current.error) || hasPendingChanges(current.record)) triggerSync();
+    };
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('online', onOnline);
@@ -154,11 +282,9 @@ export const useSync = ({
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('online', onOnline);
     };
-  }, []);
+  }, [triggerSync]);
 
-  useEffect(() => {
-    return () => lifecycle.dispose();
-  }, [lifecycle]);
+  useEffect(() => () => lifecycle.dispose(), [lifecycle]);
 
   useEffect(() => {
     if (!providerSession) return;
@@ -170,7 +296,6 @@ export const useSync = ({
       if (forgottenRecordId !== record.id) return;
 
       lifecycle.dispose();
-      activeController.current?.abort();
       setSession((previousSession) =>
         previousSession && (previousSession.sessionId ?? sessionId) === sessionId ? null : previousSession,
       );
@@ -178,7 +303,8 @@ export const useSync = ({
   }, [lifecycle, record.id, sessionId, setSession]);
 
   return {
-    ...state,
+    loading: displayedState.loading,
+    error: displayedState.error,
     retrySync,
   };
 };

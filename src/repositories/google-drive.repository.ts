@@ -1,10 +1,67 @@
 import { Lock } from '@/utils/lock.utils';
 import { requireGoogleDriveConfiguration } from '@/providers/google-drive.config';
+import { ProviderError } from '@/providers/database-provider';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
 const lock = new Lock('google-drive.repository');
+
+const driveStatusError = (operation: string, status: number) => {
+  const message =
+    status === 401
+      ? 'Google Drive rejected the current authorization.'
+      : status === 403
+        ? 'The Google Drive account does not have permission for this file.'
+        : status === 404 || status === 410
+          ? 'The Google Drive file could not be found.'
+          : status === 409
+            ? 'The Google Drive file changed while this operation was being applied.'
+            : status === 412
+              ? 'The Google Drive file changed before this operation could be applied.'
+              : status === 423
+                ? 'The Google Drive file is locked.'
+                : status === 507
+                  ? 'Google Drive does not have enough storage space.'
+                  : status === 405 || status === 501
+                    ? 'Google Drive does not support this operation.'
+                    : `Google Drive ${operation} failed with HTTP ${status}.`;
+  const kind =
+    status === 401
+      ? 'authentication'
+      : status === 403
+        ? 'permission'
+        : status === 404 || status === 410
+          ? 'missing-resource'
+          : status === 409
+            ? 'remote-conflict'
+            : status === 412
+              ? 'precondition'
+              : status === 423
+                ? 'locked-resource'
+                : status === 507
+                  ? 'capacity'
+                  : status === 405 || status === 501
+                    ? 'unsupported'
+                    : 'network';
+
+  return new ProviderError(kind, message);
+};
+
+const fetchDrive = async (url: string, init: RequestInit, operation: string) => {
+  try {
+    const response = await fetch(url, init);
+    if (!response.ok) throw driveStatusError(operation, response.status);
+    return response;
+  } catch (error) {
+    if (error instanceof ProviderError || (error instanceof DOMException && error.name === 'AbortError')) {
+      throw error;
+    }
+    throw new ProviderError('network', `The Google Drive ${operation} request could not be completed.`, {
+      cause: error,
+    });
+  }
+};
 
 class Auth {
   private state: { accessToken: string; expiresAt: Date } | null = null;
@@ -77,17 +134,24 @@ export const getFile = async (fileId: string, signal?: AbortSignal): Promise<Uin
 
   const params = new URLSearchParams({ alt: 'media' });
 
-  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    signal,
-  });
+  const response = await fetchDrive(
+    `${DRIVE_API_BASE}/files/${fileId}?${params}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal,
+    },
+    'read',
+  );
 
-  if (!response.ok) {
-    throw new Error(`Failed to get file: ${response.status} ${response.statusText}`);
+  try {
+    const buffer = await response.arrayBuffer();
+    return new Uint8Array(buffer);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    throw new ProviderError('network', 'The Google Drive file response could not be read completely.', {
+      cause: error,
+    });
   }
-
-  const buffer = await response.arrayBuffer();
-  return new Uint8Array(buffer);
 };
 
 export const createFile = async (
@@ -117,21 +181,28 @@ export const createFile = async (
 
   const params = new URLSearchParams({ uploadType: 'multipart', fields: 'id,name,modifiedTime' });
 
-  const response = await fetch(`${DRIVE_UPLOAD_BASE}/files?${params}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': `multipart/related; boundary=${boundary}`,
+  const response = await fetchDrive(
+    `${DRIVE_UPLOAD_BASE}/files?${params}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+      },
+      body,
+      signal,
     },
-    body,
-    signal,
-  });
+    'create',
+  );
 
-  if (!response.ok) {
-    throw new Error(`Failed to create file: ${response.status} ${response.statusText}`);
+  try {
+    return (await response.json()) as File;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    throw new ProviderError('network', 'Google Drive returned incomplete file metadata after creation.', {
+      cause: error,
+    });
   }
-
-  return (await response.json()) as File;
 };
 
 export const updateFile = async (
@@ -144,19 +215,26 @@ export const updateFile = async (
 
   const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime' });
 
-  const response = await fetch(`${DRIVE_UPLOAD_BASE}/files/${fileId}?${params}`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/octet-stream',
+  const response = await fetchDrive(
+    `${DRIVE_UPLOAD_BASE}/files/${fileId}?${params}`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: data,
+      signal,
     },
-    body: data,
-    signal,
-  });
+    'update',
+  );
 
-  if (!response.ok) {
-    throw new Error(`Failed to update file: ${response.status} ${response.statusText}`);
+  try {
+    return (await response.json()) as File;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    throw new ProviderError('network', 'Google Drive returned incomplete file metadata after update.', {
+      cause: error,
+    });
   }
-
-  return (await response.json()) as File;
 };

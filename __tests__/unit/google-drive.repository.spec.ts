@@ -116,7 +116,17 @@ describe('google-drive.repository', () => {
     it('throws when the API returns an error response', async () => {
       mockServer.addHandlers(googleDriveApi.getFile.error({ status: 404, statusText: 'Not Found' }));
 
-      await expect(getFile('file-xyz')).rejects.toThrow('Failed to get file: 404 Not Found');
+      await expect(getFile('file-xyz')).rejects.toMatchObject({
+        name: 'ProviderError',
+        kind: 'missing-resource',
+      });
+    });
+
+    it('preserves cancellation after OAuth and before the authenticated request', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(getFile('file-xyz', controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
     });
   });
 
@@ -178,9 +188,19 @@ describe('google-drive.repository', () => {
     it('throws when the API returns an error response', async () => {
       mockServer.addHandlers(googleDriveApi.updateFile.error({ status: 500, statusText: 'Internal Server Error' }));
 
-      await expect(updateFile('file-xyz', new Uint8Array([1, 2, 3]))).rejects.toThrow(
-        'Failed to update file: 500 Internal Server Error',
-      );
+      await expect(updateFile('file-xyz', new Uint8Array([1, 2, 3]))).rejects.toMatchObject({
+        name: 'ProviderError',
+        kind: 'network',
+      });
+    });
+
+    it('normalizes permission failures for shared provider recovery', async () => {
+      mockServer.addHandlers(googleDriveApi.updateFile.error({ status: 403, statusText: 'Forbidden' }));
+
+      await expect(updateFile('file-xyz', new Uint8Array([1, 2, 3]))).rejects.toMatchObject({
+        name: 'ProviderError',
+        kind: 'permission',
+      });
     });
   });
 
@@ -266,9 +286,10 @@ describe('google-drive.repository', () => {
     it('throws when the API returns an error response', async () => {
       mockServer.addHandlers(googleDriveApi.createFile.error({ status: 500, statusText: 'Internal Server Error' }));
 
-      await expect(createFile('vault.kdbx', new Uint8Array([1, 2, 3]))).rejects.toThrow(
-        'Failed to create file: 500 Internal Server Error',
-      );
+      await expect(createFile('vault.kdbx', new Uint8Array([1, 2, 3]))).rejects.toMatchObject({
+        name: 'ProviderError',
+        kind: 'network',
+      });
     });
   });
 });
