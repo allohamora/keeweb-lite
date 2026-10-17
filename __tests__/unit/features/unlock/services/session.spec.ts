@@ -146,7 +146,7 @@ describe('session', () => {
     };
 
     it('returns unchanged session state for a local record', async () => {
-      const getAccessTokenSpy = vi.spyOn(auth, 'getAccessToken');
+      using getAccessTokenSpy = vi.spyOn(auth, 'getAccessToken');
       const { database, encryptedBytes } = await createSyncableDatabase();
       const record = await createRecord({
         id: 'local-record',

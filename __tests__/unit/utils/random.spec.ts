@@ -1,8 +1,6 @@
 import kdbxweb from '@/utils/kdbxweb';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { random, randomElement, randomInt, shuffle } from '@/utils/random';
-
-const randomSpy = vi.spyOn(kdbxweb.CryptoEngine, 'random');
 
 const toBytes = (value: number) => {
   const bytes = new Uint8Array(4);
@@ -12,27 +10,27 @@ const toBytes = (value: number) => {
 };
 
 const mockRandom = (...values: number[]) => {
+  const randomSpy = vi.spyOn(kdbxweb.CryptoEngine, 'random');
   const [first, ...rest] = values;
-  if (first === undefined) return;
+  if (first === undefined) return randomSpy;
 
   if (rest.length === 0) {
-    randomSpy.mockReturnValue(toBytes(first));
-    return;
+    return randomSpy.mockReturnValue(toBytes(first));
   }
 
   for (const value of values) {
     randomSpy.mockReturnValueOnce(toBytes(value));
   }
+
+  return randomSpy;
 };
 
 describe('random', () => {
-  afterEach(() => {
-    randomSpy.mockReset();
-  });
-
   describe('random', () => {
     it('converts 4 random bytes into a unit interval number', () => {
-      randomSpy.mockReturnValue(Uint8Array.of(0x80, 0x00, 0x00, 0x00));
+      using _randomSpy = vi
+        .spyOn(kdbxweb.CryptoEngine, 'random')
+        .mockReturnValue(Uint8Array.of(0x80, 0x00, 0x00, 0x00));
 
       expect(random()).toBe(0.5);
     });
@@ -50,34 +48,34 @@ describe('random', () => {
 
   describe('randomInt', () => {
     it('returns an integer between the given bounds', () => {
-      mockRandom(0.5);
+      using _randomSpy = mockRandom(0.5);
 
       expect(randomInt(5, 10)).toBe(8);
     });
 
     it('returns inclusive lower bound when random is 0', () => {
-      mockRandom(0);
+      using _randomSpy = mockRandom(0);
 
       expect(randomInt(5, 10)).toBe(5);
     });
 
     it('returns inclusive upper bound when random is near 1', () => {
-      mockRandom(0.999999999999);
+      using _randomSpy = mockRandom(0.999999999999);
 
       expect(randomInt(5, 10)).toBe(10);
     });
 
     it('supports reversed bounds by normalizing min and max', () => {
-      mockRandom(0);
+      using _randomSpy = mockRandom(0);
 
       expect(randomInt(10, 5)).toBe(5);
     });
 
     it('normalizes decimal bounds to nearest integers inside range', () => {
-      mockRandom(0);
+      using randomSpy = mockRandom(0);
       expect(randomInt(1.2, 4.8)).toBe(2);
 
-      mockRandom(0.999999999999);
+      randomSpy.mockReturnValue(toBytes(0.999999999999));
       expect(randomInt(1.2, 4.8)).toBe(4);
     });
 
@@ -89,19 +87,19 @@ describe('random', () => {
 
   describe('randomElement', () => {
     it('returns a random element from the array', () => {
-      mockRandom(0.5);
+      using _randomSpy = mockRandom(0.5);
 
       expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('beta');
     });
 
     it('returns first element when random is 0', () => {
-      mockRandom(0);
+      using _randomSpy = mockRandom(0);
 
       expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('alpha');
     });
 
     it('returns last element when random is near 1', () => {
-      mockRandom(0.999999999999);
+      using _randomSpy = mockRandom(0.999999999999);
 
       expect(randomElement(['alpha', 'beta', 'gamma'])).toBe('gamma');
     });
@@ -114,14 +112,14 @@ describe('random', () => {
 
   describe('shuffle', () => {
     it('returns values sorted by generated random scores', () => {
-      mockRandom(0.8, 0.1, 0.5);
+      using _randomSpy = mockRandom(0.8, 0.1, 0.5);
 
       expect(shuffle(['alpha', 'beta', 'gamma'])).toEqual(['beta', 'gamma', 'alpha']);
     });
 
     it('returns a new array and does not mutate input', () => {
       const values = [1, 2, 3];
-      mockRandom(0.4, 0.3, 0.2);
+      using _randomSpy = mockRandom(0.4, 0.3, 0.2);
 
       const shuffled = shuffle(values);
 
@@ -131,6 +129,8 @@ describe('random', () => {
     });
 
     it('returns empty array when input is empty', () => {
+      using randomSpy = vi.spyOn(kdbxweb.CryptoEngine, 'random');
+
       expect(shuffle([])).toEqual([]);
       expect(randomSpy).not.toHaveBeenCalled();
     });

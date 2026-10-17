@@ -102,7 +102,7 @@ describe('entry-edit-form', () => {
       const user = userEvent.setup();
       const onEntrySave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
-      const saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
+      using saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
 
       render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={onEntrySave} />);
       await user.type(screen.getByLabelText('Title'), '!');
@@ -119,7 +119,7 @@ describe('entry-edit-form', () => {
       const user = userEvent.setup();
       const onEntrySave = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record };
-      const saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
+      using saveEntry = vi.spyOn(entryService, 'saveEntry').mockResolvedValue(payload);
 
       render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={onEntrySave} />);
       await user.click(screen.getByRole('button', { name: 'Change icon and color' }));
@@ -240,7 +240,7 @@ describe('entry-edit-form', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
       const save = Promise.withResolvers<Awaited<ReturnType<typeof entryService.saveEntry>>>();
-      vi.spyOn(entryService, 'saveEntry').mockReturnValue(save.promise);
+      using _saveEntry = vi.spyOn(entryService, 'saveEntry').mockReturnValue(save.promise);
 
       render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');

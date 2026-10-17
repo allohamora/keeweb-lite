@@ -61,7 +61,7 @@ describe('entry-restore', () => {
       const user = userEvent.setup();
       const onEntryRestore = vi.fn();
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
-      const restoreEntry = vi.spyOn(entryService, 'restoreEntry').mockResolvedValue(payload);
+      using restoreEntry = vi.spyOn(entryService, 'restoreEntry').mockResolvedValue(payload);
 
       render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={onEntryRestore} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
@@ -95,7 +95,7 @@ describe('entry-restore', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
       const restore = Promise.withResolvers<Awaited<ReturnType<typeof entryService.restoreEntry>>>();
-      vi.spyOn(entryService, 'restoreEntry').mockReturnValue(restore.promise);
+      using _restoreEntry = vi.spyOn(entryService, 'restoreEntry').mockReturnValue(restore.promise);
 
       render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));

@@ -168,7 +168,7 @@ describe('workspace', () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
       const create = Promise.withResolvers<Awaited<ReturnType<typeof entryService.createEntry>>>();
-      vi.spyOn(entryService, 'createEntry').mockReturnValue(create.promise);
+      using _createEntry = vi.spyOn(entryService, 'createEntry').mockReturnValue(create.promise);
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Stub create entry' }));

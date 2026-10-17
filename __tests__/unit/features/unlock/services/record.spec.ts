@@ -670,7 +670,9 @@ describe('record', () => {
 
     it('throws an error naming the uploaded file and pointing to Import when the local write fails after Drive upload succeeds', async () => {
       mockServer.addHandlers(googleDriveApi.createFile.ok({ file: { id: 'drive-file-id-xyz' } }));
-      vi.spyOn(recordRepository, 'createRecord').mockRejectedValueOnce(new Error('IndexedDB write failed'));
+      using _createRecord = vi
+        .spyOn(recordRepository, 'createRecord')
+        .mockRejectedValueOnce(new Error('IndexedDB write failed'));
 
       await expect(
         createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
