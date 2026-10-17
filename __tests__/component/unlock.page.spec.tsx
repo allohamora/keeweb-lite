@@ -41,12 +41,8 @@ describe('unlock.page', () => {
 
     using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
 
-    let resolveDemo!: (session: sessionService.UnlockSession) => void;
-    using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(
-      new Promise((resolve) => {
-        resolveDemo = resolve;
-      }),
-    );
+    const demo = Promise.withResolvers<sessionService.UnlockSession>();
+    using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(demo.promise);
 
     render(<UnlockPage setSession={setSession} />);
     await user.click(await screen.findByRole('combobox', { name: 'Selected file' }));
@@ -64,7 +60,7 @@ describe('unlock.page', () => {
 
     const database = await createTestDatabase();
 
-    resolveDemo({ database, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 });
+    demo.resolve({ database, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 });
 
     await vi.waitFor(() => {
       expect(setSession).toHaveBeenCalledOnce();
@@ -79,12 +75,8 @@ describe('unlock.page', () => {
 
     using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
 
-    let resolveUnlock!: (session: sessionService.UnlockSession) => void;
-    using _unlockSession = vi.spyOn(sessionService, 'unlockSession').mockReturnValue(
-      new Promise((resolve) => {
-        resolveUnlock = resolve;
-      }),
-    );
+    const unlock = Promise.withResolvers<sessionService.UnlockSession>();
+    using _unlockSession = vi.spyOn(sessionService, 'unlockSession').mockReturnValue(unlock.promise);
     using createDemoSession = vi.spyOn(sessionService, 'createDemoSession');
 
     render(<UnlockPage setSession={setSession} />);
@@ -103,7 +95,7 @@ describe('unlock.page', () => {
 
     const database = await createTestDatabase();
 
-    resolveUnlock({
+    unlock.resolve({
       database,
       record: vaultRecord,
       version: 0,

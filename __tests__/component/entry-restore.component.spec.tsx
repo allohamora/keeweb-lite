@@ -1,6 +1,5 @@
 import * as workspaceService from '@/services/workspace.service';
 import userEvent from '@testing-library/user-event';
-import type kdbxweb from '@/lib/kdbxweb.lib';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { EntryRestore } from '@/components/workspace/entry-restore.component';
@@ -95,19 +94,8 @@ describe('entry-restore.component', () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      let resolveRestore: (payload: {
-        nextDatabase: kdbxweb.Kdbx;
-        nextEntryUuid: null;
-        nextRecord: typeof record;
-      }) => void = () => {};
-      const restorePromise = new Promise<{
-        nextDatabase: kdbxweb.Kdbx;
-        nextEntryUuid: null;
-        nextRecord: typeof record;
-      }>((resolve) => {
-        resolveRestore = resolve;
-      });
-      vi.spyOn(workspaceService, 'restoreEntry').mockReturnValue(restorePromise);
+      const restore = Promise.withResolvers<Awaited<ReturnType<typeof workspaceService.restoreEntry>>>();
+      vi.spyOn(workspaceService, 'restoreEntry').mockReturnValue(restore.promise);
 
       render(<EntryRestore database={database} entry={entry} record={record} onRestore={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Restore' }));
@@ -115,7 +103,7 @@ describe('entry-restore.component', () => {
 
       expect(screen.getByRole('button', { name: 'Restore' })).toBeDisabled();
 
-      resolveRestore({ nextDatabase: database, nextEntryUuid: null, nextRecord: record });
+      restore.resolve({ nextDatabase: database, nextEntryUuid: null, nextRecord: record });
       await waitFor(() => expect(screen.getByRole('button', { name: 'Restore' })).toBeEnabled());
     });
   });

@@ -20,13 +20,8 @@ const AsyncLockHarness = ({ action }: { action: () => Promise<void> }) => {
 describe('use-async-lock.hook', () => {
   it('locks while the action is pending and unlocks once it resolves', async () => {
     const user = userEvent.setup();
-    let resolveAction!: () => void;
-    const action = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveAction = resolve;
-        }),
-    );
+    const pending = Promise.withResolvers<void>();
+    const action = vi.fn(() => pending.promise);
 
     render(<AsyncLockHarness action={action} />);
     await user.click(screen.getByRole('button', { name: 'Run' }));
@@ -35,7 +30,7 @@ describe('use-async-lock.hook', () => {
     expect(screen.getByRole('button', { name: 'Run' })).toBeDisabled();
     expect(action).toHaveBeenCalledOnce();
 
-    resolveAction();
+    pending.resolve();
 
     await vi.waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Run' })).toBeEnabled();
@@ -43,13 +38,8 @@ describe('use-async-lock.hook', () => {
 
   it('ignores a second run while one is already in flight', async () => {
     const user = userEvent.setup();
-    let resolveAction!: () => void;
-    const action = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveAction = resolve;
-        }),
-    );
+    const pending = Promise.withResolvers<void>();
+    const action = vi.fn(() => pending.promise);
 
     render(<AsyncLockHarness action={action} />);
     await user.click(screen.getByRole('button', { name: 'Run' }));
@@ -59,7 +49,7 @@ describe('use-async-lock.hook', () => {
 
     expect(action).toHaveBeenCalledOnce();
 
-    resolveAction();
+    pending.resolve();
     await vi.waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
   });
 

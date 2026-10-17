@@ -165,26 +165,15 @@ describe('workspace.page', () => {
     it('disables create entry while a create is pending, and re-enables it once it settles', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      let resolveCreate: (payload: {
-        nextDatabase: kdbxweb.Kdbx;
-        nextEntryUuid: kdbxweb.KdbxUuid;
-        nextRecord: typeof record;
-      }) => void = () => {};
-      const createPromise = new Promise<{
-        nextDatabase: kdbxweb.Kdbx;
-        nextEntryUuid: kdbxweb.KdbxUuid;
-        nextRecord: typeof record;
-      }>((resolve) => {
-        resolveCreate = resolve;
-      });
-      vi.spyOn(workspaceService, 'createEntry').mockReturnValue(createPromise);
+      const create = Promise.withResolvers<Awaited<ReturnType<typeof workspaceService.createEntry>>>();
+      vi.spyOn(workspaceService, 'createEntry').mockReturnValue(create.promise);
 
       render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
       await user.click(screen.getByRole('button', { name: 'Stub create entry' }));
 
       expect(screen.getByRole('button', { name: 'Stub create entry' })).toBeDisabled();
 
-      resolveCreate({
+      create.resolve({
         nextDatabase: database,
         nextEntryUuid: entryUuid,
         nextRecord: record,

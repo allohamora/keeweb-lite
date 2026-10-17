@@ -239,19 +239,8 @@ describe('entry-edit.form', () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
-      let resolveSave: (payload: {
-        nextDatabase: kdbxweb.Kdbx;
-        nextEntryUuid: kdbxweb.KdbxUuid;
-        nextRecord: typeof record;
-      }) => void = () => {};
-      const savePromise = new Promise<{
-        nextDatabase: kdbxweb.Kdbx;
-        nextEntryUuid: kdbxweb.KdbxUuid;
-        nextRecord: typeof record;
-      }>((resolve) => {
-        resolveSave = resolve;
-      });
-      vi.spyOn(workspaceService, 'saveEntry').mockReturnValue(savePromise);
+      const save = Promise.withResolvers<Awaited<ReturnType<typeof workspaceService.saveEntry>>>();
+      vi.spyOn(workspaceService, 'saveEntry').mockReturnValue(save.promise);
 
       render(<EntryEditForm database={database} entry={entry} record={record} onSave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');
@@ -259,7 +248,7 @@ describe('entry-edit.form', () => {
 
       expect(screen.getByRole('button', { name: 'Remove' })).toBeDisabled();
 
-      resolveSave({ nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record });
+      save.resolve({ nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record });
       await waitFor(() => expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled());
     });
   });
