@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(dirname, 'src'),
+      '@tests': path.resolve(dirname, '__tests__'),
       // the vitest mocker doesn't intercept build-time import resolution consistently across
       // environments (e.g. happy-dom), so these virtual specifiers are aliased to a real stub
       // module instead of relying on vi.mock
