@@ -1,15 +1,15 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { ImportGoogleDriveModal } from '@/features/unlock/components/import-google-drive-modal';
+import { ImportGoogleDriveDialog } from '@/features/unlock/components/import-google-drive-dialog';
 import { createRecord, getRecords } from '@/features/unlock/repositories/record';
 import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockGooglePicker } from '@tests/mocks/google-picker';
 import { mockServer } from '@tests/setup-component-context';
 import { render } from '@tests/utils/render';
 
-describe('import-google-drive-modal', () => {
-  describe('ImportGoogleDriveModal', () => {
+describe('import-google-drive-dialog', () => {
+  describe('ImportGoogleDriveDialog', () => {
     it('imports the picked .kdbx file from Google Drive', async () => {
       mockServer.addHandlers(
         googleDriveApi.preflight.ok(),
@@ -20,7 +20,7 @@ describe('import-google-drive-modal', () => {
       const onOpenChange = vi.fn();
       const onRecordImported = vi.fn();
 
-      render(<ImportGoogleDriveModal onOpenChange={onOpenChange} onRecordImported={onRecordImported} open={true} />);
+      render(<ImportGoogleDriveDialog onOpenChange={onOpenChange} onRecordImported={onRecordImported} open={true} />);
       await user.click(screen.getByLabelText('File'));
       await screen.findByText('Choose file vault.kdbx');
       await user.click(screen.getByRole('button', { name: 'Import' }));
@@ -39,7 +39,7 @@ describe('import-google-drive-modal', () => {
       const user = userEvent.setup();
       const onRecordImported = vi.fn();
 
-      render(<ImportGoogleDriveModal onOpenChange={vi.fn()} onRecordImported={onRecordImported} open={true} />);
+      render(<ImportGoogleDriveDialog onOpenChange={vi.fn()} onRecordImported={onRecordImported} open={true} />);
       await user.click(screen.getByLabelText('File'));
       await screen.findByText('Choose file notes.txt');
       await user.click(screen.getByRole('button', { name: 'Import' }));
@@ -60,7 +60,7 @@ describe('import-google-drive-modal', () => {
       const onOpenChange = vi.fn();
       const onRecordImported = vi.fn();
 
-      render(<ImportGoogleDriveModal onOpenChange={onOpenChange} onRecordImported={onRecordImported} open={true} />);
+      render(<ImportGoogleDriveDialog onOpenChange={onOpenChange} onRecordImported={onRecordImported} open={true} />);
       await user.click(screen.getByLabelText('File'));
       await screen.findByText('Choose file vault.kdbx');
       await user.click(screen.getByRole('button', { name: 'Import' }));

@@ -13,19 +13,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { InfoPopover } from '@/components/ui/info-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createLocalRecord } from '@/features/unlock/services/record';
+import { createGoogleDriveRecord } from '@/features/unlock/services/record';
 import { downloadBytes } from '@/utils/download';
 import { getErrorMessage } from '@/utils/error';
 
-type CreateLocalModalProps = {
+type CreateGoogleDriveDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecordCreated: () => void;
 };
 
-const createLocalModalSchema = z
+const createGoogleDriveDialogSchema = z
   .object({
     databaseName: z.string().trim().min(1, 'Enter a database name.'),
     password: z.string().min(1, 'Enter a master password.'),
@@ -37,22 +38,22 @@ const createLocalModalSchema = z
     path: ['confirmPassword'],
   });
 
-type CreateLocalModalFormValues = z.infer<typeof createLocalModalSchema>;
+type CreateGoogleDriveDialogFormValues = z.infer<typeof createGoogleDriveDialogSchema>;
 
-export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: CreateLocalModalProps) => {
+export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreated }: CreateGoogleDriveDialogProps) => {
   const {
     control,
     formState: { isSubmitting },
     handleSubmit,
     reset,
-  } = useForm<CreateLocalModalFormValues>({
+  } = useForm<CreateGoogleDriveDialogFormValues>({
     defaultValues: { databaseName: '', password: '', confirmPassword: '', useKeyFile: false },
-    resolver: zodResolver(createLocalModalSchema),
+    resolver: zodResolver(createGoogleDriveDialogSchema),
   });
 
   const handleCreateRecordSubmit = handleSubmit(async ({ databaseName, password, useKeyFile }) => {
     try {
-      const { keyFileBytes, keyFileName } = await createLocalRecord({ databaseName, password, useKeyFile });
+      const { keyFileBytes, keyFileName } = await createGoogleDriveRecord({ databaseName, password, useKeyFile });
 
       if (keyFileBytes && keyFileName) {
         downloadBytes({ bytes: keyFileBytes, fileName: keyFileName });
@@ -78,8 +79,14 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
         }}
       >
         <DialogHeader>
-          <DialogTitle>Create Local Record</DialogTitle>
-          <DialogDescription>Create a new empty local database.</DialogDescription>
+          <DialogTitle className="flex items-center gap-1.5">
+            Create Google Drive Record
+            <InfoPopover ariaLabel="Drive destination info" contentClassName="w-64">
+              Files are always created in Drive root — intentional, matching Google's own Save to Drive behavior. Move
+              it to a folder from Drive afterward.
+            </InfoPopover>
+          </DialogTitle>
+          <DialogDescription>Create a new empty database on Google Drive.</DialogDescription>
         </DialogHeader>
 
         <form
@@ -93,8 +100,8 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
             name="databaseName"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-database-name">Database name</FieldLabel>
-                <Input {...field} aria-invalid={fieldState.invalid} id="create-database-name" type="text" />
+                <FieldLabel htmlFor="create-drive-database-name">Database name</FieldLabel>
+                <Input {...field} aria-invalid={fieldState.invalid} id="create-drive-database-name" type="text" />
                 <FieldError errors={[fieldState.error]} />
               </Field>
             )}
@@ -105,8 +112,8 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
             name="password"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-password">Password</FieldLabel>
-                <Input {...field} aria-invalid={fieldState.invalid} id="create-password" type="password" />
+                <FieldLabel htmlFor="create-drive-password">Password</FieldLabel>
+                <Input {...field} aria-invalid={fieldState.invalid} id="create-drive-password" type="password" />
                 <FieldError errors={[fieldState.error]} />
               </Field>
             )}
@@ -117,8 +124,13 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
             name="confirmPassword"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-confirm-password">Confirm password</FieldLabel>
-                <Input {...field} aria-invalid={fieldState.invalid} id="create-confirm-password" type="password" />
+                <FieldLabel htmlFor="create-drive-confirm-password">Confirm password</FieldLabel>
+                <Input
+                  {...field}
+                  aria-invalid={fieldState.invalid}
+                  id="create-drive-confirm-password"
+                  type="password"
+                />
                 <FieldError errors={[fieldState.error]} />
               </Field>
             )}
@@ -131,10 +143,10 @@ export const CreateLocalModal = ({ open, onOpenChange, onRecordCreated }: Create
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={field.value}
-                  id="create-use-key-file"
+                  id="create-drive-use-key-file"
                   onCheckedChange={(checked) => field.onChange(checked === true)}
                 />
-                <Label className="cursor-pointer text-xs" htmlFor="create-use-key-file">
+                <Label className="cursor-pointer text-xs" htmlFor="create-drive-use-key-file">
                   Use key file (generated and downloaded automatically)
                 </Label>
               </div>

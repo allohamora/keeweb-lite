@@ -6,8 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CreateGoogleDriveModal } from './create-google-drive-modal';
-import { CreateLocalModal } from './create-local-modal';
+import { CreateGoogleDriveDialog } from './create-google-drive-dialog';
+import { CreateLocalDialog } from './create-local-dialog';
 
 type CreateMenuProps = {
   onRecordCreated: () => void;
@@ -31,13 +31,13 @@ export const CreateMenu = ({ onRecordCreated }: CreateMenuProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CreateLocalModal
+      <CreateLocalDialog
         onOpenChange={setIsCreateLocalOpen}
         onRecordCreated={onRecordCreated}
         open={isCreateLocalOpen}
       />
 
-      <CreateGoogleDriveModal
+      <CreateGoogleDriveDialog
         onOpenChange={setIsCreateGoogleDriveOpen}
         onRecordCreated={onRecordCreated}
         open={isCreateGoogleDriveOpen}

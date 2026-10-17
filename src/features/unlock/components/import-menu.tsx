@@ -6,8 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ImportGoogleDriveModal } from './import-google-drive-modal';
-import { ImportLocalModal } from './import-local-modal';
+import { ImportGoogleDriveDialog } from './import-google-drive-dialog';
+import { ImportLocalDialog } from './import-local-dialog';
 
 type ImportMenuProps = {
   onRecordImported: () => void;
@@ -31,13 +31,13 @@ export const ImportMenu = ({ onRecordImported }: ImportMenuProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ImportLocalModal
+      <ImportLocalDialog
         open={isImportLocalOpen}
         onOpenChange={setIsImportLocalOpen}
         onRecordImported={onRecordImported}
       />
 
-      <ImportGoogleDriveModal
+      <ImportGoogleDriveDialog
         open={isImportGoogleDriveOpen}
         onOpenChange={setIsImportGoogleDriveOpen}
         onRecordImported={onRecordImported}

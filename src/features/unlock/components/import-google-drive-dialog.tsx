@@ -16,40 +16,38 @@ import { Input } from '@/components/ui/input';
 import { fileListSchema } from '@/utils/zod';
 import { getErrorMessage } from '@/utils/error';
 import { isKdbxFileName } from '@/features/unlock/utils/kdbx';
-import { importLocalRecord } from '@/features/unlock/services/record';
+import { importGoogleDriveRecord } from '@/features/unlock/services/record';
+import { driveFileSchema } from '@/features/unlock/repositories/google-drive';
+import { GoogleDriveFilePicker } from './google-drive-file-picker';
 
-type ImportLocalModalProps = {
+type ImportGoogleDriveDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecordImported: () => void;
 };
 
-const importLocalModalSchema = z.object({
-  databaseFile: fileListSchema('Select a .kdbx file to import.')
-    .refine((files) => files.length > 0, {
-      message: 'Select a .kdbx file to import.',
-    })
-    .refine((files) => files.length === 0 || isKdbxFileName(files[0]?.name), {
-      message: 'Only .kdbx files are supported.',
-    }),
+const importGoogleDriveDialogSchema = z.object({
+  driveFile: driveFileSchema.pick({ id: true, name: true }).refine((file) => isKdbxFileName(file.name), {
+    message: 'Only .kdbx files are supported.',
+  }),
   keyFile: fileListSchema('Select a key file.').optional(),
 });
 
-type ImportLocalModalFormValues = z.infer<typeof importLocalModalSchema>;
+type ImportGoogleDriveDialogFormValues = z.infer<typeof importGoogleDriveDialogSchema>;
 
-export const ImportLocalModal = ({ open, onOpenChange, onRecordImported }: ImportLocalModalProps) => {
+export const ImportGoogleDriveDialog = ({ open, onOpenChange, onRecordImported }: ImportGoogleDriveDialogProps) => {
   const {
     control,
     formState: { isSubmitting },
     handleSubmit,
     reset,
-  } = useForm<ImportLocalModalFormValues>({
-    resolver: zodResolver(importLocalModalSchema),
+  } = useForm<ImportGoogleDriveDialogFormValues>({
+    resolver: zodResolver(importGoogleDriveDialogSchema),
   });
 
-  const handleImportRecordSubmit = handleSubmit(async ({ databaseFile, keyFile }) => {
+  const handleImportRecordSubmit = handleSubmit(async ({ driveFile, keyFile }) => {
     try {
-      await importLocalRecord({ databaseFile, keyFile });
+      await importGoogleDriveRecord({ fileId: driveFile.id, fileName: driveFile.name, keyFile });
 
       onRecordImported();
       onOpenChange(false);
@@ -69,10 +67,18 @@ export const ImportLocalModal = ({ open, onOpenChange, onRecordImported }: Impor
         onAnimationEnd={(event) => {
           if (event.currentTarget.dataset.state === 'closed') reset();
         }}
+        onInteractOutside={(event) => {
+          // Prevent the dialog from closing when interacting with the Google Picker,
+          // which is injected into <body> outside the dialog. All Picker elements
+          // (backdrop, dialog, inner content) share the .picker class.
+          if (event.target instanceof Element && event.target.closest('.picker')) {
+            event.preventDefault();
+          }
+        }}
       >
         <DialogHeader>
-          <DialogTitle>Import File Record</DialogTitle>
-          <DialogDescription>Choose a local .kdbx file and optional key file.</DialogDescription>
+          <DialogTitle>Import Google Drive Record</DialogTitle>
+          <DialogDescription>Select a .kdbx file from Google Drive.</DialogDescription>
         </DialogHeader>
 
         <form
@@ -83,18 +89,15 @@ export const ImportLocalModal = ({ open, onOpenChange, onRecordImported }: Impor
         >
           <Controller
             control={control}
-            name="databaseFile"
+            name="driveFile"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="import-database-file">File</FieldLabel>
-                <Input
-                  {...field}
-                  value={undefined}
-                  onChange={(event) => field.onChange(event.target.files)}
-                  accept=".kdbx"
+                <FieldLabel htmlFor="import-drive-file">File</FieldLabel>
+                <GoogleDriveFilePicker
+                  id="import-drive-file"
+                  value={field.value}
+                  onChange={field.onChange}
                   aria-invalid={fieldState.invalid}
-                  id="import-database-file"
-                  type="file"
                 />
                 <FieldError errors={[fieldState.error]} />
               </Field>
@@ -106,13 +109,13 @@ export const ImportLocalModal = ({ open, onOpenChange, onRecordImported }: Impor
             name="keyFile"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="import-key-file">Key file (optional)</FieldLabel>
+                <FieldLabel htmlFor="import-drive-key-file">Key file (optional)</FieldLabel>
                 <Input
                   {...field}
                   value={undefined}
                   onChange={(event) => field.onChange(event.target.files)}
                   aria-invalid={fieldState.invalid}
-                  id="import-key-file"
+                  id="import-drive-key-file"
                   type="file"
                 />
                 <FieldError errors={[fieldState.error]} />

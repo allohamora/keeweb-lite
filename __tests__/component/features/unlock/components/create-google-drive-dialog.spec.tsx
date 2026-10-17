@@ -3,13 +3,13 @@ import * as downloadUtils from '@/utils/download';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { CreateLocalModal } from '@/features/unlock/components/create-local-modal';
+import { CreateGoogleDriveDialog } from '@/features/unlock/components/create-google-drive-dialog';
 import { render } from '@tests/utils/render';
 
-describe('create-local-modal', () => {
-  describe('CreateLocalModal', () => {
+describe('create-google-drive-dialog', () => {
+  describe('CreateGoogleDriveDialog', () => {
     it('renders database name, password, confirm password fields and a use-key-file checkbox', () => {
-      render(<CreateLocalModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
 
       expect(screen.getByLabelText('Database name')).toBeInTheDocument();
       expect(screen.getByLabelText('Password')).toBeInTheDocument();
@@ -19,35 +19,35 @@ describe('create-local-modal', () => {
 
     it('shows a validation error and does not submit when passwords do not match', async () => {
       const user = userEvent.setup();
-      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord');
+      using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord');
 
-      render(<CreateLocalModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'password-1');
       await user.type(screen.getByLabelText('Confirm password'), 'password-2');
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
       expect(await screen.findByText('Passwords do not match.')).toBeInTheDocument();
-      expect(createLocalRecord).not.toHaveBeenCalled();
+      expect(createGoogleDriveRecord).not.toHaveBeenCalled();
     });
 
     it('creates the record without a key file on valid submit', async () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       const onRecordCreated = vi.fn();
-      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
+      using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord').mockResolvedValue({
         keyFileBytes: undefined,
         keyFileName: undefined,
       });
 
-      render(<CreateLocalModal onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'test-password-123');
       await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
       await waitFor(() => expect(onRecordCreated).toHaveBeenCalledOnce());
-      expect(createLocalRecord).toHaveBeenCalledWith({
+      expect(createGoogleDriveRecord).toHaveBeenCalledWith({
         databaseName: 'My Vault',
         password: 'test-password-123',
         useKeyFile: false,
@@ -58,13 +58,13 @@ describe('create-local-modal', () => {
     it('creates the record with a key file and downloads it when the checkbox is checked', async () => {
       const user = userEvent.setup();
       const keyFileBytes = new Uint8Array([1, 2, 3]);
-      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord').mockResolvedValue({
+      using createGoogleDriveRecord = vi.spyOn(recordService, 'createGoogleDriveRecord').mockResolvedValue({
         keyFileBytes,
         keyFileName: 'My Vault.keyx',
       });
       using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
-      render(<CreateLocalModal onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={vi.fn()} onRecordCreated={vi.fn()} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'test-password-123');
       await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
@@ -72,7 +72,7 @@ describe('create-local-modal', () => {
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
       await waitFor(() =>
-        expect(createLocalRecord).toHaveBeenCalledWith({
+        expect(createGoogleDriveRecord).toHaveBeenCalledWith({
           databaseName: 'My Vault',
           password: 'test-password-123',
           useKeyFile: true,
@@ -85,11 +85,11 @@ describe('create-local-modal', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       const onRecordCreated = vi.fn();
-      using _createLocalRecord = vi
-        .spyOn(recordService, 'createLocalRecord')
-        .mockRejectedValue(new Error('A record named "My Vault.kdbx" already exists.'));
+      using _createGoogleDriveRecord = vi
+        .spyOn(recordService, 'createGoogleDriveRecord')
+        .mockRejectedValue(new Error('Failed to create file.'));
 
-      render(<CreateLocalModal onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
+      render(<CreateGoogleDriveDialog onOpenChange={onOpenChange} onRecordCreated={onRecordCreated} open={true} />);
       await user.type(screen.getByLabelText('Database name'), 'My Vault');
       await user.type(screen.getByLabelText('Password'), 'test-password-123');
       await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
