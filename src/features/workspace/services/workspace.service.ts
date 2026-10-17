@@ -1,8 +1,8 @@
 import kdbxweb from '@/utils/kdbxweb.utils';
-import { updateRecordKdbx } from '@/services/record.service';
-import type { FileRecord } from '@/repositories/record.repository';
-import { getEntryIcon } from '@/services/icon.service';
-import { getEntryColor } from '@/services/color.service';
+import { updateRecordKdbx } from '@/features/unlock/services/record.service';
+import type { FileRecord } from '@/features/unlock/repositories/record.repository';
+import { getEntryIcon } from '@/features/workspace/services/icon.service';
+import { getEntryColor } from '@/features/workspace/services/color.service';
 
 export type SelectFilter = kdbxweb.KdbxUuid | { tag: string } | { color: string | null } | null;
 

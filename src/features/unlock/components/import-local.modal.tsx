@@ -15,8 +15,8 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { fileListSchema } from '@/utils/zod.utils';
 import { getErrorMessage } from '@/utils/error.utils';
-import { isKdbxFileName } from '@/utils/kdbx.utils';
-import { importLocalRecord } from '@/services/record.service';
+import { isKdbxFileName } from '@/features/unlock/utils/kdbx.utils';
+import { importLocalRecord } from '@/features/unlock/services/record.service';
 
 type ImportLocalModalProps = {
   open: boolean;

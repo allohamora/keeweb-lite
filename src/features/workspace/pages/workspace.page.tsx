@@ -1,12 +1,12 @@
 import type kdbxweb from '@/utils/kdbxweb.utils';
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { type UnlockSession } from '@/services/session.service';
+import { type UnlockSession } from '@/features/unlock/services/session.service';
 import {
   createEntry,
   findEntryByUuid,
   type EntryMutationResult,
   type SelectFilter,
-} from '@/services/workspace.service';
+} from '@/features/workspace/services/workspace.service';
 import { MenuPane } from '@/features/workspace/components/menu-pane.component';
 import { EntryList } from '@/features/workspace/components/entry-list.component';
 import { EntryDetails } from '@/features/workspace/components/entry-details.component';

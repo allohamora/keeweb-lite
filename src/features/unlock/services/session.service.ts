@@ -1,9 +1,13 @@
 import kdbxweb from '@/utils/kdbxweb.utils';
-import { loadDemoKdbx } from '@/services/demo.service';
-import { getFile, updateFile } from '@/repositories/google-drive.repository';
-import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record.repository';
-import { loadKdbx, toEncryptedBytes, unlockKdbx } from '@/services/kdbx.service';
-import { updateRecordKdbx } from '@/services/record.service';
+import { loadDemoKdbx } from '@/features/unlock/services/demo.service';
+import { getFile, updateFile } from '@/features/unlock/repositories/google-drive.repository';
+import {
+  updateRecord,
+  type FileRecord,
+  type PersistedFileRecord,
+} from '@/features/unlock/repositories/record.repository';
+import { loadKdbx, toEncryptedBytes, unlockKdbx } from '@/features/unlock/services/kdbx.service';
+import { updateRecordKdbx } from '@/features/unlock/services/record.service';
 import { Lock } from '@/utils/lock.utils';
 
 export type UnlockSession = {

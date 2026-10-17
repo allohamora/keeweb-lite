@@ -1,6 +1,6 @@
 import kdbxweb from '@/utils/kdbxweb.utils';
 import { describe, expect, it } from 'vitest';
-import { createRecord, getRecords } from '@/repositories/record.repository';
+import { createRecord, getRecords } from '@/features/unlock/repositories/record.repository';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 import {
   createEntry,
@@ -27,7 +27,7 @@ import {
   saveEntry,
   sortEntries,
   applyEntryValues,
-} from '@/services/workspace.service';
+} from '@/features/workspace/services/workspace.service';
 
 describe('workspace.service', () => {
   const createDatabase = async () => {

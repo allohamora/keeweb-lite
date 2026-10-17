@@ -1,10 +1,10 @@
-import * as recordRepository from '@/repositories/record.repository';
+import * as recordRepository from '@/features/unlock/repositories/record.repository';
 import kdbxweb from '@/utils/kdbxweb.utils';
 import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { type CreateFileRequestContext, googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
-import { clearRecords, createRecord } from '@/repositories/record.repository';
+import { clearRecords, createRecord } from '@/features/unlock/repositories/record.repository';
 import {
   createGoogleDriveRecord,
   createLocalRecord,
@@ -12,12 +12,12 @@ import {
   importGoogleDriveRecord,
   importLocalRecord,
   updateRecordKdbx,
-} from '@/services/record.service';
+} from '@/features/unlock/services/record.service';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
-import { unlockKdbx } from '@/services/kdbx.service';
-import { getFieldText as getTextFromField } from '@/services/workspace.service';
+import { unlockKdbx } from '@/features/unlock/services/kdbx.service';
+import { getFieldText as getTextFromField } from '@/features/workspace/services/workspace.service';
 import { createFileList } from '../utils/file-list.utils';
-import { unlockSession } from '@/services/session.service';
+import { unlockSession } from '@/features/unlock/services/session.service';
 
 type DatabaseRecordInput = {
   name: string;

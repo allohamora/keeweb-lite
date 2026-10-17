@@ -15,9 +15,9 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { fileListSchema } from '@/utils/zod.utils';
 import { getErrorMessage } from '@/utils/error.utils';
-import { isKdbxFileName } from '@/utils/kdbx.utils';
-import { importGoogleDriveRecord } from '@/services/record.service';
-import { driveFileSchema } from '@/repositories/google-drive.repository';
+import { isKdbxFileName } from '@/features/unlock/utils/kdbx.utils';
+import { importGoogleDriveRecord } from '@/features/unlock/services/record.service';
+import { driveFileSchema } from '@/features/unlock/repositories/google-drive.repository';
 import { GoogleDriveFilePicker } from './google-drive.file-picker';
 
 type ImportGoogleDriveModalProps = {

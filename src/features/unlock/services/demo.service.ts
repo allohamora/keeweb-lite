@@ -1,6 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb.utils';
 import demoKdbxUrl from '@/assets/demo.kdbx?url';
-import { unlockKdbx } from '@/services/kdbx.service';
+import { unlockKdbx } from '@/features/unlock/services/kdbx.service';
 
 // matches the fixed password KeeWeb itself uses for its bundled demo file
 const DEMO_PASSWORD = 'demo';

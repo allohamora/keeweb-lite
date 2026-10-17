@@ -22,7 +22,7 @@ import {
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getEntryColor } from '@/services/color.service';
+import { getEntryColor } from '@/features/workspace/services/color.service';
 import {
   getAllColors,
   getAllTags,
@@ -31,8 +31,8 @@ import {
   isEntryInRecycleBin,
   saveEntry,
   type EntryMutationResult,
-} from '@/services/workspace.service';
-import type { FileRecord } from '@/repositories/record.repository';
+} from '@/features/workspace/services/workspace.service';
+import type { FileRecord } from '@/features/unlock/repositories/record.repository';
 import { EntryHistory } from '@/features/workspace/components/entry-history.component';
 import { EntryRemove } from '@/features/workspace/components/entry-remove.component';
 import { EntryRestore } from '@/features/workspace/components/entry-restore.component';

@@ -1,6 +1,6 @@
 import { useMountedState } from 'react-use';
 import { useEffect, useEffectEvent, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { syncSession, type UnlockSession } from '@/services/session.service';
+import { syncSession, type UnlockSession } from '@/features/unlock/services/session.service';
 
 type UseSyncProps = UnlockSession & {
   setSession: Dispatch<SetStateAction<UnlockSession | null>>;

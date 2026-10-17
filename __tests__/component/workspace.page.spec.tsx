@@ -1,9 +1,9 @@
-import * as workspaceService from '@/services/workspace.service';
+import * as workspaceService from '@/features/workspace/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import kdbxweb from '@/utils/kdbxweb.utils';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import type { SelectFilter } from '@/services/workspace.service';
+import type { SelectFilter } from '@/features/workspace/services/workspace.service';
 import { WorkspacePage } from '@/features/workspace/pages/workspace.page';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';

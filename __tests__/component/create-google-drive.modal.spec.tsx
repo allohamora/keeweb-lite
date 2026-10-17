@@ -1,4 +1,4 @@
-import * as recordService from '@/services/record.service';
+import * as recordService from '@/features/unlock/services/record.service';
 import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';

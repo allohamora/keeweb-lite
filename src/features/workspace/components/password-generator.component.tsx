@@ -10,7 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldError } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { derivePasswordOptions, generatePassword, MAX_LENGTH, MIN_LENGTH } from '@/services/password-generator.service';
+import {
+  derivePasswordOptions,
+  generatePassword,
+  MAX_LENGTH,
+  MIN_LENGTH,
+} from '@/features/workspace/services/password-generator.service';
 
 type PasswordGeneratorProps = {
   currentPassword: string;

@@ -16,7 +16,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { InfoPopover } from '@/components/ui/info-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createGoogleDriveRecord } from '@/services/record.service';
+import { createGoogleDriveRecord } from '@/features/unlock/services/record.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 

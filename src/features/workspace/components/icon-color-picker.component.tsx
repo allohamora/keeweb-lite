@@ -2,8 +2,8 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { STANDARD_ICON_MAP } from '@/services/icon.service';
-import { STANDARD_COLORS } from '@/services/color.service';
+import { STANDARD_ICON_MAP } from '@/features/workspace/services/icon.service';
+import { STANDARD_COLORS } from '@/features/workspace/services/color.service';
 import { EntryIcon } from '@/features/workspace/components/entry-icon.component';
 import { ColorSwatch } from '@/features/workspace/components/color-swatch.component';
 

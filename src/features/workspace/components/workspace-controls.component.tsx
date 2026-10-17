@@ -1,10 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { toEncryptedBytes } from '@/services/kdbx.service';
-import type { UnlockSession } from '@/services/session.service';
+import { toEncryptedBytes } from '@/features/unlock/services/kdbx.service';
+import type { UnlockSession } from '@/features/unlock/services/session.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
-import { toKdbxFileName } from '@/utils/kdbx.utils';
+import { toKdbxFileName } from '@/features/unlock/utils/kdbx.utils';
 import { toast } from 'sonner';
 import { useSafeNet } from '@/hooks/use-safe-net.hook';
 

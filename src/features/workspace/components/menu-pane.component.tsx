@@ -2,7 +2,7 @@ import type kdbxweb from '@/utils/kdbxweb.utils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Delete01Icon, GridViewIcon, Tag01Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
-import { getGroupIcon, resolveStandardIcon } from '@/services/icon.service';
+import { getGroupIcon, resolveStandardIcon } from '@/features/workspace/services/icon.service';
 import {
   getAllColors,
   getAllTags,
@@ -11,7 +11,7 @@ import {
   isGroupSelect,
   isTagSelect,
   type SelectFilter,
-} from '@/services/workspace.service';
+} from '@/features/workspace/services/workspace.service';
 import { ColorSwatch } from '@/features/workspace/components/color-swatch.component';
 
 type MenuPaneProps = {

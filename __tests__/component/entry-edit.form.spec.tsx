@@ -1,4 +1,4 @@
-import * as workspaceService from '@/services/workspace.service';
+import * as workspaceService from '@/features/workspace/services/workspace.service';
 import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/utils/kdbxweb.utils';
 import { useState } from 'react';

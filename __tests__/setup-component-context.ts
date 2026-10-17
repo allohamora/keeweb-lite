@@ -1,8 +1,8 @@
 import './mocks';
 import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import { auth } from '@/repositories/google-drive.repository';
-import { clearRecords } from '@/repositories/record.repository';
+import { auth } from '@/features/unlock/repositories/google-drive.repository';
+import { clearRecords } from '@/features/unlock/repositories/record.repository';
 import { createMockServer } from './utils/mock-server.utils';
 import '@testing-library/jest-dom/vitest';
 

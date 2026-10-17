@@ -6,7 +6,7 @@ import {
   getEntryIcon,
   getGroupIcon,
   resolveStandardIcon,
-} from '@/services/icon.service';
+} from '@/features/workspace/services/icon.service';
 
 describe('icon.service', () => {
   describe('getEntryIcon', () => {

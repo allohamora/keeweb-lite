@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadDemoKdbx } from '@/services/demo.service';
+import { loadDemoKdbx } from '@/features/unlock/services/demo.service';
 import { demoFile } from '../utils/demo-file.utils';
 import { mockServer } from '../setup-unit-context';
 

@@ -6,7 +6,7 @@ import {
   CharRanges,
   derivePasswordOptions,
   generatePassword,
-} from '@/services/password-generator.service';
+} from '@/features/workspace/services/password-generator.service';
 
 describe('password-generator.service', () => {
   describe('derivePasswordOptions', () => {

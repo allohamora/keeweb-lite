@@ -1,4 +1,4 @@
-import * as kdbxService from '@/services/kdbx.service';
+import * as kdbxService from '@/features/unlock/services/kdbx.service';
 import * as downloadUtils from '@/utils/download.utils';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';

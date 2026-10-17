@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error.utils';
-import { restoreEntry, type EntryMutationResult } from '@/services/workspace.service';
-import type { FileRecord } from '@/repositories/record.repository';
+import { restoreEntry, type EntryMutationResult } from '@/features/workspace/services/workspace.service';
+import type { FileRecord } from '@/features/unlock/repositories/record.repository';
 import {
   Dialog,
   DialogClose,

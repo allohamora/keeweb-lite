@@ -3,12 +3,12 @@ import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '../mocks/google-drive.repository.mock';
 import { mockServer } from '../setup-unit-context';
-import { auth } from '@/repositories/google-drive.repository';
-import { createRecord, getRecords } from '@/repositories/record.repository';
-import { unlockKdbx } from '@/services/kdbx.service';
-import { updateRecordKdbx } from '@/services/record.service';
-import { createDemoSession, syncSession, unlockSession } from '@/services/session.service';
-import { getEntryValues, getFieldText, saveEntry } from '@/services/workspace.service';
+import { auth } from '@/features/unlock/repositories/google-drive.repository';
+import { createRecord, getRecords } from '@/features/unlock/repositories/record.repository';
+import { unlockKdbx } from '@/features/unlock/services/kdbx.service';
+import { updateRecordKdbx } from '@/features/unlock/services/record.service';
+import { createDemoSession, syncSession, unlockSession } from '@/features/unlock/services/session.service';
+import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/workspace.service';
 import { demoFile } from '../utils/demo-file.utils';
 import { expectPersisted } from '../fixtures/kdbx.fixture';
 

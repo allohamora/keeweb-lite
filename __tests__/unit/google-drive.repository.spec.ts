@@ -8,7 +8,7 @@ import {
 } from '../mocks/google-drive.repository.mock';
 import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '../mocks/google-identity.mock';
 import { mockServer } from '../setup-unit-context';
-import { auth, createFile, getFile, updateFile } from '@/repositories/google-drive.repository';
+import { auth, createFile, getFile, updateFile } from '@/features/unlock/repositories/google-drive.repository';
 
 describe('google-drive.repository', () => {
   describe('auth', () => {

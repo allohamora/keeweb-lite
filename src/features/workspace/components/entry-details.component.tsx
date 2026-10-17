@@ -4,8 +4,8 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { EntryEditForm } from '@/features/workspace/components/entry-edit.form';
-import type { FileRecord } from '@/repositories/record.repository';
-import type { EntryMutationResult } from '@/services/workspace.service';
+import type { FileRecord } from '@/features/unlock/repositories/record.repository';
+import type { EntryMutationResult } from '@/features/workspace/services/workspace.service';
 
 type EntryDetailsProps = {
   className?: string;

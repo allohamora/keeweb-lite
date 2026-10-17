@@ -23,9 +23,9 @@ import {
   type SelectFilter,
   isSortOrder,
   type SortOrder,
-} from '@/services/workspace.service';
-import { getEntryIcon } from '@/services/icon.service';
-import { getEntryColor } from '@/services/color.service';
+} from '@/features/workspace/services/workspace.service';
+import { getEntryIcon } from '@/features/workspace/services/icon.service';
+import { getEntryColor } from '@/features/workspace/services/color.service';
 import { EntryIcon } from '@/features/workspace/components/entry-icon.component';
 import { useEntryMutation } from '@/hooks/use-entry-mutation.hook';
 

@@ -15,7 +15,7 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createLocalRecord } from '@/services/record.service';
+import { createLocalRecord } from '@/features/unlock/services/record.service';
 import { downloadBytes } from '@/utils/download.utils';
 import { getErrorMessage } from '@/utils/error.utils';
 

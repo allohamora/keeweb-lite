@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from '@hugeicons/react';
 import { cn } from '@/lib/utils';
-import { resolveStandardIcon } from '@/services/icon.service';
+import { resolveStandardIcon } from '@/features/workspace/services/icon.service';
 
 type EntryIconProps = {
   index: number;

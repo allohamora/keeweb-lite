@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { unlockSession, type UnlockSession } from '@/services/session.service';
+import { unlockSession, type UnlockSession } from '@/features/unlock/services/session.service';
 import { getErrorMessage } from '@/utils/error.utils';
-import { getRecordsByLastOpened } from '@/services/record.service';
+import { getRecordsByLastOpened } from '@/features/unlock/services/record.service';
 import { toast } from 'sonner';
 import { RecordRemove } from './record-remove.component';
 

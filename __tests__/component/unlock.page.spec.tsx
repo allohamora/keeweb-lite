@@ -1,5 +1,5 @@
-import * as recordService from '@/services/record.service';
-import * as sessionService from '@/services/session.service';
+import * as recordService from '@/features/unlock/services/record.service';
+import * as sessionService from '@/features/unlock/services/session.service';
 import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,7 @@ import { UnlockPage } from '@/features/unlock/pages/unlock.page';
 import { mockServer } from '../setup-component-context';
 import { demoFile } from '../utils/demo-file.utils';
 import { render } from '../utils/render.utils';
-import type { PersistedFileRecord } from '@/repositories/record.repository';
+import type { PersistedFileRecord } from '@/features/unlock/repositories/record.repository';
 import { createTestDatabase, createTestRecord } from '../fixtures/kdbx.fixture';
 
 describe('unlock.page', () => {

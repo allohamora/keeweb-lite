@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 import { useAsyncFn } from 'react-use';
 import { PUBLIC_GOOGLE_APP_ID } from 'astro:env/client';
 import { Button } from '@/components/ui/button';
-import { auth, type DriveFile } from '@/repositories/google-drive.repository';
+import { auth, type DriveFile } from '@/features/unlock/repositories/google-drive.repository';
 import { getErrorMessage } from '@/utils/error.utils';
 
 type PickedDriveFile = Pick<DriveFile, 'id' | 'name'>;
