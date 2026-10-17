@@ -1,4 +1,4 @@
-import { createServiceMock } from '@tests/utils/service-mock';
+import { invalid } from '@tests/utils/invalid';
 
 // MSW only resolves relative request URLs (e.g. fetch('/demo.kdbx')) against `globalThis.location`
 // when one exists - see https://github.com/mswjs/msw/issues/1625. happy-dom (the component test
@@ -6,5 +6,5 @@ import { createServiceMock } from '@tests/utils/service-mock';
 // minimal stand-in there instead of falling back to per-test `vi.stubGlobal('fetch', ...)` mocks.
 if (typeof globalThis.location === 'undefined') {
   // 4321 matches Astro's own dev server port, so this looks like the real thing
-  globalThis.location = createServiceMock<Location>({ href: 'http://localhost:4321/' });
+  globalThis.location = invalid<Location>({ href: 'http://localhost:4321/' });
 }
