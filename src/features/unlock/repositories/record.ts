@@ -43,7 +43,7 @@ export type PersistedFileRecord = z.infer<typeof fileRecordSchema>;
 
 // never persisted: intentionally excluded from fileRecordSchema so it can never pass
 // getRecords/createRecord/updateRecord validation and land in IndexedDB
-export type DemoFileRecord = {
+type DemoFileRecord = {
   id: string;
   type: 'demo';
   kdbx: Pick<RecordKdbx, 'name'>;
