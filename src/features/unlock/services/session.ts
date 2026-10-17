@@ -1,6 +1,6 @@
 import kdbxweb from '@/utils/kdbxweb';
 import { loadDemoDatabase } from '@/features/unlock/services/demo';
-import { getFile, updateFile } from '@/features/unlock/repositories/google-drive';
+import { getFile, isGoogleAvailable, updateFile } from '@/features/unlock/repositories/google-drive';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/features/unlock/repositories/record';
 import { loadDatabase, toEncryptedBytes, unlockDatabase } from '@/features/unlock/services/database';
 import { updateRecordDatabase } from '@/features/unlock/services/record';
@@ -59,6 +59,10 @@ export const unlockSession = async ({
   record: PersistedFileRecord;
   password: string;
 }): Promise<UnlockSession> => {
+  if (record.type === 'google-drive' && !isGoogleAvailable()) {
+    throw new Error('Google Drive is not configured, so this record cannot be unlocked.');
+  }
+
   const database = await unlockDatabase({
     encryptedBytes: record.kdbx.encryptedBytes,
     keyFileHashBase64: record.key?.hash,

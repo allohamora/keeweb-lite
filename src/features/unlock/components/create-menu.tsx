@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CreateGoogleDriveDialog } from './create-google-drive-dialog';
+import { isGoogleAvailable } from '@/features/unlock/repositories/google-drive';
 import { CreateLocalDialog } from './create-local-dialog';
 
 type CreateMenuProps = {
@@ -16,6 +17,7 @@ type CreateMenuProps = {
 export const CreateMenu = ({ onRecordCreate }: CreateMenuProps) => {
   const [isCreateLocalOpen, setIsCreateLocalOpen] = useState(false);
   const [isCreateGoogleDriveOpen, setIsCreateGoogleDriveOpen] = useState(false);
+  const isGoogleEnabled = isGoogleAvailable();
 
   return (
     <>
@@ -27,17 +29,21 @@ export const CreateMenu = ({ onRecordCreate }: CreateMenuProps) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => setIsCreateLocalOpen(true)}>Local</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setIsCreateGoogleDriveOpen(true)}>Google Drive</DropdownMenuItem>
+          {isGoogleEnabled && (
+            <DropdownMenuItem onSelect={() => setIsCreateGoogleDriveOpen(true)}>Google Drive</DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
       <CreateLocalDialog onOpenChange={setIsCreateLocalOpen} onRecordCreate={onRecordCreate} open={isCreateLocalOpen} />
 
-      <CreateGoogleDriveDialog
-        onOpenChange={setIsCreateGoogleDriveOpen}
-        onRecordCreate={onRecordCreate}
-        open={isCreateGoogleDriveOpen}
-      />
+      {isGoogleEnabled && (
+        <CreateGoogleDriveDialog
+          onOpenChange={setIsCreateGoogleDriveOpen}
+          onRecordCreate={onRecordCreate}
+          open={isCreateGoogleDriveOpen}
+        />
+      )}
     </>
   );
 };

@@ -1,5 +1,6 @@
 import * as recordService from '@/features/unlock/services/record';
 import * as sessionService from '@/features/unlock/services/session';
+import * as googleDrive from '@/features/unlock/repositories/google-drive';
 import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -8,6 +9,7 @@ import { mockServer } from '@tests/setup-component-context';
 import { demoFile } from '@tests/utils/demo-file';
 import { render } from '@tests/utils/render';
 import type { PersistedFileRecord } from '@/features/unlock/repositories/record';
+import { createRecord } from '@/features/unlock/repositories/record';
 import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 
 describe('unlock', () => {
@@ -174,6 +176,46 @@ describe('unlock', () => {
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(await recordService.getRecordsByLastOpened()).toHaveLength(1);
+    });
+  });
+
+  describe('google disabled', () => {
+    it('hides the Google Drive import and create options', async () => {
+      using _googleConfig = vi.spyOn(googleDrive, 'isGoogleAvailable').mockReturnValue(false);
+      const user = userEvent.setup();
+
+      render(<UnlockPage setSession={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Import' }));
+      expect(await screen.findByRole('menuitem', { name: 'Local' })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: 'Google Drive' })).not.toBeInTheDocument();
+      await user.keyboard('{Escape}');
+
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+      expect(await screen.findByRole('menuitem', { name: 'Local' })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: 'Google Drive' })).not.toBeInTheDocument();
+    });
+
+    it('lists a Google Drive record but keeps it locked', async () => {
+      using _googleConfig = vi.spyOn(googleDrive, 'isGoogleAvailable').mockReturnValue(false);
+      await createRecord({
+        id: 'drive-1',
+        kdbx: { encryptedBytes: new Uint8Array([1]), name: 'drive.kdbx' },
+        source: { id: 'drive-file-1' },
+        type: 'google-drive',
+      });
+      const user = userEvent.setup();
+
+      render(<UnlockPage setSession={vi.fn()} />);
+      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
+      await user.click(await screen.findByRole('option', { name: 'drive.kdbx (google-drive)' }));
+
+      expect(
+        screen.getByText('Google Drive is not set up in this build, so this record is locked.'),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Password')).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
     });
   });
 });

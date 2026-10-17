@@ -1,3 +1,4 @@
+import * as googleDrive from '@/features/unlock/repositories/google-drive';
 import kdbxweb from '@/utils/kdbxweb';
 import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
@@ -67,6 +68,19 @@ describe('session', () => {
       const records = await getRecords();
       const updatedRecord = records.find(({ id }) => id === 'test-record');
       expect(updatedRecord?.lastOpenedAt).toBe(expectPersisted(result.record).lastOpenedAt);
+    });
+
+    it('rejects a Google Drive record when Google is not configured', async () => {
+      using _googleConfig = vi.spyOn(googleDrive, 'isGoogleAvailable').mockReturnValue(false);
+      const { encryptedBytes, password } = await createDatabase();
+      const record = await createRecord({
+        id: 'test-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes, name: 'vault.kdbx' },
+        source: { id: 'drive-file-1' },
+      });
+
+      await expect(unlockSession({ password, record })).rejects.toThrow('Google Drive is not configured');
     });
 
     it('throws on incorrect password', async () => {

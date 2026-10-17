@@ -1,8 +1,7 @@
 import { toast } from 'sonner';
 import { useAsyncFn } from 'react-use';
-import { PUBLIC_GOOGLE_APP_ID } from 'astro:env/client';
 import { Button } from '@/components/ui/button';
-import { auth, type DriveFile } from '@/features/unlock/repositories/google-drive';
+import { auth, getGoogleConfig, type DriveFile } from '@/features/unlock/repositories/google-drive';
 import { getErrorMessage } from '@/utils/error';
 
 type PickedDriveFile = Pick<DriveFile, 'id' | 'name'>;
@@ -22,6 +21,8 @@ export const GoogleDriveFilePicker = ({
 }: GoogleDriveFilePickerProps) => {
   const [{ loading: isLoading }, openPicker] = useAsyncFn(async () => {
     try {
+      const { appId } = getGoogleConfig();
+
       const token = await auth.getAccessToken();
 
       await new Promise<void>((resolve) => gapi.load('picker', resolve));
@@ -33,7 +34,7 @@ export const GoogleDriveFilePicker = ({
 
       const picker = new google.picker.PickerBuilder()
         .setOAuthToken(token)
-        .setAppId(PUBLIC_GOOGLE_APP_ID)
+        .setAppId(appId)
         .addView(view)
         .hideTitleBar()
         .setSelectableMimeTypes('application/octet-stream')

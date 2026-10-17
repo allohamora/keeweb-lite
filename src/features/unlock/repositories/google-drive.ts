@@ -1,22 +1,33 @@
 import { z } from 'zod';
 import { Lock } from '@/utils/lock';
-import { PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
+import { PUBLIC_GOOGLE_APP_ID, PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
 const lock = new Lock('google-drive.repository.auth');
 
+export const isGoogleAvailable = () => Boolean(PUBLIC_GOOGLE_CLIENT_ID && PUBLIC_GOOGLE_APP_ID);
+
+export const getGoogleConfig = () => {
+  if (!PUBLIC_GOOGLE_CLIENT_ID || !PUBLIC_GOOGLE_APP_ID) {
+    throw new Error('Google Drive is not configured.');
+  }
+
+  return { clientId: PUBLIC_GOOGLE_CLIENT_ID, appId: PUBLIC_GOOGLE_APP_ID };
+};
+
 class Auth {
   private state: { accessToken: string; expiresAt: Date } | null = null;
 
   private async requestAccessToken(): Promise<google.accounts.oauth2.TokenResponse> {
+    const { clientId } = getGoogleConfig();
     const { promise, resolve, reject } = Promise.withResolvers<google.accounts.oauth2.TokenResponse>();
 
     // this client just make requests to get access tokens
     // without storing them, so we can just create a new instance
     const client = google.accounts.oauth2.initTokenClient({
-      client_id: PUBLIC_GOOGLE_CLIENT_ID,
+      client_id: clientId,
       scope: 'https://www.googleapis.com/auth/drive.file',
       prompt: 'select_account',
       callback: (res) => {

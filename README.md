@@ -53,7 +53,7 @@ npm run format:fix   # Prettier write
 
 The Docker image builds the Astro app inside the container, then serves the static `dist/` output with Nginx.
 
-`PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` are compiled into the client bundle at build time, so changing them requires rebuilding the image.
+`PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` are optional. They are compiled into the client bundle at build time, so changing them requires rebuilding the image. Leave both unset to build without Google Drive.
 
 Build image:
 
@@ -73,11 +73,13 @@ docker run --rm -p 4321:80 keeweb-lite
 Use Docker Compose:
 
 ```bash
-# Set `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` in `.env`, then run:
+# Optionally set `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` in `.env`, then run:
 docker compose up -d --build # App is available at `http://localhost:4321`.
 ```
 
 ## Google Drive Setup
+
+Google Drive is optional. It is enabled only when both `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` are set at build time. Without them, the Google scripts are not loaded and the Google Drive import and create options are hidden. Records saved earlier from Google Drive are still listed, but they stay locked until the app is built with Google Drive enabled.
 
 To enable Google Drive integration, you need a Google Cloud project with OAuth 2.0 credentials.
 

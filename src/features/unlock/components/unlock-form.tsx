@@ -13,6 +13,7 @@ import { unlockSession, type UnlockSession } from '@/features/unlock/services/se
 import { getErrorMessage } from '@/utils/error';
 import { getRecordsByLastOpened } from '@/features/unlock/services/record';
 import { toast } from 'sonner';
+import { isGoogleAvailable } from '@/features/unlock/repositories/google-drive';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
@@ -59,6 +60,10 @@ export const UnlockForm = ({
   } = useAsync(async () => await getRecordsByLastOpened(), [recordsReloadToken]);
 
   const [showPassword, setShowPassword] = useState(false);
+
+  const selectedRecord = records.find(({ id }) => id === selectedRecordId);
+  const isSelectedRecordUnavailable = selectedRecord?.type === 'google-drive' && !isGoogleAvailable();
+  const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnavailable || isSubmitting || isUnlocking;
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
@@ -155,6 +160,11 @@ export const UnlockForm = ({
                   ))}
                 </SelectContent>
               </Select>
+              {isSelectedRecordUnavailable && (
+                <p className="pt-1 text-xs text-zinc-400">
+                  Google Drive is not set up in this build, so this record is locked.
+                </p>
+              )}
               <FieldError errors={[fieldState.error]} />
             </FieldContent>
           </Field>
@@ -174,7 +184,7 @@ export const UnlockForm = ({
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
-                  disabled={!selectedRecordId || isSubmitting || isUnlocking}
+                  disabled={isUnlockDisabled}
                   id="unlock-password"
                   placeholder="Enter password"
                   type={showPassword ? 'text' : 'password'}
@@ -183,7 +193,7 @@ export const UnlockForm = ({
                   <button
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
-                    disabled={!selectedRecordId || isSubmitting || isUnlocking}
+                    disabled={isUnlockDisabled}
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -204,12 +214,7 @@ export const UnlockForm = ({
           disabled={!selectedRecordId || isSubmitting || isUnlocking}
           onRecordRemove={handleRemove}
         />
-        <Button
-          className="ml-auto h-8 px-4 text-xs"
-          disabled={!selectedRecordId || isSubmitting || isUnlocking}
-          type="submit"
-          variant="outline"
-        >
+        <Button className="ml-auto h-8 px-4 text-xs" disabled={isUnlockDisabled} type="submit" variant="outline">
           {isSubmitting ? 'Unlocking...' : 'Unlock'}
         </Button>
       </div>
