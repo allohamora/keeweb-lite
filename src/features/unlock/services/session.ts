@@ -1,7 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import type { Dispatch, SetStateAction } from 'react';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record';
-import { loadDemoDatabase } from '@/features/demo/services/demo';
 import { loadDatabase, toEncryptedBytes, unlockDatabase } from '@/services/database';
 import { updateRecordDatabase } from '@/services/record-database';
 import { getProvider } from '@/services/provider-registry';
@@ -80,14 +79,4 @@ export const unlockSession = async ({
   }));
 
   return { database, record: updatedRecord, version: 0 };
-};
-
-export const createDemoSession = async (): Promise<UnlockSession> => {
-  const database = await loadDemoDatabase();
-
-  return {
-    database,
-    record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
-    version: 0,
-  };
 };

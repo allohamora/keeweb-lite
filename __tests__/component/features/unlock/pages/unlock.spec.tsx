@@ -1,7 +1,8 @@
 import * as sessionService from '@/features/unlock/services/session';
+import * as demoProvider from '@/features/demo/provider';
 import * as recordService from '@/features/unlock/services/record';
 import userEvent from '@testing-library/user-event';
-import { googleDriveProvider } from '@/features/google-drive/services/google-drive';
+import { googleDriveProvider } from '@/features/google-drive/provider';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { createLocalRecord } from '@/features/local/services/record';
@@ -46,7 +47,7 @@ describe('unlock', () => {
     using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
 
     const demo = Promise.withResolvers<UnlockSession>();
-    using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(demo.promise);
+    using _createDemoSession = vi.spyOn(demoProvider, 'createDemoSession').mockReturnValue(demo.promise);
 
     render(<UnlockPage setSession={setSession} />);
     await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
@@ -85,7 +86,7 @@ describe('unlock', () => {
 
     const unlock = Promise.withResolvers<UnlockSession>();
     using _unlockSession = vi.spyOn(sessionService, 'unlockSession').mockReturnValue(unlock.promise);
-    using createDemoSession = vi.spyOn(sessionService, 'createDemoSession');
+    using createDemoSession = vi.spyOn(demoProvider, 'createDemoSession');
 
     render(<UnlockPage setSession={setSession} />);
     await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));

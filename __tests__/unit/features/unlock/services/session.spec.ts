@@ -4,13 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
 import { auth } from '@/features/google-drive/repositories/google-drive';
-import { googleDriveProvider } from '@/features/google-drive/services/google-drive';
+import { googleDriveProvider } from '@/features/google-drive/provider';
 import { createRecord, getRecords } from '@/repositories/record';
 import { unlockDatabase } from '@/services/database';
 import { updateRecordDatabase } from '@/services/record-database';
-import { createDemoSession, syncSession, unlockSession } from '@/features/unlock/services/session';
+import { syncSession, unlockSession } from '@/features/unlock/services/session';
 import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/entry';
-import { demoFile } from '@tests/utils/demo-file';
 import { expectPersisted } from '@tests/utils/kdbx';
 
 describe('session', () => {
@@ -134,19 +133,6 @@ describe('session', () => {
 
       expect(result.database).toBeDefined();
       expect(result.record.id).toBe('test-record');
-    });
-  });
-
-  describe('createDemoSession', () => {
-    it('returns an in-memory demo session that is not backed by a persisted record', async () => {
-      mockServer.addHandlers(demoFile.ok());
-
-      const session = await createDemoSession();
-
-      expect(session.record.type).toBe('demo');
-      expect(session.version).toBe(0);
-      expect(session.database.meta.name).toBe('Demo');
-      await expect(getRecords()).resolves.toEqual([]);
     });
   });
 

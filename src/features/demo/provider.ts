@@ -1,5 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import demoKdbxUrl from '@/assets/demo.kdbx?url';
+import type { UnlockSession } from '@/features/unlock/services/session';
 import { cloneDatabase, unlockDatabase } from '@/services/database';
 import { defineProvider, type Storage } from '@/services/provider';
 
@@ -27,3 +28,9 @@ export const demoProvider = defineProvider({
   type: 'demo',
   storage: demoStorage,
 });
+
+export const createDemoSession = async (): Promise<UnlockSession> => {
+  const database = await loadDemoDatabase();
+
+  return { database, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 };
+};
