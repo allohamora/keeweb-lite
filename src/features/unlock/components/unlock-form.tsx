@@ -60,6 +60,8 @@ export const UnlockForm = ({
 
   const [showPassword, setShowPassword] = useState(false);
 
+  const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
+
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
       try {
@@ -120,7 +122,7 @@ export const UnlockForm = ({
             <FieldContent>
               <Select
                 {...field}
-                disabled={isLoadingRecords || records.length === 0 || isSubmitting || isUnlocking}
+                disabled={isBusy || records.length === 0}
                 onValueChange={field.onChange}
                 value={field.value}
               >
@@ -166,7 +168,7 @@ export const UnlockForm = ({
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
-                  disabled={!selectedRecordId || isSubmitting || isUnlocking}
+                  disabled={!selectedRecordId || isBusy}
                   id="unlock-password"
                   placeholder="Enter password"
                   type={showPassword ? 'text' : 'password'}
@@ -175,7 +177,7 @@ export const UnlockForm = ({
                   <button
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
-                    disabled={!selectedRecordId || isSubmitting || isUnlocking}
+                    disabled={!selectedRecordId || isBusy}
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -193,12 +195,12 @@ export const UnlockForm = ({
       <div className="flex items-center justify-between gap-2 pt-3">
         <RecordRemove
           recordId={selectedRecordId}
-          disabled={!selectedRecordId || isSubmitting || isUnlocking}
+          disabled={!selectedRecordId || isBusy}
           onRecordRemove={handleRemove}
         />
         <Button
           className="ml-auto h-8 px-4 text-xs"
-          disabled={!selectedRecordId || isSubmitting || isUnlocking}
+          disabled={!selectedRecordId || isBusy}
           type="submit"
           variant="outline"
         >
