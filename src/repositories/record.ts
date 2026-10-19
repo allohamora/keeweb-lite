@@ -63,10 +63,7 @@ export const getRecords = async () => {
       return parseResult.data;
     }
 
-    // drops all records, even the valid ones, but stored data is only written by this app and always
-    // matches the schema, so this isn't expected to happen in production
-    await del(RECORDS_STORAGE_KEY);
-    return [];
+    throw new Error('Stored records are invalid.', { cause: parseResult.error });
   });
 };
 

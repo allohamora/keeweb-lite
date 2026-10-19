@@ -59,17 +59,19 @@ describe('record-repository', () => {
       expect(await getRecords()).toEqual(records);
     });
 
-    it('returns an empty array and removes invalid records', async () => {
-      await set(RECORDS_STORAGE_KEY, [
+    it('throws and keeps storage unchanged when stored records are invalid', async () => {
+      const invalidRecords = [
         {
           id: 'google-drive-record-1',
           type: 'google-drive',
           kdbx: { name: 'vault.kdbx' },
           source: {},
         },
-      ]);
+      ];
+      await set(RECORDS_STORAGE_KEY, invalidRecords);
 
-      expect(await getRecords()).toEqual([]);
+      await expect(getRecords()).rejects.toThrow('Stored records are invalid.');
+      expect(await get(RECORDS_STORAGE_KEY)).toEqual(invalidRecords);
     });
 
     it('returns an empty array when storage is empty', async () => {
