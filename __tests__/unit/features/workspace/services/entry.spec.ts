@@ -1,6 +1,6 @@
 import kdbxweb from '@/utils/kdbxweb';
 import { describe, expect, it } from 'vitest';
-import { createRecord, getRecords } from '@/features/unlock/repositories/record';
+import { createRecord, getRecords } from '@/repositories/record';
 import { expectPersisted } from '@tests/utils/kdbx';
 import {
   createEntry,

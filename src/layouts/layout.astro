@@ -1,5 +1,6 @@
 ---
 import { APP_NAME, getPageTitle } from '@/utils/page';
+import { providers } from '@/services/provider-registry';
 import '../styles/global.css';
 
 type Props = {
@@ -9,9 +10,11 @@ type Props = {
 const { title } = Astro.props;
 const fullTitle = getPageTitle(title);
 
-const description = `${APP_NAME} is a lightweight, web-only password manager inspired by KeeWeb. Open, edit and create KeePass (KDBX) vaults in your browser, with sync via Google Drive and more.`;
+const description = `${APP_NAME} is a lightweight, web-only password manager inspired by KeeWeb. Open, edit and create KeePass (KDBX) vaults in your browser, stored locally or synced with cloud storage.`;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 const imageUrl = new URL('/icons/android-chrome-512x512.png', Astro.site);
+
+const scripts = providers.filter(({ isConfigured }) => isConfigured()).flatMap(({ scripts = [] }) => scripts);
 ---
 
 <html lang="en" class="dark">
@@ -39,8 +42,9 @@ const imageUrl = new URL('/icons/android-chrome-512x512.png', Astro.site);
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl.href} />
-    <script is:inline src="https://accounts.google.com/gsi/client" async></script>
-    <script is:inline src="https://apis.google.com/js/api.js" async></script>
+    {scripts.map((src) => (
+      <script is:inline src={src} async />
+    ))}
   </head>
   <body>
     <slot />

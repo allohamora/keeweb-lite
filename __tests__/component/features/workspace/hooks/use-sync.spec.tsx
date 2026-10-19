@@ -4,8 +4,8 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { useSync } from '@/features/workspace/hooks/use-sync';
-import { createRecord } from '@/features/unlock/repositories/record';
-import { createEmptyDatabase, toEncryptedBytes, unlockDatabase } from '@/features/unlock/services/database';
+import { createRecord } from '@/repositories/record';
+import { createEmptyDatabase, toEncryptedBytes, unlockDatabase } from '@/services/database';
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session';
 import { getFieldText } from '@/features/workspace/services/entry';
 import { googleDriveApi } from '@tests/mocks/google-drive';
@@ -43,14 +43,18 @@ const SyncHarness = ({ initialSession }: { initialSession: UnlockSession }) => {
   return session && <SyncStatus session={session} setSession={setSession} />;
 };
 
-const createSession = async (type: 'local' | 'google-drive') => {
+const createSession = async () => {
   const { encryptedBytes } = await createEmptyDatabase({ name: 'Vault', password: 'secret' });
-  const record = await createRecord(
-    type === 'local'
-      ? { id: 'record-1', kdbx: { encryptedBytes, name: 'vault.kdbx' }, type }
-      : { id: 'record-1', kdbx: { encryptedBytes, name: 'vault.kdbx' }, source: { id: 'drive-1' }, type },
-  );
-  const session = await unlockSession({ record, password: 'secret' });
+  const record = await createRecord({
+    id: 'record-1',
+    kdbx: { encryptedBytes, name: 'vault.kdbx' },
+    source: { id: 'drive-1' },
+    type: 'google-drive',
+  });
+  const session = await unlockSession({
+    record,
+    password: 'secret',
+  });
 
   const remoteDatabase = await unlockDatabase({ encryptedBytes, password: 'secret' });
   remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote entry');
@@ -61,16 +65,8 @@ const createSession = async (type: 'local' | 'google-drive') => {
 
 describe('use-sync', () => {
   describe('useSync', () => {
-    it('does not sync local records', async () => {
-      const { session } = await createSession('local');
-
-      render(<SyncHarness initialSession={session} />);
-
-      expect(screen.getByTestId('status')).toHaveTextContent('idle');
-    });
-
     it('syncs a google drive record on mount and merges the remote changes', async () => {
-      const { session, remoteBytes } = await createSession('google-drive');
+      const { session, remoteBytes } = await createSession();
       const uploads: Uint8Array[] = [];
       mockServer.addHandlers(
         googleDriveApi.preflight.ok(),
@@ -90,7 +86,7 @@ describe('use-sync', () => {
     });
 
     it('stops syncing on version changes after an error until retried', async () => {
-      const { session, remoteBytes } = await createSession('google-drive');
+      const { session, remoteBytes } = await createSession();
       let downloads = 0;
       mockServer.addHandlers(
         googleDriveApi.preflight.ok(),
@@ -116,7 +112,7 @@ describe('use-sync', () => {
     });
 
     it('drops a sync result when the session changed while it was running', async () => {
-      const { session, remoteBytes } = await createSession('google-drive');
+      const { session, remoteBytes } = await createSession();
       const { promise: released, resolve: release } = Promise.withResolvers<void>();
       mockServer.addHandlers(
         googleDriveApi.preflight.ok(),

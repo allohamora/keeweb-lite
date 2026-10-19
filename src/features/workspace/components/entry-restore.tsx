@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
 import { restoreEntry, type EntryMutationResult } from '@/features/workspace/services/entry';
-import type { FileRecord } from '@/features/unlock/repositories/record';
+import type { FileRecord } from '@/repositories/record';
 import {
   Dialog,
   DialogClose,

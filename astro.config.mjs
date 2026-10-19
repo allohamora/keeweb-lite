@@ -8,8 +8,8 @@ export default defineConfig({
   site: 'https://keeweb-lite.vercel.app',
   env: {
     schema: {
-      PUBLIC_GOOGLE_CLIENT_ID: envField.string({ context: 'client', access: 'public' }),
-      PUBLIC_GOOGLE_APP_ID: envField.string({ context: 'client', access: 'public' }),
+      PUBLIC_GOOGLE_CLIENT_ID: envField.string({ context: 'client', access: 'public', optional: true }),
+      PUBLIC_GOOGLE_APP_ID: envField.string({ context: 'client', access: 'public', optional: true }),
     },
   },
   vite: {

@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { UnlockForm } from '@/features/unlock/components/unlock-form';
 import { createTestRecord } from '@tests/utils/kdbx';
-import type { PersistedFileRecord } from '@/features/unlock/repositories/record';
+import type { PersistedFileRecord } from '@/repositories/record';
 
 describe('unlock-form', () => {
   const vaultRecord: PersistedFileRecord = {
@@ -19,7 +19,7 @@ describe('unlock-form', () => {
       const runUnlockAction = vi.fn();
       const setSession = vi.fn();
 
-      const reload = Promise.withResolvers<PersistedFileRecord[]>();
+      const reload = Promise.withResolvers<Awaited<ReturnType<typeof recordService.getRecordsByLastOpened>>>();
       using getRecordsByLastOpened = vi
         .spyOn(recordService, 'getRecordsByLastOpened')
         .mockResolvedValueOnce([vaultRecord])

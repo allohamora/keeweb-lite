@@ -67,7 +67,11 @@ describe('entry-restore', () => {
       await user.click(screen.getByRole('button', { name: 'Restore' }));
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 
-      expect(restoreEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
+      expect(restoreEntry).toHaveBeenCalledWith({
+        database,
+        record,
+        entryUuid: entry.uuid.toString(),
+      });
       expect(onEntryRestore).toHaveBeenCalledWith(payload);
     });
 

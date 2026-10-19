@@ -1,6 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb';
-import { useState, type Dispatch, type SetStateAction } from 'react';
-import { type UnlockSession } from '@/features/unlock/services/session';
+import { useState } from 'react';
+import { type SetSession, type UnlockSession } from '@/features/unlock/services/session';
 import {
   createEntry,
   findEntryByUuid,
@@ -16,33 +16,22 @@ import { toast } from 'sonner';
 import { useMedia } from 'react-use';
 import { getErrorMessage } from '@/utils/error';
 import { useIdleLock } from '@/features/workspace/hooks/use-idle-lock';
-import { useSync } from '@/features/workspace/hooks/use-sync';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
 import { useEntryMutation } from '@/features/workspace/hooks/use-entry-mutation';
 
 type WorkspacePageProps = {
   session: UnlockSession;
-  setSession: Dispatch<SetStateAction<UnlockSession | null>>;
+  setSession: SetSession;
 };
 
-export const WorkspacePage = ({ session: { database, record, version }, setSession }: WorkspacePageProps) => {
+export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
+  const { database, record } = session;
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbxweb.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useMedia('(max-width: 768px)');
   const { guardNavigation } = useSafeNet();
   const { setMutating } = useEntryMutation();
-
-  const {
-    loading: isSyncing,
-    error: syncError,
-    retrySync,
-  } = useSync({
-    record,
-    database,
-    version,
-    setSession,
-  });
 
   const selectedEntry = selectedEntryUuid ? findEntryByUuid(database, selectedEntryUuid) : null;
 
@@ -102,23 +91,13 @@ export const WorkspacePage = ({ session: { database, record, version }, setSessi
     guardNavigation(() => void createNewEntry());
   };
 
-  const syncStatus = isSyncing ? 'syncing' : syncError ? 'error' : 'synced';
-  const syncErrorMessage = syncError?.message ?? null;
   const isDesktopMode = !isMobile;
   const showListPane = isDesktopMode || !selectedEntryUuid;
   const showDetailsPane = isDesktopMode || Boolean(selectedEntryUuid);
 
   return (
     <div className="box-border flex h-svh min-h-svh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-foreground sm:h-dvh sm:min-h-dvh sm:py-0">
-      <WorkspaceControls
-        database={database}
-        recordName={record.kdbx.name}
-        recordType={record.type}
-        syncStatus={syncStatus}
-        syncErrorMessage={syncErrorMessage}
-        onWorkspaceLock={handleLock}
-        onSyncRetry={retrySync}
-      />
+      <WorkspaceControls session={session} setSession={setSession} onWorkspaceLock={handleLock} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {isDesktopMode && (
           <MenuPane

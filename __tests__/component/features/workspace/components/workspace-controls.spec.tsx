@@ -1,8 +1,11 @@
-import * as databaseService from '@/features/unlock/services/database';
+import * as databaseService from '@/services/database';
 import * as downloadUtils from '@/utils/download';
+import * as sessionService from '@/features/workspace/services/session';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { toast } from 'sonner';
+import { googleDriveProvider } from '@/features/google-drive/services/provider';
 import { WorkspaceControls } from '@/features/workspace/components/workspace-controls';
 import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
@@ -12,6 +15,17 @@ const record = createTestRecord();
 
 describe('workspace-controls', () => {
   describe('WorkspaceControls', () => {
+    it('shows the record name with the record type and no sync status for a local record', async () => {
+      const database = await createTestDatabase();
+
+      render(
+        <WorkspaceControls session={{ database, record, version: 0 }} setSession={vi.fn()} onWorkspaceLock={vi.fn()} />,
+      );
+
+      expect(screen.getByText('test.kdbx (local)')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Sync status/ })).not.toBeInTheDocument();
+    });
+
     it('downloads the database directly when there are no unsaved changes', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
@@ -21,15 +35,7 @@ describe('workspace-controls', () => {
       using _anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
       render(
-        <WorkspaceControls
-          database={database}
-          recordName={record.kdbx.name}
-          recordType={record.type}
-          syncStatus="synced"
-          syncErrorMessage={null}
-          onWorkspaceLock={vi.fn()}
-          onSyncRetry={vi.fn()}
-        />,
+        <WorkspaceControls session={{ database, record, version: 0 }} setSession={vi.fn()} onWorkspaceLock={vi.fn()} />,
       );
       await user.click(screen.getByRole('button', { name: 'Download database' }));
 
@@ -44,13 +50,13 @@ describe('workspace-controls', () => {
 
       render(
         <WorkspaceControls
-          database={database}
-          recordName="Vault.KDBX"
-          recordType="local"
-          syncStatus="synced"
-          syncErrorMessage={null}
+          session={{
+            database,
+            record: { ...record, kdbx: { ...record.kdbx, name: 'Vault.KDBX' } },
+            version: 0,
+          }}
+          setSession={vi.fn()}
           onWorkspaceLock={vi.fn()}
-          onSyncRetry={vi.fn()}
         />,
       );
       await user.click(screen.getByRole('button', { name: 'Download database' }));
@@ -66,13 +72,9 @@ describe('workspace-controls', () => {
       render(
         <DirtySafeNet>
           <WorkspaceControls
-            database={database}
-            recordName={record.kdbx.name}
-            recordType={record.type}
-            syncStatus="synced"
-            syncErrorMessage={null}
+            session={{ database, record, version: 0 }}
+            setSession={vi.fn()}
             onWorkspaceLock={vi.fn()}
-            onSyncRetry={vi.fn()}
           />
         </DirtySafeNet>,
       );
@@ -82,67 +84,76 @@ describe('workspace-controls', () => {
       expect(toEncryptedBytes).not.toHaveBeenCalled();
     });
 
-    it('hides the download button for demo records', async () => {
-      const database = await createTestDatabase();
-      render(
-        <WorkspaceControls
-          database={database}
-          recordName="Demo"
-          recordType="demo"
-          syncStatus="synced"
-          syncErrorMessage={null}
-          onWorkspaceLock={vi.fn()}
-          onSyncRetry={vi.fn()}
-        />,
-      );
-
-      expect(screen.queryByRole('button', { name: 'Download database' })).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Lock workspace' })).toBeInTheDocument();
-    });
-
-    it('retries sync directly when there are no unsaved changes', async () => {
+    it('downloads a demo record as a .kdbx file', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      const onSyncRetry = vi.fn();
+      using _toEncryptedBytes = vi.spyOn(databaseService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
       render(
         <WorkspaceControls
-          database={database}
-          recordName={record.kdbx.name}
-          recordType="google-drive"
-          syncStatus="error"
-          syncErrorMessage="Drive sync failed."
+          session={{
+            database,
+            record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
+            version: 0,
+          }}
+          setSession={vi.fn()}
           onWorkspaceLock={vi.fn()}
-          onSyncRetry={onSyncRetry}
         />,
       );
-      await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
 
-      expect(onSyncRetry).toHaveBeenCalledOnce();
+      await user.click(screen.getByRole('button', { name: 'Download database' }));
+
+      expect(downloadBytes).toHaveBeenCalledWith(expect.objectContaining({ fileName: 'Demo.kdbx' }));
     });
 
-    it('defers sync retry behind the discard prompt when there are unsaved changes', async () => {
+    it('shows sync as unavailable without syncing when Google Drive is not configured', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
-      const onSyncRetry = vi.fn();
+      using _googleConfig = vi.spyOn(googleDriveProvider, 'isConfigured').mockReturnValue(false);
+      using syncSession = vi.spyOn(sessionService, 'syncSession');
+      using toastInfo = vi.spyOn(toast, 'info').mockReturnValue('toast-id');
 
       render(
-        <DirtySafeNet>
-          <WorkspaceControls
-            database={database}
-            recordName={record.kdbx.name}
-            recordType="google-drive"
-            syncStatus="error"
-            syncErrorMessage="Drive sync failed."
-            onWorkspaceLock={vi.fn()}
-            onSyncRetry={onSyncRetry}
-          />
-        </DirtySafeNet>,
+        <WorkspaceControls
+          session={{
+            database,
+            record: { id: 'drive-record', type: 'google-drive', kdbx: { ...record.kdbx }, source: { id: 'file-1' } },
+            version: 0,
+          }}
+          setSession={vi.fn()}
+          onWorkspaceLock={vi.fn()}
+        />,
       );
-      await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
+      await user.click(screen.getByRole('button', { name: 'Sync status: unavailable' }));
 
-      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
-      expect(onSyncRetry).not.toHaveBeenCalled();
+      expect(toastInfo).toHaveBeenCalledWith(
+        'Google Drive is not configured in this build, so changes are saved locally only.',
+      );
+      expect(syncSession).not.toHaveBeenCalled();
+    });
+
+    it('shows a generic message and retries when a sync fails without an error message', async () => {
+      const database = await createTestDatabase();
+      const user = userEvent.setup();
+      using syncSession = vi.spyOn(sessionService, 'syncSession').mockRejectedValue(new Error(''));
+      using toastError = vi.spyOn(toast, 'error').mockReturnValue('toast-id');
+
+      render(
+        <WorkspaceControls
+          session={{
+            database,
+            record: { id: 'drive-record', type: 'google-drive', kdbx: { ...record.kdbx }, source: { id: 'file-1' } },
+            version: 0,
+          }}
+          setSession={vi.fn()}
+          onWorkspaceLock={vi.fn()}
+        />,
+      );
+      await user.click(await screen.findByRole('button', { name: 'Sync status: error' }));
+
+      expect(toastError).toHaveBeenCalledWith('Sync failed.');
+      expect(syncSession).toHaveBeenCalledTimes(2);
     });
   });
 });

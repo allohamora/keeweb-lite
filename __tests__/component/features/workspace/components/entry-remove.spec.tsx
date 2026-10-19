@@ -67,7 +67,11 @@ describe('entry-remove', () => {
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
-      expect(removeEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
+      expect(removeEntry).toHaveBeenCalledWith({
+        database,
+        record,
+        entryUuid: entry.uuid.toString(),
+      });
       expect(onEntryRemove).toHaveBeenCalledWith(payload);
     });
 

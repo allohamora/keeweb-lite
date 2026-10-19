@@ -3,10 +3,10 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAsyncLock } from '@/features/unlock/hooks/use-async-lock';
 import { useHydrated } from '@/features/unlock/hooks/use-hydrated';
-import { createDemoSession, type UnlockSession } from '@/features/unlock/services/session';
+import { createDemoSession } from '@/features/demo/services/demo';
+import type { UnlockSession } from '@/features/unlock/services/session';
 import { getErrorMessage } from '@/utils/error';
-import { CreateMenu } from '@/features/unlock/components/create-menu';
-import { ImportMenu } from '@/features/unlock/components/import-menu';
+import { ProviderMenu } from '@/features/unlock/components/provider-menu';
 import { UnlockForm } from '@/features/unlock/components/unlock-form';
 
 type UnlockPageProps = {
@@ -49,8 +49,8 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
                 >
                   Demo
                 </Button>
-                <ImportMenu disabled={!isHydrated} onRecordImport={reloadRecords} />
-                <CreateMenu disabled={!isHydrated} onRecordCreate={reloadRecords} />
+                <ProviderMenu label="Import" dialog="ImportDialog" disabled={!isHydrated} onSuccess={reloadRecords} />
+                <ProviderMenu label="Create" dialog="CreateDialog" disabled={!isHydrated} onSuccess={reloadRecords} />
               </div>
             </div>
 

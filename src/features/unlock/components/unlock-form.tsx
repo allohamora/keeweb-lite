@@ -56,11 +56,12 @@ export const UnlockForm = ({
     error: recordsLoadError,
     loading: isLoadingRecords,
     value: records = [],
-  } = useAsync(async () => await getRecordsByLastOpened(), [recordsReloadToken]);
+  } = useAsync(getRecordsByLastOpened, [recordsReloadToken]);
 
   const [showPassword, setShowPassword] = useState(false);
 
   const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
+  const isUnlockDisabled = !selectedRecordId || isBusy;
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
@@ -168,7 +169,7 @@ export const UnlockForm = ({
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
-                  disabled={!selectedRecordId || isBusy}
+                  disabled={isUnlockDisabled}
                   id="unlock-password"
                   placeholder="Enter password"
                   type={showPassword ? 'text' : 'password'}
@@ -177,7 +178,7 @@ export const UnlockForm = ({
                   <button
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
-                    disabled={!selectedRecordId || isBusy}
+                    disabled={isUnlockDisabled}
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -198,12 +199,7 @@ export const UnlockForm = ({
           disabled={!selectedRecordId || isBusy}
           onRecordRemove={handleRemove}
         />
-        <Button
-          className="ml-auto h-8 px-4 text-xs"
-          disabled={!selectedRecordId || isBusy}
-          type="submit"
-          variant="outline"
-        >
+        <Button className="ml-auto h-8 px-4 text-xs" disabled={isUnlockDisabled} type="submit" variant="outline">
           {isSubmitting ? 'Unlocking...' : 'Unlock'}
         </Button>
       </div>

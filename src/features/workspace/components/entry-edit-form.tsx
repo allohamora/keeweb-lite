@@ -32,7 +32,7 @@ import {
   saveEntry,
   type EntryMutationResult,
 } from '@/features/workspace/services/entry';
-import type { FileRecord } from '@/features/unlock/repositories/record';
+import type { FileRecord } from '@/repositories/record';
 import { EntryHistory } from '@/features/workspace/components/entry-history';
 import { EntryRemove } from '@/features/workspace/components/entry-remove';
 import { EntryRestore } from '@/features/workspace/components/entry-restore';

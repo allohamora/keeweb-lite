@@ -1,9 +1,10 @@
 import { useMountedState } from 'react-use';
-import { useEffect, useEffectEvent, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { syncSession, type UnlockSession } from '@/features/unlock/services/session';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
+import { syncSession } from '@/features/workspace/services/session';
 
 type UseSyncProps = UnlockSession & {
-  setSession: Dispatch<SetStateAction<UnlockSession | null>>;
+  setSession: SetSession;
 };
 
 type State = {
@@ -36,10 +37,6 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   };
 
   const triggerSync = () => {
-    if (record.type !== 'google-drive') {
-      return;
-    }
-
     const callId = ++lastCallId.current;
 
     if (!state.loading) {
@@ -78,7 +75,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   });
 
   useEffect(() => {
-    // syncing with Drive on every version change is the point of this effect, and `loading` tracks that sync
+    // syncing on every version change is the point of this effect, and `loading` tracks that sync
     // eslint-disable-next-line react-hooks/set-state-in-effect
     handleVersionSync();
   }, [version]);
