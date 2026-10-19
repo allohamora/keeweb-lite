@@ -11,8 +11,8 @@ import {
   cloneDatabase,
   createEmptyDatabase,
   loadDatabase,
-  loadKdbxweb,
   toEncryptedBytes,
+  toKeyFileHash,
 } from '@/features/unlock/services/database';
 import { asUint8Array } from '@/utils/buffer';
 import { toKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
@@ -73,8 +73,7 @@ export const updateRecordDatabase = async <Result>({
 };
 
 const readKeyFile = async (file: File) => {
-  const kdbxweb = await loadKdbxweb();
-  const hash = kdbxweb.ByteUtils.bytesToBase64(await file.arrayBuffer());
+  const hash = await toKeyFileHash(file);
   const name = file.name;
 
   return { hash, name };
