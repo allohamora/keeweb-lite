@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ type ImportMenuProps = {
 
 export const ImportMenu = ({ onRecordImport, disabled = false }: ImportMenuProps) => {
   const [openType, setOpenType] = useState<Provider['type'] | null>(null);
-  const items = useMemo(() => getImportItems(), []);
+  const items = getImportItems();
 
   return (
     <>
