@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDemoSession, loadDemoDatabase } from '@/features/demo/provider';
+import { createDemoSession, loadDemoDatabase } from '@/features/demo/services/provider';
 import { getRecords } from '@/repositories/record';
 import { demoFile } from '@tests/utils/demo-file';
 import { mockServer } from '@tests/setup-unit-context';

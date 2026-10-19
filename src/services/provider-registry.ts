@@ -1,6 +1,6 @@
-import { demoProvider } from '@/features/demo/provider';
-import { googleDriveProvider } from '@/features/google-drive/provider';
-import { localProvider } from '@/features/local/provider';
+import { demoProvider } from '@/features/demo/services/provider';
+import { googleDriveProvider } from '@/features/google-drive/services/provider';
+import { localProvider } from '@/features/local/services/provider';
 import type { FileRecord } from '@/repositories/record';
 import type { Provider } from '@/services/provider';
 

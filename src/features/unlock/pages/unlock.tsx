@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAsyncLock } from '@/features/unlock/hooks/use-async-lock';
 import { useHydrated } from '@/features/unlock/hooks/use-hydrated';
-import { createDemoSession } from '@/features/demo/provider';
+import { createDemoSession } from '@/features/demo/services/provider';
 import type { UnlockSession } from '@/features/unlock/services/session';
 import { getErrorMessage } from '@/utils/error';
 import { CreateMenu } from '@/features/unlock/components/create-menu';

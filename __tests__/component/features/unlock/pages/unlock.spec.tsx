@@ -1,8 +1,8 @@
 import * as sessionService from '@/features/unlock/services/session';
-import * as demoProvider from '@/features/demo/provider';
+import * as demoProvider from '@/features/demo/services/provider';
 import * as recordService from '@/features/unlock/services/record';
 import userEvent from '@testing-library/user-event';
-import { googleDriveProvider } from '@/features/google-drive/provider';
+import { googleDriveProvider } from '@/features/google-drive/services/provider';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { createLocalRecord } from '@/features/local/services/record';

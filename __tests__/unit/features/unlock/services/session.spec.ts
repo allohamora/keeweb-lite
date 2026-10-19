@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
 import { auth } from '@/features/google-drive/repositories/google-drive';
-import { googleDriveProvider } from '@/features/google-drive/provider';
+import { googleDriveProvider } from '@/features/google-drive/services/provider';
 import { createRecord, getRecords } from '@/repositories/record';
 import { unlockDatabase } from '@/services/database';
 import { updateRecordDatabase } from '@/services/record-database';
