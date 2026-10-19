@@ -51,20 +51,22 @@ type DemoFileRecord = {
 
 export type FileRecord = PersistedFileRecord | DemoFileRecord;
 
+const readRecords = async () => {
+  const value = await get<unknown>(RECORDS_STORAGE_KEY);
+  if (!value) {
+    return [];
+  }
+
+  const parseResult = fileRecordsSchema.safeParse(value);
+  if (parseResult.success) {
+    return parseResult.data;
+  }
+
+  throw new Error('Stored records are invalid.', { cause: parseResult.error });
+};
+
 export const getRecords = async () => {
-  return lock.runInLock(async () => {
-    const value = await get<unknown>(RECORDS_STORAGE_KEY);
-    if (!value) {
-      return [];
-    }
-
-    const parseResult = fileRecordsSchema.safeParse(value);
-    if (parseResult.success) {
-      return parseResult.data;
-    }
-
-    throw new Error('Stored records are invalid.', { cause: parseResult.error });
-  });
+  return lock.runInLock(readRecords);
 };
 
 export const getRecord = async (recordId: string) => {
@@ -81,8 +83,7 @@ const updateRecords = async <Update extends { nextRecords: PersistedFileRecord[]
   updater: (oldRecords: PersistedFileRecord[]) => Update,
 ): Promise<Update['result']> => {
   return lock.runInLock(async () => {
-    const parseResult = fileRecordsSchema.safeParse(await get<unknown>(RECORDS_STORAGE_KEY));
-    const update = updater(parseResult.success ? parseResult.data : []);
+    const update = updater(await readRecords());
     await set(RECORDS_STORAGE_KEY, update.nextRecords);
 
     return update.result;

@@ -250,6 +250,20 @@ describe('record-repository', () => {
       ).rejects.toThrow('Record with id duplicate-id already exists');
     });
 
+    it('throws and keeps storage unchanged when stored records are invalid', async () => {
+      const invalidRecords = [{ id: 'local-record-1', type: 'local', kdbx: { name: 'vault.kdbx' } }];
+      await set(RECORDS_STORAGE_KEY, invalidRecords);
+
+      await expect(
+        createRecord({
+          id: 'local-record-2',
+          type: 'local',
+          kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault-2.kdbx' },
+        }),
+      ).rejects.toThrow('Stored records are invalid.');
+      expect(await get(RECORDS_STORAGE_KEY)).toEqual(invalidRecords);
+    });
+
     it('does not create a record when a duplicate id error is thrown', async () => {
       await createRecord({
         id: 'duplicate-id-check',
