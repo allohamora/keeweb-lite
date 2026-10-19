@@ -217,7 +217,7 @@ describe('unlock', () => {
 
   describe('google disabled', () => {
     it('hides the Google Drive import and create options', async () => {
-      using _googleConfig = vi.spyOn(googleDriveProvider, 'isAvailable').mockReturnValue(false);
+      using _googleConfig = vi.spyOn(googleDriveProvider, 'isConfigured').mockReturnValue(false);
       const user = userEvent.setup();
 
       render(<UnlockPage setSession={vi.fn()} />);
@@ -233,7 +233,7 @@ describe('unlock', () => {
     });
 
     it('lists a Google Drive record but keeps it locked', async () => {
-      using _googleConfig = vi.spyOn(googleDriveProvider, 'isAvailable').mockReturnValue(false);
+      using _googleConfig = vi.spyOn(googleDriveProvider, 'isConfigured').mockReturnValue(false);
       await createRecord({
         id: 'drive-1',
         kdbx: { encryptedBytes: new Uint8Array([1]), name: 'drive.kdbx' },

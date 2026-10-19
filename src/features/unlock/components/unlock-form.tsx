@@ -64,8 +64,8 @@ export const UnlockForm = ({
   const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
   const selectedRecord = records.find(({ id }) => id === selectedRecordId);
   const selectedProvider = selectedRecord && getProvider(selectedRecord);
-  const isSelectedRecordUnavailable = selectedProvider ? !selectedProvider.isAvailable() : false;
-  const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnavailable || isBusy;
+  const isSelectedRecordUnconfigured = selectedProvider ? !selectedProvider.isConfigured() : false;
+  const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnconfigured || isBusy;
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
@@ -154,7 +154,7 @@ export const UnlockForm = ({
                   ))}
                 </SelectContent>
               </Select>
-              {selectedProvider && isSelectedRecordUnavailable && (
+              {selectedProvider && isSelectedRecordUnconfigured && (
                 <p className="pt-1 text-xs text-zinc-400">
                   {selectedProvider.label} is not configured in this build, so this record is locked.
                 </p>

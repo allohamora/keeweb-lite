@@ -62,8 +62,8 @@ export const unlockSession = async ({
   record: PersistedFileRecord;
   password: string;
 }): Promise<UnlockSession> => {
-  const { isAvailable, label } = getProvider(record);
-  if (!isAvailable()) {
+  const { isConfigured, label } = getProvider(record);
+  if (!isConfigured()) {
     throw new Error(`${label} is not configured in this build, so this record is locked.`);
   }
 

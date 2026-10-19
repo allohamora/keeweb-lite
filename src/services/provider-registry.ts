@@ -16,11 +16,11 @@ export const getProvider = <Type extends FileRecord['type']>({ type }: { type: T
   providersByType[type];
 
 export const getImportItems = () =>
-  providers.flatMap(({ type, label, ImportDialog, isAvailable }) =>
-    ImportDialog && isAvailable() ? [{ type, label, Dialog: ImportDialog }] : [],
+  providers.flatMap(({ type, label, ImportDialog, isConfigured }) =>
+    ImportDialog && isConfigured() ? [{ type, label, Dialog: ImportDialog }] : [],
   );
 
 export const getCreateItems = () =>
-  providers.flatMap(({ type, label, CreateDialog, isAvailable }) =>
-    CreateDialog && isAvailable() ? [{ type, label, Dialog: CreateDialog }] : [],
+  providers.flatMap(({ type, label, CreateDialog, isConfigured }) =>
+    CreateDialog && isConfigured() ? [{ type, label, Dialog: CreateDialog }] : [],
   );

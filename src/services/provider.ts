@@ -26,7 +26,7 @@ export type Sync<Record extends FileRecord = FileRecord> = {
 export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {
   type: Type;
   label: string;
-  isAvailable: () => boolean;
+  isConfigured: () => boolean;
   scripts?: string[];
   storage: Storage;
   sync?: Sync<RecordOf<Type>>;
@@ -39,7 +39,7 @@ type ProviderConfig<Type extends FileRecord['type']> = Pick<Provider<Type>, 'typ
 
 export const defineProvider = <Type extends FileRecord['type']>(provider: ProviderConfig<Type>): Provider<Type> => ({
   label: kebabCaseToTitle(provider.type),
-  isAvailable: () => true,
+  isConfigured: () => true,
   storage: recordStorage,
   ...provider,
 });

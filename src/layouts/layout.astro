@@ -14,7 +14,7 @@ const description = `${APP_NAME} is a lightweight, web-only password manager ins
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 const imageUrl = new URL('/icons/android-chrome-512x512.png', Astro.site);
 
-const scripts = providers.filter(({ isAvailable }) => isAvailable()).flatMap(({ scripts = [] }) => scripts);
+const scripts = providers.filter(({ isConfigured }) => isConfigured()).flatMap(({ scripts = [] }) => scripts);
 ---
 
 <html lang="en" class="dark">

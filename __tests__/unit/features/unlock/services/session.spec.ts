@@ -70,7 +70,7 @@ describe('session', () => {
     });
 
     it('rejects a Google Drive record when Google is not configured', async () => {
-      using _googleConfig = vi.spyOn(googleDriveProvider, 'isAvailable').mockReturnValue(false);
+      using _googleConfig = vi.spyOn(googleDriveProvider, 'isConfigured').mockReturnValue(false);
       const { encryptedBytes, password } = await createDatabase();
       const record = await createRecord({
         id: 'test-record',
