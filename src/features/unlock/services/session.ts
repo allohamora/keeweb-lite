@@ -1,4 +1,4 @@
-import kdbxweb from '@/utils/kdbxweb';
+import type kdbxweb from '@/utils/kdbxweb';
 import { loadDemoDatabase } from '@/features/unlock/services/demo';
 import { getFile, updateFile } from '@/features/unlock/repositories/google-drive';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/features/unlock/repositories/record';

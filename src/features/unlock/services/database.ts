@@ -1,6 +1,10 @@
-import kdbxweb from '@/utils/kdbxweb';
+import type kdbxweb from '@/utils/kdbxweb';
 import { asArrayBuffer, asUint8Array } from '@/utils/buffer';
 import { Lock } from '@/utils/lock';
+
+// kdbxweb, xmldom and argon2 are about 245 KB, so they load on first use instead of with the unlock page.
+// import() is cached per module, so calling this again reuses the loaded module.
+export const loadKdbxweb = async () => (await import('@/utils/kdbxweb')).default;
 
 export const loadDatabase = async ({
   encryptedBytes,
@@ -9,6 +13,8 @@ export const loadDatabase = async ({
   encryptedBytes: Uint8Array;
   credentials: kdbxweb.Credentials;
 }) => {
+  const kdbxweb = await loadKdbxweb();
+
   return kdbxweb.Kdbx.load(asArrayBuffer(encryptedBytes), credentials);
 };
 
@@ -21,6 +27,7 @@ export const unlockDatabase = async ({
   keyFileHashBase64?: string | null;
   password: string;
 }) => {
+  const kdbxweb = await loadKdbxweb();
   const keyfile = keyFileHashBase64 ? kdbxweb.ByteUtils.base64ToBytes(keyFileHashBase64) : undefined;
   const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), keyfile);
   await credentials.ready;
@@ -47,6 +54,8 @@ export const toEncryptedBytes = async (database: kdbxweb.Kdbx) => {
 };
 
 const generateKeyFile = async (databaseName: string) => {
+  const kdbxweb = await loadKdbxweb();
+
   // createRandomKeyFile defaults to the legacy version 1 XML key file; pass 2 explicitly
   // to get the newer, hash-verified version that KeePass2 names with a .keyx extension.
   const keyFileBytes = await kdbxweb.Credentials.createRandomKeyFile(2);
@@ -64,6 +73,7 @@ export const createEmptyDatabase = async ({
   password: string;
   useKeyFile?: boolean;
 }) => {
+  const kdbxweb = await loadKdbxweb();
   const generatedKey = useKeyFile ? await generateKeyFile(name) : undefined;
 
   const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password), generatedKey?.keyFileBytes);
@@ -76,6 +86,7 @@ export const createEmptyDatabase = async ({
 };
 
 export const cloneDatabase = async (database: kdbxweb.Kdbx): Promise<kdbxweb.Kdbx> => {
+  const kdbxweb = await loadKdbxweb();
   const encryptedBytes = await serialize(database);
 
   return kdbxweb.Kdbx.load(encryptedBytes, database.credentials);
