@@ -51,5 +51,31 @@ describe('password-generator', () => {
       expect(await screen.findByText('Length must be at least 4.')).toBeInTheDocument();
       expect(screen.getByLabelText('Generated password')).toHaveValue('abcd');
     });
+
+    it('does not generate with a length above the maximum', async () => {
+      const user = userEvent.setup();
+
+      render(<PasswordGenerator currentPassword="abcd" onPasswordApply={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Generate password' }));
+      await user.clear(screen.getByLabelText('Length'));
+      await user.type(screen.getByLabelText('Length'), '65');
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      expect(await screen.findByText('Length must be at most 64.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Generated password')).toHaveValue('abcd');
+    });
+
+    it('does not generate with a length that is not a whole number', async () => {
+      const user = userEvent.setup();
+
+      render(<PasswordGenerator currentPassword="abcd" onPasswordApply={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Generate password' }));
+      await user.clear(screen.getByLabelText('Length'));
+      await user.type(screen.getByLabelText('Length'), '10.5');
+      await user.click(screen.getByRole('button', { name: 'Generate' }));
+
+      expect(await screen.findByText('Length must be a whole number.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Generated password')).toHaveValue('abcd');
+    });
   });
 });

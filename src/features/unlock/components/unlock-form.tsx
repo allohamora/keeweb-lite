@@ -1,8 +1,8 @@
+import * as z from 'zod/mini';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useAsync } from 'react-use';
-import { z } from 'zod';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,8 @@ import { isGoogleAvailable } from '@/features/unlock/repositories/google-drive';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
-  selectedRecordId: z.string().min(1, 'Create or select a record before unlocking.'),
-  password: z.string().trim().min(1, 'Enter a password to unlock.'),
+  selectedRecordId: z.string().check(z.minLength(1, 'Create or select a record before unlocking.')),
+  password: z.string().check(z.trim(), z.minLength(1, 'Enter a password to unlock.')),
 });
 
 type UnlockFormValues = z.infer<typeof unlockFormSchema>;
@@ -61,9 +61,10 @@ export const UnlockForm = ({
 
   const [showPassword, setShowPassword] = useState(false);
 
+  const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
   const selectedRecord = records.find(({ id }) => id === selectedRecordId);
   const isSelectedRecordUnavailable = selectedRecord?.type === 'google-drive' && !isGoogleAvailable();
-  const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnavailable || isSubmitting || isUnlocking;
+  const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnavailable || isBusy;
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
@@ -96,14 +97,6 @@ export const UnlockForm = ({
     reset();
   };
 
-  if (isLoadingRecords) {
-    return (
-      <div aria-live="polite" className="mt-4 min-h-4">
-        <p className="text-xs text-zinc-400">Loading records...</p>
-      </div>
-    );
-  }
-
   if (recordsLoadError) {
     return (
       <div aria-live="polite" className="mt-4 min-h-4">
@@ -133,7 +126,7 @@ export const UnlockForm = ({
             <FieldContent>
               <Select
                 {...field}
-                disabled={isLoadingRecords || records.length === 0 || isSubmitting || isUnlocking}
+                disabled={isBusy || records.length === 0}
                 onValueChange={field.onChange}
                 value={field.value}
               >
@@ -211,7 +204,7 @@ export const UnlockForm = ({
       <div className="flex items-center justify-between gap-2 pt-3">
         <RecordRemove
           recordId={selectedRecordId}
-          disabled={!selectedRecordId || isSubmitting || isUnlocking}
+          disabled={!selectedRecordId || isBusy}
           onRecordRemove={handleRemove}
         />
         <Button className="ml-auto h-8 px-4 text-xs" disabled={isUnlockDisabled} type="submit" variant="outline">

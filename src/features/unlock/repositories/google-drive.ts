@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod/mini';
 import { Lock } from '@/utils/lock';
 import { PUBLIC_GOOGLE_APP_ID, PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 

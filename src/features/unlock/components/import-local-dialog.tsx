@@ -1,7 +1,7 @@
+import * as z from 'zod/mini';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,14 +25,15 @@ type ImportLocalDialogProps = {
 };
 
 const importLocalDialogSchema = z.object({
-  databaseFile: fileListSchema('Select a .kdbx file to import.')
-    .refine((files) => files.length > 0, {
+  databaseFile: fileListSchema('Select a .kdbx file to import.').check(
+    z.refine((files) => files.length > 0, {
       message: 'Select a .kdbx file to import.',
-    })
-    .refine((files) => files.length === 0 || isKdbxFileName(files[0]?.name), {
+    }),
+    z.refine((files) => files.length === 0 || isKdbxFileName(files[0]?.name), {
       message: 'Only .kdbx files are supported.',
     }),
-  keyFile: fileListSchema('Select a key file.').optional(),
+  ),
+  keyFile: z.optional(fileListSchema('Select a key file.')),
 });
 
 type ImportLocalDialogFormValues = z.infer<typeof importLocalDialogSchema>;

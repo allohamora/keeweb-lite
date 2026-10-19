@@ -1,7 +1,7 @@
+import * as z from 'zod/mini';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ViewIcon, ViewOffIcon, ZapIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,15 @@ type PasswordGeneratorProps = {
 };
 
 const passwordGeneratorSchema = z.object({
-  length: z.coerce
-    .number()
-    .int({ message: 'Length must be a whole number.' })
-    .min(MIN_PASSWORD_LENGTH, { message: `Length must be at least ${MIN_PASSWORD_LENGTH}.` })
-    .max(MAX_PASSWORD_LENGTH, { message: `Length must be at most ${MAX_PASSWORD_LENGTH}.` }),
+  length: z.pipe(
+    z.coerce.number(),
+    z
+      .int('Length must be a whole number.')
+      .check(
+        z.minimum(MIN_PASSWORD_LENGTH, `Length must be at least ${MIN_PASSWORD_LENGTH}.`),
+        z.maximum(MAX_PASSWORD_LENGTH, `Length must be at most ${MAX_PASSWORD_LENGTH}.`),
+      ),
+  ),
   upper: z.boolean(),
   lower: z.boolean(),
   digits: z.boolean(),

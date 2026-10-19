@@ -1,7 +1,7 @@
+import * as z from 'zod/mini';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -28,15 +28,17 @@ type CreateGoogleDriveDialogProps = {
 
 const createGoogleDriveDialogSchema = z
   .object({
-    databaseName: z.string().trim().min(1, 'Enter a database name.'),
-    password: z.string().min(1, 'Enter a master password.'),
-    confirmPassword: z.string().min(1, 'Confirm your master password.'),
+    databaseName: z.string().check(z.trim(), z.minLength(1, 'Enter a database name.')),
+    password: z.string().check(z.minLength(1, 'Enter a master password.')),
+    confirmPassword: z.string().check(z.minLength(1, 'Confirm your master password.')),
     useKeyFile: z.boolean(),
   })
-  .refine((values) => values.password === values.confirmPassword, {
-    message: 'Passwords do not match.',
-    path: ['confirmPassword'],
-  });
+  .check(
+    z.refine((values) => values.password === values.confirmPassword, {
+      message: 'Passwords do not match.',
+      path: ['confirmPassword'],
+    }),
+  );
 
 type CreateGoogleDriveDialogFormValues = z.infer<typeof createGoogleDriveDialogSchema>;
 

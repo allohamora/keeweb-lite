@@ -12,9 +12,10 @@ import { CreateLocalDialog } from './create-local-dialog';
 
 type CreateMenuProps = {
   onRecordCreate: () => void;
+  disabled?: boolean;
 };
 
-export const CreateMenu = ({ onRecordCreate }: CreateMenuProps) => {
+export const CreateMenu = ({ onRecordCreate, disabled = false }: CreateMenuProps) => {
   const [isCreateLocalOpen, setIsCreateLocalOpen] = useState(false);
   const [isCreateGoogleDriveOpen, setIsCreateGoogleDriveOpen] = useState(false);
   const isGoogleEnabled = isGoogleAvailable();
@@ -23,7 +24,7 @@ export const CreateMenu = ({ onRecordCreate }: CreateMenuProps) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button className="h-8 px-3 text-xs" type="button" variant="outline">
+          <Button className="h-8 px-3 text-xs" disabled={disabled} type="button" variant="outline">
             Create
           </Button>
         </DropdownMenuTrigger>
