@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
+import { DownloadButton } from '@/features/workspace/components/download-button';
 import { SyncStatus } from '@/features/workspace/components/sync-status';
 
 type WorkspaceControlsProps = {
@@ -10,7 +11,6 @@ type WorkspaceControlsProps = {
 
 export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: WorkspaceControlsProps) => {
   const { provider, record } = session;
-  const { DownloadButton } = provider;
 
   return (
     <header className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
@@ -23,7 +23,7 @@ export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: Work
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        {DownloadButton && <DownloadButton session={session} />}
+        {provider.type !== 'demo' && <DownloadButton session={session} />}
         <Button
           aria-label="Lock workspace"
           className="h-6 px-1.5 text-[11px]"

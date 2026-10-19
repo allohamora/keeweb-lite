@@ -25,6 +25,5 @@ export const demoStorage: Storage = {
 
 export const demoProvider = defineProvider({
   type: 'demo',
-  DownloadButton: null,
   storage: demoStorage,
 });

@@ -1,8 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import type { ComponentType } from 'react';
 import type { FileRecord } from '@/repositories/record';
-import type { UnlockSession } from '@/features/unlock/services/session';
-import { DownloadButton } from '@/features/workspace/components/download-button';
 import { kebabCaseToTitle } from '@/utils/string';
 
 export type DialogProps = {
@@ -30,7 +28,6 @@ export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {
   label: string;
   isAvailable: () => boolean;
   scripts?: string[];
-  DownloadButton: ComponentType<{ session: UnlockSession }> | null;
   storage: Storage;
   sync?: Sync<RecordOf<Type>>;
   ImportDialog?: ComponentType<DialogProps>;
@@ -43,6 +40,5 @@ type ProviderConfig<Type extends FileRecord['type']> = Pick<Provider<Type>, 'typ
 export const defineProvider = <Type extends FileRecord['type']>(provider: ProviderConfig<Type>): Provider<Type> => ({
   label: kebabCaseToTitle(provider.type),
   isAvailable: () => true,
-  DownloadButton,
   ...provider,
 });
