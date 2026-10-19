@@ -1,7 +1,7 @@
 import './mocks';
 import { afterAll, afterEach, beforeAll, expect } from 'vitest';
-import { auth } from '@/features/unlock/repositories/google-drive';
-import { clearRecords } from '@/features/unlock/repositories/record';
+import { auth } from '@/features/google-drive/repositories/google-drive';
+import { clearRecords } from '@/repositories/record';
 import { createMockServer } from './utils/mock-server';
 
 export const mockServer = createMockServer();

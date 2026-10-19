@@ -4,6 +4,7 @@ import { screen } from '@testing-library/react';
 import { WorkspacePage } from '@/features/workspace/pages/workspace';
 import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
+import { localProvider } from '@/features/local/services/local';
 
 // `using _viewport = useMobileViewport()` restores the desktop width when the test ends, even if it fails
 const useMobileViewport = () => {
@@ -23,7 +24,9 @@ describe('workspace.mobile', () => {
       createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       expect(screen.queryByRole('button', { name: 'Back to list' })).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: /Test Entry/ }));
@@ -42,7 +45,9 @@ describe('workspace.mobile', () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       expect(screen.queryByRole('button', { name: 'All Items' })).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: 'Open menu' }));

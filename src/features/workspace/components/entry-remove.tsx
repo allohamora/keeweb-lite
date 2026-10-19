@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
 import { removeEntry, type EntryMutationResult } from '@/features/workspace/services/entry';
-import type { FileRecord } from '@/features/unlock/repositories/record';
+import type { FileRecord } from '@/repositories/record';
+import type { Provider } from '@/services/provider';
 import {
   Dialog,
   DialogClose,
@@ -23,10 +24,11 @@ type EntryRemoveProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
+  provider: Provider;
   onEntryRemove: (result: EntryMutationResult) => void;
 };
 
-export const EntryRemove = ({ database, entry, record, onEntryRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, provider, onEntryRemove }: EntryRemoveProps) => {
   const { guardNavigation } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
   const [isOpen, setIsOpen] = useState(false);
@@ -36,7 +38,7 @@ export const EntryRemove = ({ database, entry, record, onEntryRemove }: EntryRem
     try {
       const entryUuid = entry.uuid.toString();
 
-      onEntryRemove(await removeEntry({ database, record, entryUuid }));
+      onEntryRemove(await removeEntry({ database, record, provider, entryUuid }));
 
       toast.success('Entry removed.');
     } catch (error) {

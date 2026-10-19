@@ -1,8 +1,8 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { ImportGoogleDriveDialog } from '@/features/unlock/components/import-google-drive-dialog';
-import { createRecord, getRecords } from '@/features/unlock/repositories/record';
+import { ImportGoogleDriveDialog } from '@/features/google-drive/components/import-dialog';
+import { createRecord, getRecords } from '@/repositories/record';
 import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockGooglePicker } from '@tests/mocks/google-picker';
 import { mockServer } from '@tests/setup-component-context';
@@ -18,14 +18,14 @@ describe('import-google-drive-dialog', () => {
       using _picker = mockGooglePicker({ id: 'drive-file-1', name: 'vault.kdbx' });
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
-      const onRecordImport = vi.fn();
+      const onSuccess = vi.fn();
 
-      render(<ImportGoogleDriveDialog onOpenChange={onOpenChange} onRecordImport={onRecordImport} open={true} />);
+      render(<ImportGoogleDriveDialog onOpenChange={onOpenChange} onSuccess={onSuccess} open={true} />);
       await user.click(screen.getByLabelText('File'));
       await screen.findByText('Choose file vault.kdbx');
       await user.click(screen.getByRole('button', { name: 'Import' }));
 
-      await waitFor(() => expect(onRecordImport).toHaveBeenCalledOnce());
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce());
       expect(onOpenChange).toHaveBeenCalledWith(false);
 
       const [record] = await getRecords();
@@ -37,15 +37,15 @@ describe('import-google-drive-dialog', () => {
     it('rejects a picked file without the .kdbx extension', async () => {
       using _picker = mockGooglePicker({ id: 'drive-file-1', name: 'notes.txt' });
       const user = userEvent.setup();
-      const onRecordImport = vi.fn();
+      const onSuccess = vi.fn();
 
-      render(<ImportGoogleDriveDialog onOpenChange={vi.fn()} onRecordImport={onRecordImport} open={true} />);
+      render(<ImportGoogleDriveDialog onOpenChange={vi.fn()} onSuccess={onSuccess} open={true} />);
       await user.click(screen.getByLabelText('File'));
       await screen.findByText('Choose file notes.txt');
       await user.click(screen.getByRole('button', { name: 'Import' }));
 
       expect(await screen.findByText('Only .kdbx files are supported.')).toBeInTheDocument();
-      expect(onRecordImport).not.toHaveBeenCalled();
+      expect(onSuccess).not.toHaveBeenCalled();
     });
 
     it('keeps the dialog open when the file is already imported', async () => {
@@ -58,16 +58,16 @@ describe('import-google-drive-dialog', () => {
       using _picker = mockGooglePicker({ id: 'drive-file-1', name: 'vault.kdbx' });
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
-      const onRecordImport = vi.fn();
+      const onSuccess = vi.fn();
 
-      render(<ImportGoogleDriveDialog onOpenChange={onOpenChange} onRecordImport={onRecordImport} open={true} />);
+      render(<ImportGoogleDriveDialog onOpenChange={onOpenChange} onSuccess={onSuccess} open={true} />);
       await user.click(screen.getByLabelText('File'));
       await screen.findByText('Choose file vault.kdbx');
       await user.click(screen.getByRole('button', { name: 'Import' }));
 
       await waitFor(() => expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled());
       expect(onOpenChange).not.toHaveBeenCalledWith(false);
-      expect(onRecordImport).not.toHaveBeenCalled();
+      expect(onSuccess).not.toHaveBeenCalled();
       expect(await getRecords()).toHaveLength(1);
     });
   });

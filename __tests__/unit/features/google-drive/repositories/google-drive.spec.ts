@@ -8,7 +8,7 @@ import {
 } from '@tests/mocks/google-drive';
 import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '@tests/mocks/google-identity';
 import { mockServer } from '@tests/setup-unit-context';
-import { auth, createFile, getFile, updateFile } from '@/features/unlock/repositories/google-drive';
+import { auth, createFile, getFile, updateFile } from '@/features/google-drive/repositories/google-drive';
 
 const useFakeDate = () => {
   vi.useFakeTimers({ toFake: ['Date'] });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -6,9 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CreateGoogleDriveDialog } from './create-google-drive-dialog';
-import { isGoogleAvailable } from '@/features/unlock/repositories/google-drive';
-import { CreateLocalDialog } from './create-local-dialog';
+import { getCreateItems } from '@/services/provider-registry';
+import type { Provider } from '@/services/provider';
 
 type CreateMenuProps = {
   onRecordCreate: () => void;
@@ -16,9 +15,8 @@ type CreateMenuProps = {
 };
 
 export const CreateMenu = ({ onRecordCreate, disabled = false }: CreateMenuProps) => {
-  const [isCreateLocalOpen, setIsCreateLocalOpen] = useState(false);
-  const [isCreateGoogleDriveOpen, setIsCreateGoogleDriveOpen] = useState(false);
-  const isGoogleEnabled = isGoogleAvailable();
+  const [openType, setOpenType] = useState<Provider['type'] | null>(null);
+  const items = useMemo(() => getCreateItems(), []);
 
   return (
     <>
@@ -29,22 +27,22 @@ export const CreateMenu = ({ onRecordCreate, disabled = false }: CreateMenuProps
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setIsCreateLocalOpen(true)}>Local</DropdownMenuItem>
-          {isGoogleEnabled && (
-            <DropdownMenuItem onSelect={() => setIsCreateGoogleDriveOpen(true)}>Google Drive</DropdownMenuItem>
-          )}
+          {items.map(({ type, label }) => (
+            <DropdownMenuItem key={type} onSelect={() => setOpenType(type)}>
+              {label}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CreateLocalDialog onOpenChange={setIsCreateLocalOpen} onRecordCreate={onRecordCreate} open={isCreateLocalOpen} />
-
-      {isGoogleEnabled && (
-        <CreateGoogleDriveDialog
-          onOpenChange={setIsCreateGoogleDriveOpen}
-          onRecordCreate={onRecordCreate}
-          open={isCreateGoogleDriveOpen}
+      {items.map(({ type, Dialog }) => (
+        <Dialog
+          key={type}
+          open={openType === type}
+          onOpenChange={(open) => setOpenType(open ? type : null)}
+          onSuccess={onRecordCreate}
         />
-      )}
+      ))}
     </>
   );
 };

@@ -4,8 +4,10 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { useSync } from '@/features/workspace/hooks/use-sync';
-import { createRecord } from '@/features/unlock/repositories/record';
-import { createEmptyDatabase, toEncryptedBytes, unlockDatabase } from '@/features/unlock/services/database';
+import { googleDriveProvider } from '@/features/google-drive/services/google-drive';
+import { localProvider } from '@/features/local/services/local';
+import { createRecord } from '@/repositories/record';
+import { createEmptyDatabase, toEncryptedBytes, unlockDatabase } from '@/services/database';
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session';
 import { getFieldText } from '@/features/workspace/services/entry';
 import { googleDriveApi } from '@tests/mocks/google-drive';
@@ -50,7 +52,11 @@ const createSession = async (type: 'local' | 'google-drive') => {
       ? { id: 'record-1', kdbx: { encryptedBytes, name: 'vault.kdbx' }, type }
       : { id: 'record-1', kdbx: { encryptedBytes, name: 'vault.kdbx' }, source: { id: 'drive-1' }, type },
   );
-  const session = await unlockSession({ record, password: 'secret' });
+  const session = await unlockSession({
+    record,
+    provider: type === 'local' ? localProvider : googleDriveProvider,
+    password: 'secret',
+  });
 
   const remoteDatabase = await unlockDatabase({ encryptedBytes, password: 'secret' });
   remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote entry');

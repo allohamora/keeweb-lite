@@ -1,8 +1,10 @@
-import * as databaseService from '@/features/unlock/services/database';
+import * as databaseService from '@/services/database';
 import * as downloadUtils from '@/utils/download';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { demoProvider } from '@/features/demo/services/demo';
+import { localProvider } from '@/features/local/services/local';
 import { WorkspaceControls } from '@/features/workspace/components/workspace-controls';
 import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
@@ -12,6 +14,21 @@ const record = createTestRecord();
 
 describe('workspace-controls', () => {
   describe('WorkspaceControls', () => {
+    it('shows the record name with the record type and no sync status for a local record', async () => {
+      const database = await createTestDatabase();
+
+      render(
+        <WorkspaceControls
+          session={{ database, record, provider: localProvider, version: 0 }}
+          setSession={vi.fn()}
+          onWorkspaceLock={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText('test.kdbx (local)')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Sync status/ })).not.toBeInTheDocument();
+    });
+
     it('downloads the database directly when there are no unsaved changes', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();
@@ -22,13 +39,9 @@ describe('workspace-controls', () => {
 
       render(
         <WorkspaceControls
-          database={database}
-          recordName={record.kdbx.name}
-          recordType={record.type}
-          syncStatus="synced"
-          syncErrorMessage={null}
+          session={{ database, record, provider: localProvider, version: 0 }}
+          setSession={vi.fn()}
           onWorkspaceLock={vi.fn()}
-          onSyncRetry={vi.fn()}
         />,
       );
       await user.click(screen.getByRole('button', { name: 'Download database' }));
@@ -44,13 +57,14 @@ describe('workspace-controls', () => {
 
       render(
         <WorkspaceControls
-          database={database}
-          recordName="Vault.KDBX"
-          recordType="local"
-          syncStatus="synced"
-          syncErrorMessage={null}
+          session={{
+            database,
+            record: { ...record, kdbx: { ...record.kdbx, name: 'Vault.KDBX' } },
+            provider: localProvider,
+            version: 0,
+          }}
+          setSession={vi.fn()}
           onWorkspaceLock={vi.fn()}
-          onSyncRetry={vi.fn()}
         />,
       );
       await user.click(screen.getByRole('button', { name: 'Download database' }));
@@ -66,13 +80,9 @@ describe('workspace-controls', () => {
       render(
         <DirtySafeNet>
           <WorkspaceControls
-            database={database}
-            recordName={record.kdbx.name}
-            recordType={record.type}
-            syncStatus="synced"
-            syncErrorMessage={null}
+            session={{ database, record, provider: localProvider, version: 0 }}
+            setSession={vi.fn()}
             onWorkspaceLock={vi.fn()}
-            onSyncRetry={vi.fn()}
           />
         </DirtySafeNet>,
       );
@@ -84,65 +94,23 @@ describe('workspace-controls', () => {
 
     it('hides the download button for demo records', async () => {
       const database = await createTestDatabase();
+
       render(
         <WorkspaceControls
-          database={database}
-          recordName="Demo"
-          recordType="demo"
-          syncStatus="synced"
-          syncErrorMessage={null}
+          session={{
+            database,
+            record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
+            provider: demoProvider,
+            version: 0,
+          }}
+          setSession={vi.fn()}
           onWorkspaceLock={vi.fn()}
-          onSyncRetry={vi.fn()}
         />,
       );
 
+      expect(screen.getByText('Demo (demo)')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Download database' })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Lock workspace' })).toBeInTheDocument();
-    });
-
-    it('retries sync directly when there are no unsaved changes', async () => {
-      const database = await createTestDatabase();
-      const user = userEvent.setup();
-      const onSyncRetry = vi.fn();
-
-      render(
-        <WorkspaceControls
-          database={database}
-          recordName={record.kdbx.name}
-          recordType="google-drive"
-          syncStatus="error"
-          syncErrorMessage="Drive sync failed."
-          onWorkspaceLock={vi.fn()}
-          onSyncRetry={onSyncRetry}
-        />,
-      );
-      await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
-
-      expect(onSyncRetry).toHaveBeenCalledOnce();
-    });
-
-    it('defers sync retry behind the discard prompt when there are unsaved changes', async () => {
-      const database = await createTestDatabase();
-      const user = userEvent.setup();
-      const onSyncRetry = vi.fn();
-
-      render(
-        <DirtySafeNet>
-          <WorkspaceControls
-            database={database}
-            recordName={record.kdbx.name}
-            recordType="google-drive"
-            syncStatus="error"
-            syncErrorMessage="Drive sync failed."
-            onWorkspaceLock={vi.fn()}
-            onSyncRetry={onSyncRetry}
-          />
-        </DirtySafeNet>,
-      );
-      await user.click(screen.getByRole('button', { name: 'Sync status: error' }));
-
-      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
-      expect(onSyncRetry).not.toHaveBeenCalled();
     });
   });
 });

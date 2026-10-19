@@ -8,7 +8,7 @@ import {
   removeRecord,
   updateRecord,
   type PersistedFileRecord,
-} from '@/features/unlock/repositories/record';
+} from '@/repositories/record';
 
 const seedRecords = async (records: PersistedFileRecord[]) => {
   for (const record of records) {

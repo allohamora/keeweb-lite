@@ -1,4 +1,5 @@
 import * as z from 'zod/mini';
+import type { ReactNode } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -16,17 +17,24 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { InfoPopover } from '@/components/ui/info-popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createGoogleDriveRecord } from '@/features/unlock/services/record';
+import type { DialogProps } from '@/services/provider';
 import { downloadBytes } from '@/utils/download';
 import { getErrorMessage } from '@/utils/error';
 
-type CreateGoogleDriveDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onRecordCreate: () => void;
+type NewDatabaseInput = {
+  databaseName: string;
+  password: string;
+  useKeyFile: boolean;
 };
 
-const createGoogleDriveDialogSchema = z
+type NewDatabaseDialogProps = DialogProps & {
+  title: string;
+  description: string;
+  info?: ReactNode;
+  onCreate: (input: NewDatabaseInput) => Promise<{ keyFileBytes?: Uint8Array; keyFileName?: string }>;
+};
+
+const newDatabaseDialogSchema = z
   .object({
     databaseName: z.string().check(z.trim(), z.minLength(1, 'Enter a database name.')),
     password: z.string().check(z.minLength(1, 'Enter a master password.')),
@@ -40,28 +48,36 @@ const createGoogleDriveDialogSchema = z
     }),
   );
 
-type CreateGoogleDriveDialogFormValues = z.infer<typeof createGoogleDriveDialogSchema>;
+type NewDatabaseDialogFormValues = z.infer<typeof newDatabaseDialogSchema>;
 
-export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreate }: CreateGoogleDriveDialogProps) => {
+export const NewDatabaseDialog = ({
+  open,
+  onOpenChange,
+  onSuccess,
+  title,
+  description,
+  info,
+  onCreate,
+}: NewDatabaseDialogProps) => {
   const {
     control,
     formState: { isSubmitting },
     handleSubmit,
     reset,
-  } = useForm<CreateGoogleDriveDialogFormValues>({
+  } = useForm<NewDatabaseDialogFormValues>({
     defaultValues: { databaseName: '', password: '', confirmPassword: '', useKeyFile: false },
-    resolver: zodResolver(createGoogleDriveDialogSchema),
+    resolver: zodResolver(newDatabaseDialogSchema),
   });
 
   const handleCreateRecordSubmit = handleSubmit(async ({ databaseName, password, useKeyFile }) => {
     try {
-      const { keyFileBytes, keyFileName } = await createGoogleDriveRecord({ databaseName, password, useKeyFile });
+      const { keyFileBytes, keyFileName } = await onCreate({ databaseName, password, useKeyFile });
 
       if (keyFileBytes && keyFileName) {
         downloadBytes({ bytes: keyFileBytes, fileName: keyFileName });
       }
 
-      onRecordCreate();
+      onSuccess();
       onOpenChange(false);
 
       toast.success('Record created.');
@@ -82,13 +98,14 @@ export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreate }: 
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1.5">
-            Create Google Drive Record
-            <InfoPopover ariaLabel="Drive destination info" contentClassName="w-64">
-              Files are always created in Drive root — intentional, matching Google's own Save to Drive behavior. Move
-              it to a folder from Drive afterward.
-            </InfoPopover>
+            {title}
+            {info && (
+              <InfoPopover ariaLabel="Destination info" contentClassName="w-64">
+                {info}
+              </InfoPopover>
+            )}
           </DialogTitle>
-          <DialogDescription>Create a new empty database on Google Drive.</DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <form
@@ -102,8 +119,8 @@ export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreate }: 
             name="databaseName"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-drive-database-name">Database name</FieldLabel>
-                <Input {...field} aria-invalid={fieldState.invalid} id="create-drive-database-name" type="text" />
+                <FieldLabel htmlFor="create-database-name">Database name</FieldLabel>
+                <Input {...field} aria-invalid={fieldState.invalid} id="create-database-name" type="text" />
                 <FieldError errors={[fieldState.error]} />
               </Field>
             )}
@@ -114,8 +131,8 @@ export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreate }: 
             name="password"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-drive-password">Password</FieldLabel>
-                <Input {...field} aria-invalid={fieldState.invalid} id="create-drive-password" type="password" />
+                <FieldLabel htmlFor="create-password">Password</FieldLabel>
+                <Input {...field} aria-invalid={fieldState.invalid} id="create-password" type="password" />
                 <FieldError errors={[fieldState.error]} />
               </Field>
             )}
@@ -126,13 +143,8 @@ export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreate }: 
             name="confirmPassword"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="create-drive-confirm-password">Confirm password</FieldLabel>
-                <Input
-                  {...field}
-                  aria-invalid={fieldState.invalid}
-                  id="create-drive-confirm-password"
-                  type="password"
-                />
+                <FieldLabel htmlFor="create-confirm-password">Confirm password</FieldLabel>
+                <Input {...field} aria-invalid={fieldState.invalid} id="create-confirm-password" type="password" />
                 <FieldError errors={[fieldState.error]} />
               </Field>
             )}
@@ -145,10 +157,10 @@ export const CreateGoogleDriveDialog = ({ open, onOpenChange, onRecordCreate }: 
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={field.value}
-                  id="create-drive-use-key-file"
+                  id="create-use-key-file"
                   onCheckedChange={(checked) => field.onChange(checked === true)}
                 />
-                <Label className="cursor-pointer text-xs" htmlFor="create-drive-use-key-file">
+                <Label className="cursor-pointer text-xs" htmlFor="create-use-key-file">
                   Use key file (generated and downloaded automatically)
                 </Label>
               </div>

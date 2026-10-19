@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import { useAsyncFn } from 'react-use';
 import { Button } from '@/components/ui/button';
-import { auth, getGoogleConfig, type DriveFile } from '@/features/unlock/repositories/google-drive';
+import { auth, getGoogleConfig, type DriveFile } from '@/features/google-drive/repositories/google-drive';
 import { getErrorMessage } from '@/utils/error';
 
 type PickedDriveFile = Pick<DriveFile, 'id' | 'name'>;

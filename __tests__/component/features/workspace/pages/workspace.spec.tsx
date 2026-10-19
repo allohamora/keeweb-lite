@@ -5,6 +5,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { WorkspacePage } from '@/features/workspace/pages/workspace';
 import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
+import { localProvider } from '@/features/local/services/local';
 
 const record = createTestRecord();
 
@@ -15,7 +16,9 @@ describe('workspace', () => {
       createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       await user.click(screen.getByRole('button', { name: /Test Entry/ }));
       await user.click(screen.getByRole('button', { name: 'All Items' }));
 
@@ -28,7 +31,9 @@ describe('workspace', () => {
       createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       await user.click(screen.getByRole('button', { name: /Test Entry/ }));
       await user.type(screen.getByLabelText('Title'), ' edited');
       await user.click(screen.getByRole('button', { name: 'All Items' }));
@@ -42,7 +47,9 @@ describe('workspace', () => {
       createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       await user.click(screen.getByRole('button', { name: /Test Entry/ }));
       await user.type(screen.getByLabelText('Title'), ' edited');
       await user.click(screen.getByRole('button', { name: 'All Items' }));
@@ -57,7 +64,9 @@ describe('workspace', () => {
       createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       await user.click(screen.getByRole('button', { name: /Test Entry/ }));
       await user.type(screen.getByLabelText('Title'), ' edited');
       await user.click(screen.getByRole('button', { name: 'All Items' }));
@@ -79,7 +88,9 @@ describe('workspace', () => {
       const setSession = vi.fn();
       using createEntry = vi.spyOn(entryService, 'createEntry');
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={setSession} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={setSession} />,
+      );
       await user.click(screen.getByRole('button', { name: /Test Entry/ }));
       await user.type(screen.getByLabelText('Title'), ' edited');
 
@@ -103,7 +114,9 @@ describe('workspace', () => {
       createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       await user.click(screen.getByRole('button', { name: /Test Entry/ }));
       await user.type(screen.getByLabelText('Title'), ' edited');
 
@@ -115,7 +128,9 @@ describe('workspace', () => {
 
     it('does not prevent beforeunload without unsaved changes', async () => {
       const database = await createTestDatabase();
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
 
       const event = new Event('beforeunload', { cancelable: true });
       window.dispatchEvent(event);
@@ -130,7 +145,9 @@ describe('workspace', () => {
       const create = Promise.withResolvers<Awaited<ReturnType<typeof entryService.createEntry>>>();
       using _createEntry = vi.spyOn(entryService, 'createEntry').mockReturnValue(create.promise);
 
-      render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      render(
+        <WorkspacePage session={{ database, record, provider: localProvider, version: 0 }} setSession={vi.fn()} />,
+      );
       await user.click(screen.getByRole('button', { name: 'Create entry' }));
 
       expect(screen.getByRole('button', { name: 'Create entry' })).toBeDisabled();

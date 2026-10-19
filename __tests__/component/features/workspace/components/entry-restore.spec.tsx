@@ -7,6 +7,7 @@ import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/ut
 import { render } from '@tests/utils/render';
 import { DirtySafeNet } from '@tests/utils/dirty-safe-net';
 import { MutatingEntryMutation } from '@tests/utils/mutating-entry-mutation';
+import { localProvider } from '@/features/local/services/local';
 
 describe('entry-restore', () => {
   const record = createTestRecord();
@@ -17,7 +18,15 @@ describe('entry-restore', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />);
+      render(
+        <EntryRestore
+          database={database}
+          entry={entry}
+          record={record}
+          provider={localProvider}
+          onEntryRestore={vi.fn()}
+        />,
+      );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 
       expect(screen.getByText('Restore entry?')).toBeInTheDocument();
@@ -30,7 +39,13 @@ describe('entry-restore', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />
+          <EntryRestore
+            database={database}
+            entry={entry}
+            record={record}
+            provider={localProvider}
+            onEntryRestore={vi.fn()}
+          />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
@@ -46,7 +61,13 @@ describe('entry-restore', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />
+          <EntryRestore
+            database={database}
+            entry={entry}
+            record={record}
+            provider={localProvider}
+            onEntryRestore={vi.fn()}
+          />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
@@ -63,11 +84,24 @@ describe('entry-restore', () => {
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
       using restoreEntry = vi.spyOn(entryService, 'restoreEntry').mockResolvedValue(payload);
 
-      render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={onEntryRestore} />);
+      render(
+        <EntryRestore
+          database={database}
+          entry={entry}
+          record={record}
+          provider={localProvider}
+          onEntryRestore={onEntryRestore}
+        />,
+      );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 
-      expect(restoreEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
+      expect(restoreEntry).toHaveBeenCalledWith({
+        database,
+        record,
+        provider: localProvider,
+        entryUuid: entry.uuid.toString(),
+      });
       expect(onEntryRestore).toHaveBeenCalledWith(payload);
     });
 
@@ -78,7 +112,13 @@ describe('entry-restore', () => {
 
       render(
         <MutatingEntryMutation>
-          <EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />
+          <EntryRestore
+            database={database}
+            entry={entry}
+            record={record}
+            provider={localProvider}
+            onEntryRestore={vi.fn()}
+          />
         </MutatingEntryMutation>,
       );
       const trigger = screen.getByRole('button', { name: 'Restore' });
@@ -97,7 +137,15 @@ describe('entry-restore', () => {
       const restore = Promise.withResolvers<Awaited<ReturnType<typeof entryService.restoreEntry>>>();
       using _restoreEntry = vi.spyOn(entryService, 'restoreEntry').mockReturnValue(restore.promise);
 
-      render(<EntryRestore database={database} entry={entry} record={record} onEntryRestore={vi.fn()} />);
+      render(
+        <EntryRestore
+          database={database}
+          entry={entry}
+          record={record}
+          provider={localProvider}
+          onEntryRestore={vi.fn()}
+        />,
+      );
       await user.click(screen.getByRole('button', { name: 'Restore' }));
       await user.click(screen.getByRole('button', { name: 'Restore' }));
 

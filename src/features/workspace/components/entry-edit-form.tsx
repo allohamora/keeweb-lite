@@ -32,7 +32,8 @@ import {
   saveEntry,
   type EntryMutationResult,
 } from '@/features/workspace/services/entry';
-import type { FileRecord } from '@/features/unlock/repositories/record';
+import type { FileRecord } from '@/repositories/record';
+import type { Provider } from '@/services/provider';
 import { EntryHistory } from '@/features/workspace/components/entry-history';
 import { EntryRemove } from '@/features/workspace/components/entry-remove';
 import { EntryRestore } from '@/features/workspace/components/entry-restore';
@@ -59,10 +60,11 @@ type EntryEditFormProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
+  provider: Provider;
   onEntrySave: (result: EntryMutationResult) => void;
 };
 
-export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEditFormProps) => {
+export const EntryEditForm = ({ database, entry, record, provider, onEntrySave }: EntryEditFormProps) => {
   const { setDirty, registerDiscard } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
   const {
@@ -96,7 +98,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
     setMutating(true);
     try {
       const entryUuid = entry.uuid.toString();
-      const result = await saveEntry({ database, record, entryUuid, values });
+      const result = await saveEntry({ database, record, provider, entryUuid, values });
 
       reset(values); // Reset the form state after the successful saving (isDirty, touched state, etc)
       onEntrySave?.(result);
@@ -424,9 +426,21 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onEntryRemove={handleSave} />
+            <EntryRemove
+              database={database}
+              entry={entry}
+              record={record}
+              provider={provider}
+              onEntryRemove={handleSave}
+            />
             {isInTrash && (
-              <EntryRestore database={database} entry={entry} record={record} onEntryRestore={handleSave} />
+              <EntryRestore
+                database={database}
+                entry={entry}
+                record={record}
+                provider={provider}
+                onEntryRestore={handleSave}
+              />
             )}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isMutating} type="submit" variant="outline">

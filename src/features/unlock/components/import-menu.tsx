@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -6,9 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ImportGoogleDriveDialog } from './import-google-drive-dialog';
-import { isGoogleAvailable } from '@/features/unlock/repositories/google-drive';
-import { ImportLocalDialog } from './import-local-dialog';
+import { getImportItems } from '@/services/provider-registry';
+import type { Provider } from '@/services/provider';
 
 type ImportMenuProps = {
   onRecordImport: () => void;
@@ -16,9 +15,8 @@ type ImportMenuProps = {
 };
 
 export const ImportMenu = ({ onRecordImport, disabled = false }: ImportMenuProps) => {
-  const [isImportLocalOpen, setIsImportLocalOpen] = useState(false);
-  const [isImportGoogleDriveOpen, setIsImportGoogleDriveOpen] = useState(false);
-  const isGoogleEnabled = isGoogleAvailable();
+  const [openType, setOpenType] = useState<Provider['type'] | null>(null);
+  const items = useMemo(() => getImportItems(), []);
 
   return (
     <>
@@ -29,22 +27,22 @@ export const ImportMenu = ({ onRecordImport, disabled = false }: ImportMenuProps
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setIsImportLocalOpen(true)}>Local</DropdownMenuItem>
-          {isGoogleEnabled && (
-            <DropdownMenuItem onSelect={() => setIsImportGoogleDriveOpen(true)}>Google Drive</DropdownMenuItem>
-          )}
+          {items.map(({ type, label }) => (
+            <DropdownMenuItem key={type} onSelect={() => setOpenType(type)}>
+              {label}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ImportLocalDialog open={isImportLocalOpen} onOpenChange={setIsImportLocalOpen} onRecordImport={onRecordImport} />
-
-      {isGoogleEnabled && (
-        <ImportGoogleDriveDialog
-          open={isImportGoogleDriveOpen}
-          onOpenChange={setIsImportGoogleDriveOpen}
-          onRecordImport={onRecordImport}
+      {items.map(({ type, Dialog }) => (
+        <Dialog
+          key={type}
+          open={openType === type}
+          onOpenChange={(open) => setOpenType(open ? type : null)}
+          onSuccess={onRecordImport}
         />
-      )}
+      ))}
     </>
   );
 };

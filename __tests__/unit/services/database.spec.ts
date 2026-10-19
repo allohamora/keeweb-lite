@@ -1,6 +1,6 @@
 import kdbxweb from '@/utils/kdbxweb';
 import { describe, expect, it } from 'vitest';
-import { cloneDatabase, toEncryptedBytes, unlockDatabase } from '@/features/unlock/services/database';
+import { cloneDatabase, toEncryptedBytes, unlockDatabase } from '@/services/database';
 import { getFieldText as getTextFromField } from '@/features/workspace/services/entry';
 
 type DatabaseRecordInput = {

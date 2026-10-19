@@ -1,6 +1,6 @@
 import kdbxweb from '@/utils/kdbxweb';
 import { describe, expect, it } from 'vitest';
-import { createRecord, getRecords } from '@/features/unlock/repositories/record';
+import { createRecord, getRecords } from '@/repositories/record';
 import { expectPersisted } from '@tests/utils/kdbx';
 import {
   createEntry,
@@ -25,6 +25,7 @@ import {
   applyEntryValues,
 } from '@/features/workspace/services/entry';
 import { findGroupByUuid } from '@/features/workspace/services/group';
+import { localProvider } from '@/features/local/services/local';
 
 describe('entry', () => {
   const createDatabase = async () => {
@@ -968,6 +969,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await saveEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
         values: {
           title: 'Updated Title',
@@ -1005,6 +1007,7 @@ describe('entry', () => {
         saveEntry({
           database,
           record,
+          provider: localProvider,
           entryUuid: 'missing-entry-uuid',
           values: {
             title: 'Should fail',
@@ -1027,6 +1030,7 @@ describe('entry', () => {
       const { nextDatabase } = await saveEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
         values: {
           title: 'Original Title',
@@ -1055,6 +1059,7 @@ describe('entry', () => {
       const { nextRecord } = await saveEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
         values: {
           title: 'Updated Title',
@@ -1093,6 +1098,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: null,
       });
 
@@ -1106,6 +1112,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: null,
       });
 
@@ -1118,6 +1125,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: null,
       });
 
@@ -1130,6 +1138,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: { tag: 'work' },
       });
 
@@ -1142,6 +1151,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: { tag: 'work' },
       });
 
@@ -1162,6 +1172,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: targetGroup.uuid,
       });
 
@@ -1184,6 +1195,7 @@ describe('entry', () => {
       const { nextDatabase, nextEntryUuid } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: targetGroup.uuid,
       });
 
@@ -1193,9 +1205,9 @@ describe('entry', () => {
     it('throws when group uuid is not found in the cloned database', async () => {
       const { database, record } = await createPersistedDatabase();
 
-      await expect(createEntry({ database, record, selectFilter: kdbxweb.KdbxUuid.random() })).rejects.toThrow(
-        'Group not found.',
-      );
+      await expect(
+        createEntry({ database, record, provider: localProvider, selectFilter: kdbxweb.KdbxUuid.random() }),
+      ).rejects.toThrow('Group not found.');
     });
 
     it('persists the database to the record', async () => {
@@ -1204,6 +1216,7 @@ describe('entry', () => {
       await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: null,
       });
 
@@ -1219,6 +1232,7 @@ describe('entry', () => {
       const { nextRecord } = await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: null,
       });
 
@@ -1234,6 +1248,7 @@ describe('entry', () => {
       await createEntry({
         database,
         record,
+        provider: localProvider,
         selectFilter: null,
       });
 
@@ -1375,6 +1390,7 @@ describe('entry', () => {
       const { nextDatabase } = await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1390,6 +1406,7 @@ describe('entry', () => {
       const { nextDatabase } = await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1403,6 +1420,7 @@ describe('entry', () => {
       const { nextDatabase } = await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1415,6 +1433,7 @@ describe('entry', () => {
       const { nextDatabase } = await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1427,6 +1446,7 @@ describe('entry', () => {
       const { nextDatabase } = await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1440,6 +1460,7 @@ describe('entry', () => {
       await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1453,6 +1474,7 @@ describe('entry', () => {
       await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1467,6 +1489,7 @@ describe('entry', () => {
       await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1481,6 +1504,7 @@ describe('entry', () => {
       const { nextEntryUuid } = await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1495,6 +1519,7 @@ describe('entry', () => {
       const { nextRecord } = await removeEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1505,7 +1530,9 @@ describe('entry', () => {
     it('throws when the entry uuid is not found', async () => {
       const { database, record } = await createPersistedDatabaseWithEntry();
 
-      await expect(removeEntry({ database, record, entryUuid: 'missing-uuid' })).rejects.toThrow('Entry not found.');
+      await expect(
+        removeEntry({ database, record, provider: localProvider, entryUuid: 'missing-uuid' }),
+      ).rejects.toThrow('Entry not found.');
     });
   });
 
@@ -1535,6 +1562,7 @@ describe('entry', () => {
       const { nextDatabase } = await restoreEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1548,6 +1576,7 @@ describe('entry', () => {
       const { nextDatabase } = await restoreEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1563,6 +1592,7 @@ describe('entry', () => {
       const { nextDatabase } = await restoreEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1575,6 +1605,7 @@ describe('entry', () => {
       const { nextEntryUuid } = await restoreEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1589,6 +1620,7 @@ describe('entry', () => {
       const { nextRecord } = await restoreEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1603,6 +1635,7 @@ describe('entry', () => {
       await restoreEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1617,6 +1650,7 @@ describe('entry', () => {
       await restoreEntry({
         database,
         record,
+        provider: localProvider,
         entryUuid: entry.uuid.toString(),
       });
 
@@ -1628,7 +1662,9 @@ describe('entry', () => {
     it('throws when the entry uuid is not found', async () => {
       const { database, record } = await createPersistedDatabaseWithEntryInTrash();
 
-      await expect(restoreEntry({ database, record, entryUuid: 'missing-uuid' })).rejects.toThrow('Entry not found.');
+      await expect(
+        restoreEntry({ database, record, provider: localProvider, entryUuid: 'missing-uuid' }),
+      ).rejects.toThrow('Entry not found.');
     });
   });
 });

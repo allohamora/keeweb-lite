@@ -1,9 +1,9 @@
 import { useMountedState } from 'react-use';
-import { useEffect, useEffectEvent, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { syncSession, type UnlockSession } from '@/features/unlock/services/session';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { syncSession, type SetSession, type UnlockSession } from '@/features/unlock/services/session';
 
 type UseSyncProps = UnlockSession & {
-  setSession: Dispatch<SetStateAction<UnlockSession | null>>;
+  setSession: SetSession;
 };
 
 type State = {
@@ -11,13 +11,13 @@ type State = {
   error?: Error;
 };
 
-export const useSync = ({ record, database, version, setSession }: UseSyncProps) => {
+export const useSync = ({ record, database, provider, version, setSession }: UseSyncProps) => {
   const lastCallId = useRef(0);
   const isMounted = useMountedState();
   const [state, set] = useState<State>({ loading: false });
 
   const sync = async () => {
-    const syncedSession = await syncSession({ record, database });
+    const syncedSession = await syncSession({ record, database, provider });
 
     setSession((previousSession) => {
       if (!previousSession) {
@@ -29,6 +29,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
       }
 
       return {
+        ...previousSession,
         ...syncedSession,
         version,
       };
@@ -36,7 +37,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   };
 
   const triggerSync = () => {
-    if (record.type !== 'google-drive') {
+    if (!provider.sync) {
       return;
     }
 

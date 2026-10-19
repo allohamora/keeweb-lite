@@ -1,124 +1,29 @@
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { toEncryptedBytes } from '@/features/unlock/services/database';
-import type { UnlockSession } from '@/features/unlock/services/session';
-import { downloadBytes } from '@/utils/download';
-import { getErrorMessage } from '@/utils/error';
-import { toKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
-import { toast } from 'sonner';
-import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
-
-type SyncStatus = 'synced' | 'syncing' | 'error';
+import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
+import { SyncStatus } from '@/features/workspace/components/sync-status';
 
 type WorkspaceControlsProps = {
-  database: UnlockSession['database'];
-  recordName: string;
-  recordType: string;
-  syncStatus: SyncStatus;
-  syncErrorMessage: string | null;
+  session: UnlockSession;
+  setSession: SetSession;
   onWorkspaceLock: () => void;
-  onSyncRetry: () => void;
 };
 
-export const WorkspaceControls = ({
-  database,
-  recordName,
-  recordType,
-  syncStatus,
-  syncErrorMessage,
-  onWorkspaceLock,
-  onSyncRetry,
-}: WorkspaceControlsProps) => {
-  const { guardNavigation } = useSafeNet();
-  const download = async () => {
-    const bytes = await toEncryptedBytes(database);
-
-    downloadBytes({ bytes, fileName: toKdbxFileName(recordName) });
-  };
-
-  const onDownload = async () => {
-    try {
-      await download();
-
-      toast.success('Database download started.');
-    } catch (error) {
-      toast.error(getErrorMessage({ error, fallback: 'Database download failed.' }));
-    }
-  };
-
-  const handleDownloadClick = () => {
-    guardNavigation(() => void onDownload());
-  };
-
-  const onSync = () => {
-    switch (syncStatus) {
-      case 'error':
-        toast.error(syncErrorMessage ?? 'Drive sync failed.');
-        onSyncRetry();
-        break;
-      case 'syncing':
-        toast.success('Database syncing.');
-        break;
-      case 'synced':
-        toast.success('Database synced.');
-        break;
-      default: {
-        const exhaustiveCheck: never = syncStatus;
-        throw new Error(`Unhandled sync status: ${exhaustiveCheck}`);
-      }
-    }
-  };
-
-  const handleSyncClick = () => {
-    guardNavigation(() => onSync());
-  };
+export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: WorkspaceControlsProps) => {
+  const { provider, record } = session;
+  const { DownloadButton } = provider;
 
   return (
     <header className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
       <div className="min-w-0 text-[11px] text-muted-foreground">
         <p className="flex flex-wrap items-center gap-1.5">
           <span className="min-w-0 truncate font-medium text-foreground">
-            {recordName} ({recordType})
+            {record.kdbx.name} ({record.type})
           </span>
-          {recordType === 'google-drive' && (
-            <button
-              aria-label={`Sync status: ${syncStatus}`}
-              className="flex shrink-0 cursor-pointer appearance-none items-center gap-1 border-0 bg-transparent p-0 text-[11px] text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-              onClick={handleSyncClick}
-              title={
-                syncStatus === 'error' ? 'Sync error — click to retry' : syncStatus === 'syncing' ? 'Syncing' : 'Synced'
-              }
-              type="button"
-            >
-              <span
-                className={cn('inline-block size-2 rounded-full', {
-                  'bg-green-500': syncStatus === 'synced',
-                  'bg-orange-500': syncStatus === 'syncing',
-                  'bg-destructive': syncStatus === 'error',
-                })}
-              />
-              <span className="text-foreground">
-                {syncStatus === 'synced' && 'Synced'}
-                {syncStatus === 'syncing' && 'Syncing'}
-                {syncStatus === 'error' && 'Sync error'}
-              </span>
-            </button>
-          )}
+          {provider.sync && <SyncStatus session={session} setSession={setSession} />}
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        {recordType !== 'demo' && (
-          <Button
-            aria-label="Download database"
-            className="h-6 px-1.5 text-[11px]"
-            onClick={handleDownloadClick}
-            size="xs"
-            type="button"
-            variant="outline"
-          >
-            Download
-          </Button>
-        )}
+        {DownloadButton && <DownloadButton session={session} />}
         <Button
           aria-label="Lock workspace"
           className="h-6 px-1.5 text-[11px]"

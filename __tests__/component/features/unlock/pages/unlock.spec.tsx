@@ -1,15 +1,19 @@
-import * as recordService from '@/features/unlock/services/record';
 import * as sessionService from '@/features/unlock/services/session';
-import * as googleDrive from '@/features/unlock/repositories/google-drive';
+import * as recordService from '@/features/unlock/services/record';
 import userEvent from '@testing-library/user-event';
+import { googleDriveProvider } from '@/features/google-drive/services/google-drive';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { demoProvider } from '@/features/demo/services/demo';
+import { localProvider } from '@/features/local/services/local';
+import { createLocalRecord } from '@/features/local/services/record';
+import type { UnlockSession } from '@/features/unlock/services/session';
 import { UnlockPage } from '@/features/unlock/pages/unlock';
 import { mockServer } from '@tests/setup-component-context';
 import { demoFile } from '@tests/utils/demo-file';
 import { render } from '@tests/utils/render';
-import type { PersistedFileRecord } from '@/features/unlock/repositories/record';
-import { createRecord } from '@/features/unlock/repositories/record';
+import type { PersistedFileRecord } from '@/repositories/record';
+import { createRecord } from '@/repositories/record';
 import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 
 describe('unlock', () => {
@@ -41,9 +45,11 @@ describe('unlock', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
+    using _getRecordItemsByLastOpened = vi
+      .spyOn(recordService, 'getRecordItemsByLastOpened')
+      .mockResolvedValue([{ record: vaultRecord, provider: localProvider }]);
 
-    const demo = Promise.withResolvers<sessionService.UnlockSession>();
+    const demo = Promise.withResolvers<UnlockSession>();
     using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(demo.promise);
 
     render(<UnlockPage setSession={setSession} />);
@@ -62,7 +68,12 @@ describe('unlock', () => {
 
     const database = await createTestDatabase();
 
-    demo.resolve({ database, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 });
+    demo.resolve({
+      database,
+      record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
+      provider: demoProvider,
+      version: 0,
+    });
 
     await vi.waitFor(() => {
       expect(setSession).toHaveBeenCalledOnce();
@@ -75,9 +86,11 @@ describe('unlock', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
+    using _getRecordItemsByLastOpened = vi
+      .spyOn(recordService, 'getRecordItemsByLastOpened')
+      .mockResolvedValue([{ record: vaultRecord, provider: localProvider }]);
 
-    const unlock = Promise.withResolvers<sessionService.UnlockSession>();
+    const unlock = Promise.withResolvers<UnlockSession>();
     using _unlockSession = vi.spyOn(sessionService, 'unlockSession').mockReturnValue(unlock.promise);
     using createDemoSession = vi.spyOn(sessionService, 'createDemoSession');
 
@@ -100,6 +113,7 @@ describe('unlock', () => {
     unlock.resolve({
       database,
       record: vaultRecord,
+      provider: localProvider,
       version: 0,
     });
 
@@ -112,7 +126,7 @@ describe('unlock', () => {
 
   describe('unlock', () => {
     it('unlocks a stored record with the right password', async () => {
-      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      await createLocalRecord({ databaseName: 'Vault', password: 'secret' });
       const user = userEvent.setup();
       const setSession = vi.fn();
 
@@ -132,7 +146,7 @@ describe('unlock', () => {
     });
 
     it('does not start a session with a wrong password', async () => {
-      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      await createLocalRecord({ databaseName: 'Vault', password: 'secret' });
       const user = userEvent.setup();
       const setSession = vi.fn();
 
@@ -149,7 +163,7 @@ describe('unlock', () => {
     });
 
     it('requires a password', async () => {
-      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      await createLocalRecord({ databaseName: 'Vault', password: 'secret' });
       const user = userEvent.setup();
       const setSession = vi.fn();
 
@@ -163,7 +177,7 @@ describe('unlock', () => {
     });
 
     it('rejects a password that is only whitespace', async () => {
-      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      await createLocalRecord({ databaseName: 'Vault', password: 'secret' });
       const user = userEvent.setup();
       const setSession = vi.fn();
 
@@ -180,7 +194,7 @@ describe('unlock', () => {
 
   describe('remove record', () => {
     it('removes the selected record after confirming', async () => {
-      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      await createLocalRecord({ databaseName: 'Vault', password: 'secret' });
       const user = userEvent.setup();
 
       render(<UnlockPage setSession={vi.fn()} />);
@@ -194,7 +208,7 @@ describe('unlock', () => {
     });
 
     it('keeps the record when the removal is cancelled', async () => {
-      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      await createLocalRecord({ databaseName: 'Vault', password: 'secret' });
       const user = userEvent.setup();
 
       render(<UnlockPage setSession={vi.fn()} />);
@@ -210,7 +224,7 @@ describe('unlock', () => {
 
   describe('google disabled', () => {
     it('hides the Google Drive import and create options', async () => {
-      using _googleConfig = vi.spyOn(googleDrive, 'isGoogleAvailable').mockReturnValue(false);
+      using _googleConfig = vi.spyOn(googleDriveProvider, 'isAvailable').mockReturnValue(false);
       const user = userEvent.setup();
 
       render(<UnlockPage setSession={vi.fn()} />);
@@ -226,7 +240,7 @@ describe('unlock', () => {
     });
 
     it('lists a Google Drive record but keeps it locked', async () => {
-      using _googleConfig = vi.spyOn(googleDrive, 'isGoogleAvailable').mockReturnValue(false);
+      using _googleConfig = vi.spyOn(googleDriveProvider, 'isAvailable').mockReturnValue(false);
       await createRecord({
         id: 'drive-1',
         kdbx: { encryptedBytes: new Uint8Array([1]), name: 'drive.kdbx' },

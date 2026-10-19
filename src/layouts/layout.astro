@@ -1,6 +1,6 @@
 ---
 import { APP_NAME, getPageTitle } from '@/utils/page';
-import { isGoogleAvailable } from '@/features/unlock/repositories/google-drive';
+import { providers } from '@/services/provider-registry';
 import '../styles/global.css';
 
 type Props = {
@@ -14,7 +14,7 @@ const description = `${APP_NAME} is a lightweight, web-only password manager ins
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 const imageUrl = new URL('/icons/android-chrome-512x512.png', Astro.site);
 
-const isGoogleEnabled = isGoogleAvailable();
+const scripts = providers.filter(({ isAvailable }) => isAvailable()).flatMap(({ scripts = [] }) => scripts);
 ---
 
 <html lang="en" class="dark">
@@ -42,12 +42,9 @@ const isGoogleEnabled = isGoogleAvailable();
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl.href} />
-    {isGoogleEnabled && (
-      <>
-        <script is:inline src="https://accounts.google.com/gsi/client" async />
-        <script is:inline src="https://apis.google.com/js/api.js" async />
-      </>
-    )}
+    {scripts.map((src) => (
+      <script is:inline src={src} async />
+    ))}
   </head>
   <body>
     <slot />

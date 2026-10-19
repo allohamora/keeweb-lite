@@ -7,6 +7,7 @@ import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/ut
 import { render } from '@tests/utils/render';
 import { DirtySafeNet } from '@tests/utils/dirty-safe-net';
 import { MutatingEntryMutation } from '@tests/utils/mutating-entry-mutation';
+import { localProvider } from '@/features/local/services/local';
 
 describe('entry-remove', () => {
   const record = createTestRecord();
@@ -17,7 +18,15 @@ describe('entry-remove', () => {
       const entry = createTestEntry(database);
       const user = userEvent.setup();
 
-      render(<EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />);
+      render(
+        <EntryRemove
+          database={database}
+          entry={entry}
+          record={record}
+          provider={localProvider}
+          onEntryRemove={vi.fn()}
+        />,
+      );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
       expect(screen.getByText('Remove entry?')).toBeInTheDocument();
@@ -30,7 +39,13 @@ describe('entry-remove', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />
+          <EntryRemove
+            database={database}
+            entry={entry}
+            record={record}
+            provider={localProvider}
+            onEntryRemove={vi.fn()}
+          />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
@@ -46,7 +61,13 @@ describe('entry-remove', () => {
 
       render(
         <DirtySafeNet>
-          <EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />
+          <EntryRemove
+            database={database}
+            entry={entry}
+            record={record}
+            provider={localProvider}
+            onEntryRemove={vi.fn()}
+          />
         </DirtySafeNet>,
       );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
@@ -63,11 +84,24 @@ describe('entry-remove', () => {
       const payload = { nextDatabase: database, nextEntryUuid: null, nextRecord: record };
       using removeEntry = vi.spyOn(entryService, 'removeEntry').mockResolvedValue(payload);
 
-      render(<EntryRemove database={database} entry={entry} record={record} onEntryRemove={onEntryRemove} />);
+      render(
+        <EntryRemove
+          database={database}
+          entry={entry}
+          record={record}
+          provider={localProvider}
+          onEntryRemove={onEntryRemove}
+        />,
+      );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
-      expect(removeEntry).toHaveBeenCalledWith({ database, record, entryUuid: entry.uuid.toString() });
+      expect(removeEntry).toHaveBeenCalledWith({
+        database,
+        record,
+        provider: localProvider,
+        entryUuid: entry.uuid.toString(),
+      });
       expect(onEntryRemove).toHaveBeenCalledWith(payload);
     });
 
@@ -78,7 +112,13 @@ describe('entry-remove', () => {
 
       render(
         <MutatingEntryMutation>
-          <EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />
+          <EntryRemove
+            database={database}
+            entry={entry}
+            record={record}
+            provider={localProvider}
+            onEntryRemove={vi.fn()}
+          />
         </MutatingEntryMutation>,
       );
       const trigger = screen.getByRole('button', { name: 'Remove' });
@@ -97,7 +137,15 @@ describe('entry-remove', () => {
       const remove = Promise.withResolvers<Awaited<ReturnType<typeof entryService.removeEntry>>>();
       using _removeEntry = vi.spyOn(entryService, 'removeEntry').mockReturnValue(remove.promise);
 
-      render(<EntryRemove database={database} entry={entry} record={record} onEntryRemove={vi.fn()} />);
+      render(
+        <EntryRemove
+          database={database}
+          entry={entry}
+          record={record}
+          provider={localProvider}
+          onEntryRemove={vi.fn()}
+        />,
+      );
       await user.click(screen.getByRole('button', { name: 'Remove' }));
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 

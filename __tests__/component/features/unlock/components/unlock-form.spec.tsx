@@ -2,9 +2,10 @@ import * as recordService from '@/features/unlock/services/record';
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { localProvider } from '@/features/local/services/local';
 import { UnlockForm } from '@/features/unlock/components/unlock-form';
 import { createTestRecord } from '@tests/utils/kdbx';
-import type { PersistedFileRecord } from '@/features/unlock/repositories/record';
+import type { PersistedFileRecord } from '@/repositories/record';
 
 describe('unlock-form', () => {
   const vaultRecord: PersistedFileRecord = {
@@ -19,10 +20,10 @@ describe('unlock-form', () => {
       const runUnlockAction = vi.fn();
       const setSession = vi.fn();
 
-      const reload = Promise.withResolvers<PersistedFileRecord[]>();
-      using getRecordsByLastOpened = vi
-        .spyOn(recordService, 'getRecordsByLastOpened')
-        .mockResolvedValueOnce([vaultRecord])
+      const reload = Promise.withResolvers<Awaited<ReturnType<typeof recordService.getRecordItemsByLastOpened>>>();
+      using getRecordItemsByLastOpened = vi
+        .spyOn(recordService, 'getRecordItemsByLastOpened')
+        .mockResolvedValueOnce([{ record: vaultRecord, provider: localProvider }])
         .mockReturnValueOnce(reload.promise);
 
       const { rerender } = render(
@@ -52,7 +53,7 @@ describe('unlock-form', () => {
       );
 
       await vi.waitFor(() => {
-        expect(getRecordsByLastOpened).toHaveBeenCalledTimes(2);
+        expect(getRecordItemsByLastOpened).toHaveBeenCalledTimes(2);
       });
       expect(screen.getByRole('combobox', { name: 'Selected record' })).toBeDisabled();
       expect(screen.getByLabelText('Password')).toBeDisabled();
@@ -64,7 +65,7 @@ describe('unlock-form', () => {
       await user.click(screen.getByRole('button', { name: 'Unlock' }));
       expect(runUnlockAction).not.toHaveBeenCalled();
 
-      reload.resolve([vaultRecord]);
+      reload.resolve([{ record: vaultRecord, provider: localProvider }]);
 
       await vi.waitFor(() => {
         expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();

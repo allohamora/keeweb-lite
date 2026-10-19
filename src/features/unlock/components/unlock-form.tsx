@@ -11,9 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session';
 import { getErrorMessage } from '@/utils/error';
-import { getRecordsByLastOpened } from '@/features/unlock/services/record';
+import { getRecordItemsByLastOpened } from '@/features/unlock/services/record';
 import { toast } from 'sonner';
-import { isGoogleAvailable } from '@/features/unlock/repositories/google-drive';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
@@ -56,26 +55,27 @@ export const UnlockForm = ({
   const {
     error: recordsLoadError,
     loading: isLoadingRecords,
-    value: records = [],
-  } = useAsync(async () => await getRecordsByLastOpened(), [recordsReloadToken]);
+    value: items = [],
+  } = useAsync(getRecordItemsByLastOpened, [recordsReloadToken]);
 
   const [showPassword, setShowPassword] = useState(false);
 
   const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
-  const selectedRecord = records.find(({ id }) => id === selectedRecordId);
-  const isSelectedRecordUnavailable = selectedRecord?.type === 'google-drive' && !isGoogleAvailable();
+  const selectedProvider = items.find(({ record }) => record.id === selectedRecordId)?.provider;
+  const isSelectedRecordUnavailable = selectedProvider ? !selectedProvider.isAvailable() : false;
   const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnavailable || isBusy;
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
       try {
-        const record = records.find(({ id }) => id === selectedRecordId);
-        if (!record) {
+        const item = items.find(({ record }) => record.id === selectedRecordId);
+        if (!item) {
           throw new Error('Selected record not found.');
         }
 
         const session = await unlockSession({
-          record,
+          record: item.record,
+          provider: item.provider,
           password,
         });
 
@@ -126,7 +126,7 @@ export const UnlockForm = ({
             <FieldContent>
               <Select
                 {...field}
-                disabled={isBusy || records.length === 0}
+                disabled={isBusy || items.length === 0}
                 onValueChange={field.onChange}
                 value={field.value}
               >
@@ -139,23 +139,23 @@ export const UnlockForm = ({
                     placeholder={
                       isLoadingRecords
                         ? 'Loading records...'
-                        : records.length === 0
+                        : items.length === 0
                           ? 'No records available'
                           : 'Select a record'
                     }
                   />
                 </SelectTrigger>
                 <SelectContent position="popper">
-                  {records.map((record) => (
+                  {items.map(({ record }) => (
                     <SelectItem key={record.id} value={record.id}>
                       {record.kdbx.name} ({record.type})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {isSelectedRecordUnavailable && (
+              {selectedProvider && isSelectedRecordUnavailable && (
                 <p className="pt-1 text-xs text-zinc-400">
-                  Google Drive is not set up in this build, so this record is locked.
+                  {selectedProvider.label} is not set up in this build, so this record is locked.
                 </p>
               )}
               <FieldError errors={[fieldState.error]} />

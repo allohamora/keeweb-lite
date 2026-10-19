@@ -1,6 +1,7 @@
 import kdbxweb from '@/utils/kdbxweb';
-import { updateRecordDatabase } from '@/features/unlock/services/record';
-import type { FileRecord } from '@/features/unlock/repositories/record';
+import { updateRecordDatabase } from '@/services/record';
+import type { Provider } from '@/services/provider';
+import type { FileRecord } from '@/repositories/record';
 import { getEntryIcon } from '@/features/workspace/services/icon';
 import { getEntryColor } from '@/features/workspace/services/color';
 import {
@@ -128,6 +129,7 @@ export type EntryUpdateValues = {
 type UpdateEntryInput = {
   database: kdbxweb.Kdbx;
   record: FileRecord;
+  provider: Provider;
   entryUuid: string;
   values: EntryUpdateValues;
 };
@@ -164,14 +166,16 @@ export const applyEntryValues = (entry: kdbxweb.KdbxEntry, values: EntryUpdateVa
 type MutateEntryInput = {
   database: kdbxweb.Kdbx;
   record: FileRecord;
+  provider: Provider;
   entryUuid: string;
   mutate: (nextDatabase: kdbxweb.Kdbx, nextEntry: kdbxweb.KdbxEntry) => void;
 };
 
-const mutateEntry = async ({ database, record, entryUuid, mutate }: MutateEntryInput) => {
+const mutateEntry = async ({ database, record, provider, entryUuid, mutate }: MutateEntryInput) => {
   const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordDatabase({
     database,
     record,
+    provider,
     update: (updatedDatabase) => {
       const nextEntry = findEntryByUuid(updatedDatabase, entryUuid);
 
@@ -197,12 +201,14 @@ export type EntryMutationResult<EntryUuid extends kdbxweb.KdbxUuid | null = kdbx
 export const saveEntry = async ({
   database,
   record,
+  provider,
   entryUuid,
   values,
 }: UpdateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
   return mutateEntry({
     database,
     record,
+    provider,
     entryUuid,
     mutate: (_, entry) => applyEntryValues(entry, values),
   });
@@ -211,17 +217,20 @@ export const saveEntry = async ({
 type CreateEntryInput = {
   database: kdbxweb.Kdbx;
   record: FileRecord;
+  provider: Provider;
   selectFilter: SelectFilter;
 };
 
 export const createEntry = async ({
   database,
   record,
+  provider,
   selectFilter,
 }: CreateEntryInput): Promise<EntryMutationResult<kdbxweb.KdbxUuid>> => {
   const [nextDatabase, nextRecord, nextEntryUuid] = await updateRecordDatabase({
     database,
     record,
+    provider,
     update: (updatedDatabase) => {
       const group = isGroupSelect(selectFilter)
         ? findGroupByUuid(updatedDatabase, selectFilter)
@@ -256,17 +265,20 @@ export const isEntryInRecycleBin = (database: RecycleAwareDatabase, entry: kdbxw
 type RemoveEntryInput = {
   database: kdbxweb.Kdbx;
   record: FileRecord;
+  provider: Provider;
   entryUuid: string;
 };
 
 export const removeEntry = async ({
   database,
   record,
+  provider,
   entryUuid,
 }: RemoveEntryInput): Promise<EntryMutationResult<null>> => {
   const { nextDatabase, nextRecord } = await mutateEntry({
     database,
     record,
+    provider,
     entryUuid,
     mutate: (nextDatabase, nextEntry) => {
       if (isEntryInRecycleBin(nextDatabase, nextEntry)) {
@@ -283,11 +295,13 @@ export const removeEntry = async ({
 export const restoreEntry = async ({
   database,
   record,
+  provider,
   entryUuid,
 }: RemoveEntryInput): Promise<EntryMutationResult<null>> => {
   const { nextDatabase, nextRecord } = await mutateEntry({
     database,
     record,
+    provider,
     entryUuid,
     mutate: (nextDatabase, nextEntry) => nextDatabase.move(nextEntry, nextDatabase.getDefaultGroup()),
   });
