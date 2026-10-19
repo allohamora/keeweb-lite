@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAsyncLock } from '@/features/unlock/hooks/use-async-lock';
+import { useHydrated } from '@/features/unlock/hooks/use-hydrated';
 import { createDemoSession, type UnlockSession } from '@/features/unlock/services/session';
 import { getErrorMessage } from '@/utils/error';
 import { CreateMenu } from '@/features/unlock/components/create-menu';
@@ -15,6 +16,7 @@ type UnlockPageProps = {
 export const UnlockPage = ({ setSession }: UnlockPageProps) => {
   const [recordsReloadToken, setRecordsReloadToken] = useState(0);
   const [isUnlocking, runUnlockAction] = useAsyncLock();
+  const isHydrated = useHydrated();
 
   const reloadRecords = useCallback(() => {
     setRecordsReloadToken((currentValue) => currentValue + 1);
@@ -40,15 +42,15 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
               <div className="flex items-center gap-2">
                 <Button
                   className="h-8 px-3 text-xs"
-                  disabled={isUnlocking}
+                  disabled={isUnlocking || !isHydrated}
                   onClick={() => void handleStartDemo()}
                   type="button"
                   variant="outline"
                 >
                   Demo
                 </Button>
-                <ImportMenu onRecordImport={reloadRecords} />
-                <CreateMenu onRecordCreate={reloadRecords} />
+                <ImportMenu disabled={!isHydrated} onRecordImport={reloadRecords} />
+                <CreateMenu disabled={!isHydrated} onRecordCreate={reloadRecords} />
               </div>
             </div>
 

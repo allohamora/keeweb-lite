@@ -31,6 +31,33 @@ describe('create-local-dialog', () => {
       expect(createLocalRecord).not.toHaveBeenCalled();
     });
 
+    it('requires a database name, password and password confirmation', async () => {
+      const user = userEvent.setup();
+      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord');
+
+      render(<CreateLocalDialog onOpenChange={vi.fn()} onRecordCreate={vi.fn()} open={true} />);
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+
+      expect(await screen.findByText('Enter a database name.')).toBeInTheDocument();
+      expect(screen.getByText('Enter a master password.')).toBeInTheDocument();
+      expect(screen.getByText('Confirm your master password.')).toBeInTheDocument();
+      expect(createLocalRecord).not.toHaveBeenCalled();
+    });
+
+    it('rejects a database name that is only whitespace', async () => {
+      const user = userEvent.setup();
+      using createLocalRecord = vi.spyOn(recordService, 'createLocalRecord');
+
+      render(<CreateLocalDialog onOpenChange={vi.fn()} onRecordCreate={vi.fn()} open={true} />);
+      await user.type(screen.getByLabelText('Database name'), '   ');
+      await user.type(screen.getByLabelText('Password'), 'test-password-123');
+      await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+
+      expect(await screen.findByText('Enter a database name.')).toBeInTheDocument();
+      expect(createLocalRecord).not.toHaveBeenCalled();
+    });
+
     it('creates the record without a key file on valid submit', async () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();

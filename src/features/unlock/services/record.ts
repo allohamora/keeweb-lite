@@ -1,4 +1,4 @@
-import kdbxweb from '@/utils/kdbxweb';
+import type kdbxweb from '@/utils/kdbxweb';
 import { createFile, getFile } from '@/features/unlock/repositories/google-drive';
 import {
   createRecord,
@@ -12,6 +12,7 @@ import {
   createEmptyDatabase,
   loadDatabase,
   toEncryptedBytes,
+  toKeyFileHash,
 } from '@/features/unlock/services/database';
 import { asUint8Array } from '@/utils/buffer';
 import { toKdbxFileName } from '@/features/unlock/utils/kdbx-file-name';
@@ -72,7 +73,7 @@ export const updateRecordDatabase = async <Result>({
 };
 
 const readKeyFile = async (file: File) => {
-  const hash = kdbxweb.ByteUtils.bytesToBase64(await file.arrayBuffer());
+  const hash = await toKeyFileHash(file);
   const name = file.name;
 
   return { hash, name };

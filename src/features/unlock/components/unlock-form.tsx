@@ -1,8 +1,8 @@
+import * as z from 'zod/mini';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useAsync } from 'react-use';
-import { z } from 'zod';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,8 @@ import { toast } from 'sonner';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
-  selectedRecordId: z.string().min(1, 'Create or select a record before unlocking.'),
-  password: z.string().trim().min(1, 'Enter a password to unlock.'),
+  selectedRecordId: z.string().check(z.minLength(1, 'Create or select a record before unlocking.')),
+  password: z.string().check(z.trim(), z.minLength(1, 'Enter a password to unlock.')),
 });
 
 type UnlockFormValues = z.infer<typeof unlockFormSchema>;
@@ -60,6 +60,8 @@ export const UnlockForm = ({
 
   const [showPassword, setShowPassword] = useState(false);
 
+  const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
+
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
       try {
@@ -91,14 +93,6 @@ export const UnlockForm = ({
     reset();
   };
 
-  if (isLoadingRecords) {
-    return (
-      <div aria-live="polite" className="mt-4 min-h-4">
-        <p className="text-xs text-zinc-400">Loading records...</p>
-      </div>
-    );
-  }
-
   if (recordsLoadError) {
     return (
       <div aria-live="polite" className="mt-4 min-h-4">
@@ -128,7 +122,7 @@ export const UnlockForm = ({
             <FieldContent>
               <Select
                 {...field}
-                disabled={isLoadingRecords || records.length === 0 || isSubmitting || isUnlocking}
+                disabled={isBusy || records.length === 0}
                 onValueChange={field.onChange}
                 value={field.value}
               >
@@ -174,7 +168,7 @@ export const UnlockForm = ({
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   className="pr-8"
-                  disabled={!selectedRecordId || isSubmitting || isUnlocking}
+                  disabled={!selectedRecordId || isBusy}
                   id="unlock-password"
                   placeholder="Enter password"
                   type={showPassword ? 'text' : 'password'}
@@ -183,7 +177,7 @@ export const UnlockForm = ({
                   <button
                     type="button"
                     className="flex items-center px-2 text-muted-foreground hover:text-foreground disabled:hover:text-muted-foreground"
-                    disabled={!selectedRecordId || isSubmitting || isUnlocking}
+                    disabled={!selectedRecordId || isBusy}
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -201,12 +195,12 @@ export const UnlockForm = ({
       <div className="flex items-center justify-between gap-2 pt-3">
         <RecordRemove
           recordId={selectedRecordId}
-          disabled={!selectedRecordId || isSubmitting || isUnlocking}
+          disabled={!selectedRecordId || isBusy}
           onRecordRemove={handleRemove}
         />
         <Button
           className="ml-auto h-8 px-4 text-xs"
-          disabled={!selectedRecordId || isSubmitting || isUnlocking}
+          disabled={!selectedRecordId || isBusy}
           type="submit"
           variant="outline"
         >

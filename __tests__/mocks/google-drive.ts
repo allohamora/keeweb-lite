@@ -1,5 +1,5 @@
+import * as z from 'zod/mini';
 import { http, HttpResponse } from 'msw';
-import { z } from 'zod';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
