@@ -7,7 +7,7 @@ const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
 const lock = new Lock('google-drive.repository.auth');
 
-export const isGoogleAvailable = () => Boolean(PUBLIC_GOOGLE_CLIENT_ID && PUBLIC_GOOGLE_APP_ID);
+export const isGoogleDriveAvailable = () => Boolean(PUBLIC_GOOGLE_CLIENT_ID && PUBLIC_GOOGLE_APP_ID);
 
 export const getGoogleConfig = () => {
   if (!PUBLIC_GOOGLE_CLIENT_ID || !PUBLIC_GOOGLE_APP_ID) {
