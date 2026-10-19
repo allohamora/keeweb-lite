@@ -1,7 +1,6 @@
-import type kdbxweb from '@/utils/kdbxweb';
-import { getRecord, updateRecord, type FileRecord } from '@/repositories/record';
+import { getRecord, updateRecord } from '@/repositories/record';
 import { loadDatabase, toEncryptedBytes, toKeyFileHash } from '@/services/database';
-import type { Provider, Storage } from '@/services/provider';
+import type { Storage } from '@/services/provider';
 import { toKdbxFileName } from '@/utils/kdbx-file-name';
 import { Lock } from '@/utils/lock';
 
@@ -52,26 +51,4 @@ export const recordStorage: Storage = {
       kdbx: { ...currentRecord.kdbx, encryptedBytes },
     }));
   },
-};
-
-const updateRecordDatabaseLock = new Lock('record.service.update-record-database');
-
-export const updateRecordDatabase = async <Result>({
-  database,
-  record,
-  provider,
-  update,
-}: {
-  database: kdbxweb.Kdbx;
-  record: FileRecord;
-  provider: Provider;
-  update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
-}): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
-  return updateRecordDatabaseLock.runInLock(async () => {
-    const nextDatabase = await provider.storage.load({ database, record });
-    const result = await update(nextDatabase);
-    const nextRecord = await provider.storage.save({ database: nextDatabase, record });
-
-    return [nextDatabase, nextRecord, result];
-  });
 };

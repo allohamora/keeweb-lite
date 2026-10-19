@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
 import { removeEntry, type EntryMutationResult } from '@/features/workspace/services/entry';
 import type { FileRecord } from '@/repositories/record';
-import type { Provider } from '@/services/provider';
 import {
   Dialog,
   DialogClose,
@@ -24,11 +23,10 @@ type EntryRemoveProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  provider: Provider;
   onEntryRemove: (result: EntryMutationResult) => void;
 };
 
-export const EntryRemove = ({ database, entry, record, provider, onEntryRemove }: EntryRemoveProps) => {
+export const EntryRemove = ({ database, entry, record, onEntryRemove }: EntryRemoveProps) => {
   const { guardNavigation } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
   const [isOpen, setIsOpen] = useState(false);
@@ -38,7 +36,7 @@ export const EntryRemove = ({ database, entry, record, provider, onEntryRemove }
     try {
       const entryUuid = entry.uuid.toString();
 
-      onEntryRemove(await removeEntry({ database, record, provider, entryUuid }));
+      onEntryRemove(await removeEntry({ database, record, entryUuid }));
 
       toast.success('Entry removed.');
     } catch (error) {

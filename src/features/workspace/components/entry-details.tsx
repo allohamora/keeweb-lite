@@ -5,7 +5,6 @@ import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { EntryEditForm } from '@/features/workspace/components/entry-edit-form';
 import type { FileRecord } from '@/repositories/record';
-import type { Provider } from '@/services/provider';
 import type { EntryMutationResult } from '@/features/workspace/services/entry';
 
 type EntryDetailsProps = {
@@ -13,7 +12,6 @@ type EntryDetailsProps = {
   selectedEntry: kdbxweb.KdbxEntry | null;
   database: kdbxweb.Kdbx;
   record: FileRecord;
-  provider: Provider;
   onEntrySave: (result: EntryMutationResult) => void;
   showBackButton: boolean;
   onBack: () => void;
@@ -43,7 +41,6 @@ export const EntryDetails = ({
   selectedEntry,
   database,
   record,
-  provider,
   onEntrySave,
   showBackButton,
   onBack,
@@ -73,7 +70,6 @@ export const EntryDetails = ({
         database={database}
         entry={selectedEntry}
         record={record}
-        provider={provider}
         onEntrySave={onEntrySave}
       />
     </aside>

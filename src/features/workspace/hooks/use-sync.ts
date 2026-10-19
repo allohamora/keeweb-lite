@@ -1,5 +1,6 @@
 import { useMountedState } from 'react-use';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { getProvider } from '@/services/provider-registry';
 import { syncSession, type SetSession, type UnlockSession } from '@/features/unlock/services/session';
 
 type UseSyncProps = UnlockSession & {
@@ -11,13 +12,13 @@ type State = {
   error?: Error;
 };
 
-export const useSync = ({ record, database, provider, version, setSession }: UseSyncProps) => {
+export const useSync = ({ record, database, version, setSession }: UseSyncProps) => {
   const lastCallId = useRef(0);
   const isMounted = useMountedState();
   const [state, set] = useState<State>({ loading: false });
 
   const sync = async () => {
-    const syncedSession = await syncSession({ record, database, provider });
+    const syncedSession = await syncSession({ record, database });
 
     setSession((previousSession) => {
       if (!previousSession) {
@@ -29,7 +30,6 @@ export const useSync = ({ record, database, provider, version, setSession }: Use
       }
 
       return {
-        ...previousSession,
         ...syncedSession,
         version,
       };
@@ -37,7 +37,7 @@ export const useSync = ({ record, database, provider, version, setSession }: Use
   };
 
   const triggerSync = () => {
-    if (!provider.sync) {
+    if (!getProvider(record).sync) {
       return;
     }
 

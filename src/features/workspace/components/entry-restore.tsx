@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
 import { restoreEntry, type EntryMutationResult } from '@/features/workspace/services/entry';
 import type { FileRecord } from '@/repositories/record';
-import type { Provider } from '@/services/provider';
 import {
   Dialog,
   DialogClose,
@@ -24,11 +23,10 @@ type EntryRestoreProps = {
   database: kdbxweb.Kdbx;
   entry: kdbxweb.KdbxEntry;
   record: FileRecord;
-  provider: Provider;
   onEntryRestore: (result: EntryMutationResult) => void;
 };
 
-export const EntryRestore = ({ database, entry, record, provider, onEntryRestore }: EntryRestoreProps) => {
+export const EntryRestore = ({ database, entry, record, onEntryRestore }: EntryRestoreProps) => {
   const { guardNavigation } = useSafeNet();
   const { isMutating, setMutating } = useEntryMutation();
   const [isOpen, setIsOpen] = useState(false);
@@ -38,7 +36,7 @@ export const EntryRestore = ({ database, entry, record, provider, onEntryRestore
     try {
       const entryUuid = entry.uuid.toString();
 
-      onEntryRestore(await restoreEntry({ database, record, provider, entryUuid }));
+      onEntryRestore(await restoreEntry({ database, record, entryUuid }));
 
       toast.success('Entry restored.');
     } catch (error) {

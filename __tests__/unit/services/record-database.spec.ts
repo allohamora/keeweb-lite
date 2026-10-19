@@ -1,15 +1,13 @@
 import * as recordRepository from '@/repositories/record';
 import kdbxweb from '@/utils/kdbxweb';
 import { describe, expect, it } from 'vitest';
-import { demoProvider } from '@/features/demo/services/demo';
-import { localProvider } from '@/features/local/services/local';
 import { clearRecords, createRecord } from '@/repositories/record';
-import { updateRecordDatabase } from '@/services/record';
+import { updateRecordDatabase } from '@/services/record-database';
 import { unlockDatabase } from '@/services/database';
 import { getFieldText as getTextFromField } from '@/features/workspace/services/entry';
 import { expectPersisted } from '@tests/utils/kdbx';
 
-describe('record-service', () => {
+describe('record-database', () => {
   describe('updateRecordDatabase', () => {
     const password = 'update-test-password';
 
@@ -50,7 +48,7 @@ describe('record-service', () => {
     it('saves the changed database back to the stored record', async () => {
       const { database, initialBytes, record } = await createStoredDatabase();
 
-      await updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('New Entry') });
+      await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
 
       const [stored] = await recordRepository.getRecords();
       expect(stored?.kdbx.encryptedBytes).not.toEqual(initialBytes);
@@ -60,7 +58,7 @@ describe('record-service', () => {
     it('preserves existing record metadata when updating', async () => {
       const { database, record } = await createStoredDatabase();
 
-      await updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('New Entry') });
+      await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
 
       const [stored] = await recordRepository.getRecords();
       expect(stored?.lastOpenedAt).toBe('2026-01-01T00:00:00.000Z');
@@ -73,7 +71,6 @@ describe('record-service', () => {
       const [nextDatabase, nextRecord, result] = await updateRecordDatabase({
         database,
         record,
-        provider: localProvider,
         update: (updatedDatabase) => {
           addEntry('New Entry')(updatedDatabase);
 
@@ -90,8 +87,8 @@ describe('record-service', () => {
     it('builds on the latest stored state instead of the database the caller holds', async () => {
       const { database, record } = await createStoredDatabase();
 
-      await updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('First') });
-      await updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('Second') });
+      await updateRecordDatabase({ database, record, update: addEntry('First') });
+      await updateRecordDatabase({ database, record, update: addEntry('Second') });
 
       await expect(getStoredTitles()).resolves.toEqual(['First', 'Second']);
     });
@@ -100,9 +97,9 @@ describe('record-service', () => {
       const { database, record } = await createStoredDatabase();
 
       await Promise.all([
-        updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('First') }),
-        updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('Second') }),
-        updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('Third') }),
+        updateRecordDatabase({ database, record, update: addEntry('First') }),
+        updateRecordDatabase({ database, record, update: addEntry('Second') }),
+        updateRecordDatabase({ database, record, update: addEntry('Third') }),
       ]);
 
       await expect(getStoredTitles()).resolves.toEqual(['First', 'Second', 'Third']);
@@ -115,7 +112,6 @@ describe('record-service', () => {
         updateRecordDatabase({
           database,
           record,
-          provider: localProvider,
           update: () => {
             throw new Error('update failed');
           },
@@ -130,9 +126,9 @@ describe('record-service', () => {
       const { database, record } = await createStoredDatabase();
       await clearRecords();
 
-      await expect(
-        updateRecordDatabase({ database, record, provider: localProvider, update: addEntry('New Entry') }),
-      ).rejects.toThrow('Record not found.');
+      await expect(updateRecordDatabase({ database, record, update: addEntry('New Entry') })).rejects.toThrow(
+        'Record not found.',
+      );
     });
 
     it('does not persist demo records to the repository', async () => {
@@ -143,7 +139,6 @@ describe('record-service', () => {
       const [nextDatabase, nextRecord] = await updateRecordDatabase({
         database,
         record: demoRecord,
-        provider: demoProvider,
         update: addEntry('New Entry'),
       });
 

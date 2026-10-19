@@ -4,8 +4,6 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { useSync } from '@/features/workspace/hooks/use-sync';
-import { googleDriveProvider } from '@/features/google-drive/services/google-drive';
-import { localProvider } from '@/features/local/services/local';
 import { createRecord } from '@/repositories/record';
 import { createEmptyDatabase, toEncryptedBytes, unlockDatabase } from '@/services/database';
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session';
@@ -54,7 +52,6 @@ const createSession = async (type: 'local' | 'google-drive') => {
   );
   const session = await unlockSession({
     record,
-    provider: type === 'local' ? localProvider : googleDriveProvider,
     password: 'secret',
   });
 

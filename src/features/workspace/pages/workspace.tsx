@@ -25,7 +25,7 @@ type WorkspacePageProps = {
 };
 
 export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
-  const { database, record, provider } = session;
+  const { database, record } = session;
   const [selectFilter, setSelectFilter] = useState<SelectFilter>(null);
   const [selectedEntryUuid, setSelectedEntryUuid] = useState<kdbxweb.KdbxUuid | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -78,7 +78,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   const createNewEntry = async () => {
     setMutating(true);
     try {
-      handleSave(await createEntry({ database, record, provider, selectFilter }));
+      handleSave(await createEntry({ database, record, selectFilter }));
       toast.success('Entry created.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Entry creation failed.' }));
@@ -125,7 +125,6 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
             selectedEntry={selectedEntry}
             database={database}
             record={record}
-            provider={provider}
             onEntrySave={handleSave}
             showBackButton={isMobile}
             onBack={handleBack}

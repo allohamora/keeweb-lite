@@ -6,7 +6,6 @@ import { unlockDatabase } from '@/services/database';
 import { getFieldText as getTextFromField } from '@/features/workspace/services/entry';
 import { createFileList } from '@tests/utils/file-list';
 import { unlockSession } from '@/features/unlock/services/session';
-import { localProvider } from '@/features/local/services/local';
 import { createLocalRecord, importLocalRecord } from '@/features/local/services/record';
 
 type DatabaseRecordInput = {
@@ -236,7 +235,7 @@ describe('local-record-service', () => {
       await importLocalRecord({ databaseFile: createFileList(new File([encryptedBytes], 'vault.kdbx')) });
 
       const [record] = await getRecordsByLastOpened();
-      const { database } = await unlockSession({ password, record, provider: localProvider });
+      const { database } = await unlockSession({ password, record });
 
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');
@@ -258,7 +257,7 @@ describe('local-record-service', () => {
       });
 
       const [record] = await getRecordsByLastOpened();
-      const { database } = await unlockSession({ password, record, provider: localProvider });
+      const { database } = await unlockSession({ password, record });
 
       const testGroup = getGroupByName(database, 'Test Group');
       const entry = getRecordByTitle(testGroup, 'Test Entry');

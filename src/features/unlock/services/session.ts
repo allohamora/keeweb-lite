@@ -1,11 +1,10 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import type { Dispatch, SetStateAction } from 'react';
 import { updateRecord, type FileRecord, type PersistedFileRecord } from '@/repositories/record';
-import { demoProvider } from '@/features/demo/services/demo';
 import { loadDemoDatabase } from '@/features/demo/services/demo';
 import { loadDatabase, toEncryptedBytes, unlockDatabase } from '@/services/database';
-import { updateRecordDatabase } from '@/services/record';
-import type { Provider } from '@/services/provider';
+import { updateRecordDatabase } from '@/services/record-database';
+import { getProvider } from '@/services/provider-registry';
 import { Lock } from '@/utils/lock';
 
 export type SetSession = Dispatch<SetStateAction<UnlockSession | null>>;
@@ -13,7 +12,6 @@ export type SetSession = Dispatch<SetStateAction<UnlockSession | null>>;
 export type UnlockSession = {
   database: kdbxweb.Kdbx;
   record: FileRecord;
-  provider: Provider;
   version: number;
 };
 
@@ -26,16 +24,14 @@ const syncSessionLock = new Lock('session.service.sync-session');
 
 export const syncSession = async ({
   record,
-  provider,
   database,
 }: {
   record: FileRecord;
-  provider: Provider;
   database: kdbxweb.Kdbx;
 }): Promise<SyncSessionResult> => {
-  const { sync } = provider;
+  const { sync, label } = getProvider(record);
   if (!sync) {
-    throw new Error(`${provider.label} does not support sync.`);
+    throw new Error(`${label} does not support sync.`);
   }
 
   return syncSessionLock.runInLock(async () => {
@@ -44,7 +40,6 @@ export const syncSession = async ({
     const [nextDatabase, nextRecord] = await updateRecordDatabase({
       database,
       record,
-      provider,
       update: async (updatedDatabase) => {
         const remoteDatabase = await loadDatabase({
           encryptedBytes: remoteBytes,
@@ -63,15 +58,14 @@ export const syncSession = async ({
 
 export const unlockSession = async ({
   record,
-  provider,
   password,
 }: {
   record: PersistedFileRecord;
-  provider: Provider;
   password: string;
 }): Promise<UnlockSession> => {
-  if (!provider.isAvailable()) {
-    throw new Error(`${provider.label} is not configured, so this record cannot be unlocked.`);
+  const { isAvailable, label } = getProvider(record);
+  if (!isAvailable()) {
+    throw new Error(`${label} is not configured, so this record cannot be unlocked.`);
   }
 
   const database = await unlockDatabase({
@@ -85,7 +79,7 @@ export const unlockSession = async ({
     lastOpenedAt: new Date().toISOString(),
   }));
 
-  return { database, record: updatedRecord, provider, version: 0 };
+  return { database, record: updatedRecord, version: 0 };
 };
 
 export const createDemoSession = async (): Promise<UnlockSession> => {
@@ -94,7 +88,6 @@ export const createDemoSession = async (): Promise<UnlockSession> => {
   return {
     database,
     record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
-    provider: demoProvider,
     version: 0,
   };
 };

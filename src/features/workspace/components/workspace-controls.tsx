@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
 import { DownloadButton } from '@/features/workspace/components/download-button';
+import { getProvider } from '@/services/provider-registry';
 import { SyncStatus } from '@/features/workspace/components/sync-status';
 
 type WorkspaceControlsProps = {
@@ -10,7 +11,8 @@ type WorkspaceControlsProps = {
 };
 
 export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: WorkspaceControlsProps) => {
-  const { provider, record } = session;
+  const { record } = session;
+  const { sync } = getProvider(record);
 
   return (
     <header className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
@@ -19,11 +21,11 @@ export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: Work
           <span className="min-w-0 truncate font-medium text-foreground">
             {record.kdbx.name} ({record.type})
           </span>
-          {provider.sync && <SyncStatus session={session} setSession={setSession} />}
+          {sync && <SyncStatus session={session} setSession={setSession} />}
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        {provider.type !== 'demo' && <DownloadButton session={session} />}
+        {record.type !== 'demo' && <DownloadButton session={session} />}
         <Button
           aria-label="Lock workspace"
           className="h-6 px-1.5 text-[11px]"

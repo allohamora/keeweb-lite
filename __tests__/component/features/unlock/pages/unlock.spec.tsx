@@ -4,8 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { googleDriveProvider } from '@/features/google-drive/services/google-drive';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { demoProvider } from '@/features/demo/services/demo';
-import { localProvider } from '@/features/local/services/local';
 import { createLocalRecord } from '@/features/local/services/record';
 import type { UnlockSession } from '@/features/unlock/services/session';
 import { UnlockPage } from '@/features/unlock/pages/unlock';
@@ -45,9 +43,7 @@ describe('unlock', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    using _getRecordItemsByLastOpened = vi
-      .spyOn(recordService, 'getRecordItemsByLastOpened')
-      .mockResolvedValue([{ record: vaultRecord, provider: localProvider }]);
+    using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
 
     const demo = Promise.withResolvers<UnlockSession>();
     using _createDemoSession = vi.spyOn(sessionService, 'createDemoSession').mockReturnValue(demo.promise);
@@ -71,7 +67,6 @@ describe('unlock', () => {
     demo.resolve({
       database,
       record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
-      provider: demoProvider,
       version: 0,
     });
 
@@ -86,9 +81,7 @@ describe('unlock', () => {
     const user = userEvent.setup();
     const setSession = vi.fn();
 
-    using _getRecordItemsByLastOpened = vi
-      .spyOn(recordService, 'getRecordItemsByLastOpened')
-      .mockResolvedValue([{ record: vaultRecord, provider: localProvider }]);
+    using _getRecordsByLastOpened = vi.spyOn(recordService, 'getRecordsByLastOpened').mockResolvedValue([vaultRecord]);
 
     const unlock = Promise.withResolvers<UnlockSession>();
     using _unlockSession = vi.spyOn(sessionService, 'unlockSession').mockReturnValue(unlock.promise);
@@ -113,7 +106,6 @@ describe('unlock', () => {
     unlock.resolve({
       database,
       record: vaultRecord,
-      provider: localProvider,
       version: 0,
     });
 

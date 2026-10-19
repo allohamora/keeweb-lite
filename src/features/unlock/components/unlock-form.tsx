@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session';
 import { getErrorMessage } from '@/utils/error';
-import { getRecordItemsByLastOpened } from '@/features/unlock/services/record';
+import { getRecordsByLastOpened } from '@/features/unlock/services/record';
+import { getProvider } from '@/services/provider-registry';
 import { toast } from 'sonner';
 import { RecordRemove } from './record-remove';
 
@@ -55,27 +56,27 @@ export const UnlockForm = ({
   const {
     error: recordsLoadError,
     loading: isLoadingRecords,
-    value: items = [],
-  } = useAsync(getRecordItemsByLastOpened, [recordsReloadToken]);
+    value: records = [],
+  } = useAsync(getRecordsByLastOpened, [recordsReloadToken]);
 
   const [showPassword, setShowPassword] = useState(false);
 
   const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
-  const selectedProvider = items.find(({ record }) => record.id === selectedRecordId)?.provider;
+  const selectedRecord = records.find(({ id }) => id === selectedRecordId);
+  const selectedProvider = selectedRecord && getProvider(selectedRecord);
   const isSelectedRecordUnavailable = selectedProvider ? !selectedProvider.isAvailable() : false;
   const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnavailable || isBusy;
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
       try {
-        const item = items.find(({ record }) => record.id === selectedRecordId);
-        if (!item) {
+        const record = records.find(({ id }) => id === selectedRecordId);
+        if (!record) {
           throw new Error('Selected record not found.');
         }
 
         const session = await unlockSession({
-          record: item.record,
-          provider: item.provider,
+          record,
           password,
         });
 
@@ -126,7 +127,7 @@ export const UnlockForm = ({
             <FieldContent>
               <Select
                 {...field}
-                disabled={isBusy || items.length === 0}
+                disabled={isBusy || records.length === 0}
                 onValueChange={field.onChange}
                 value={field.value}
               >
@@ -139,14 +140,14 @@ export const UnlockForm = ({
                     placeholder={
                       isLoadingRecords
                         ? 'Loading records...'
-                        : items.length === 0
+                        : records.length === 0
                           ? 'No records available'
                           : 'Select a record'
                     }
                   />
                 </SelectTrigger>
                 <SelectContent position="popper">
-                  {items.map(({ record }) => (
+                  {records.map((record) => (
                     <SelectItem key={record.id} value={record.id}>
                       {record.kdbx.name} ({record.type})
                     </SelectItem>

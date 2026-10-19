@@ -1,5 +1,4 @@
 import { getRecords } from '@/repositories/record';
-import { getProvider } from '@/services/provider-registry';
 
 const sortRecordsByLastOpened = <RecordType extends { lastOpenedAt?: string }>(records: RecordType[]) => {
   return records
@@ -17,10 +16,4 @@ export const getRecordsByLastOpened = async () => {
   const records = await getRecords();
 
   return sortRecordsByLastOpened(records);
-};
-
-export const getRecordItemsByLastOpened = async () => {
-  const records = await getRecordsByLastOpened();
-
-  return records.map((record) => ({ record, provider: getProvider(record) }));
 };

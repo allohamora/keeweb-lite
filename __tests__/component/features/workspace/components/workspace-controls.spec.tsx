@@ -3,8 +3,6 @@ import * as downloadUtils from '@/utils/download';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { demoProvider } from '@/features/demo/services/demo';
-import { localProvider } from '@/features/local/services/local';
 import { WorkspaceControls } from '@/features/workspace/components/workspace-controls';
 import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
@@ -18,11 +16,7 @@ describe('workspace-controls', () => {
       const database = await createTestDatabase();
 
       render(
-        <WorkspaceControls
-          session={{ database, record, provider: localProvider, version: 0 }}
-          setSession={vi.fn()}
-          onWorkspaceLock={vi.fn()}
-        />,
+        <WorkspaceControls session={{ database, record, version: 0 }} setSession={vi.fn()} onWorkspaceLock={vi.fn()} />,
       );
 
       expect(screen.getByText('test.kdbx (local)')).toBeInTheDocument();
@@ -38,11 +32,7 @@ describe('workspace-controls', () => {
       using _anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
       render(
-        <WorkspaceControls
-          session={{ database, record, provider: localProvider, version: 0 }}
-          setSession={vi.fn()}
-          onWorkspaceLock={vi.fn()}
-        />,
+        <WorkspaceControls session={{ database, record, version: 0 }} setSession={vi.fn()} onWorkspaceLock={vi.fn()} />,
       );
       await user.click(screen.getByRole('button', { name: 'Download database' }));
 
@@ -60,7 +50,6 @@ describe('workspace-controls', () => {
           session={{
             database,
             record: { ...record, kdbx: { ...record.kdbx, name: 'Vault.KDBX' } },
-            provider: localProvider,
             version: 0,
           }}
           setSession={vi.fn()}
@@ -80,7 +69,7 @@ describe('workspace-controls', () => {
       render(
         <DirtySafeNet>
           <WorkspaceControls
-            session={{ database, record, provider: localProvider, version: 0 }}
+            session={{ database, record, version: 0 }}
             setSession={vi.fn()}
             onWorkspaceLock={vi.fn()}
           />
@@ -100,7 +89,6 @@ describe('workspace-controls', () => {
           session={{
             database,
             record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } },
-            provider: demoProvider,
             version: 0,
           }}
           setSession={vi.fn()}
