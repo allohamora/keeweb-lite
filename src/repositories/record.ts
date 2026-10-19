@@ -62,7 +62,13 @@ const readRecords = async () => {
     return parseResult.data;
   }
 
-  throw new Error('Stored records are invalid.', { cause: parseResult.error });
+  console.error('Invalid stored records:', parseResult.error);
+
+  throw new Error(
+    `Saved records can't be read. Fix the "${RECORDS_STORAGE_KEY}" key in this site's IndexedDB, ` +
+      `or clear this site's data to start over (this deletes all local databases).`,
+    { cause: parseResult.error },
+  );
 };
 
 export const getRecords = async () => {

@@ -70,7 +70,7 @@ describe('record-repository', () => {
       ];
       await set(RECORDS_STORAGE_KEY, invalidRecords);
 
-      await expect(getRecords()).rejects.toThrow('Stored records are invalid.');
+      await expect(getRecords()).rejects.toThrow("Saved records can't be read.");
       expect(await get(RECORDS_STORAGE_KEY)).toEqual(invalidRecords);
     });
 
@@ -260,7 +260,7 @@ describe('record-repository', () => {
           type: 'local',
           kdbx: { encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault-2.kdbx' },
         }),
-      ).rejects.toThrow('Stored records are invalid.');
+      ).rejects.toThrow("Saved records can't be read.");
       expect(await get(RECORDS_STORAGE_KEY)).toEqual(invalidRecords);
     });
 
