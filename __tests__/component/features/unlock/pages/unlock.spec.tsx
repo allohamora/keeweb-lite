@@ -1,5 +1,5 @@
 import * as sessionService from '@/features/unlock/services/session';
-import * as demoProvider from '@/features/demo/services/provider';
+import * as demoProvider from '@/features/demo/services/demo';
 import * as recordService from '@/features/unlock/services/record';
 import userEvent from '@testing-library/user-event';
 import { googleDriveProvider } from '@/features/google-drive/services/provider';
