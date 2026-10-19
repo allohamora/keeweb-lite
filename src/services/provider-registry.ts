@@ -15,12 +15,9 @@ export const providers = Object.values(providersByType);
 export const getProvider = <Type extends FileRecord['type']>({ type }: { type: Type }): Provider<Type> =>
   providersByType[type];
 
-export const getImportItems = () =>
-  providers.flatMap(({ type, label, ImportDialog, isConfigured }) =>
-    ImportDialog && isConfigured() ? [{ type, label, Dialog: ImportDialog }] : [],
-  );
+export const getDialogItems = (dialog: 'ImportDialog' | 'CreateDialog') =>
+  providers.flatMap((provider) => {
+    const Dialog = provider[dialog];
 
-export const getCreateItems = () =>
-  providers.flatMap(({ type, label, CreateDialog, isConfigured }) =>
-    CreateDialog && isConfigured() ? [{ type, label, Dialog: CreateDialog }] : [],
-  );
+    return Dialog && provider.isConfigured() ? [{ type: provider.type, label: provider.label, Dialog }] : [];
+  });

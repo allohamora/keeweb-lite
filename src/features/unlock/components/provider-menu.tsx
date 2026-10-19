@@ -6,24 +6,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getCreateItems } from '@/services/provider-registry';
+import { getDialogItems } from '@/services/provider-registry';
 import type { Provider } from '@/services/provider';
 
-type CreateMenuProps = {
-  onRecordCreate: () => void;
+type ProviderMenuProps = {
+  label: string;
+  dialog: 'ImportDialog' | 'CreateDialog';
+  onSuccess: () => void;
   disabled?: boolean;
 };
 
-export const CreateMenu = ({ onRecordCreate, disabled = false }: CreateMenuProps) => {
+export const ProviderMenu = ({ label, dialog, onSuccess, disabled = false }: ProviderMenuProps) => {
   const [openType, setOpenType] = useState<Provider['type'] | null>(null);
-  const items = getCreateItems();
+  const items = getDialogItems(dialog);
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="h-8 px-3 text-xs" disabled={disabled} type="button" variant="outline">
-            Create
+            {label}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -40,7 +42,7 @@ export const CreateMenu = ({ onRecordCreate, disabled = false }: CreateMenuProps
           key={type}
           open={openType === type}
           onOpenChange={(open) => setOpenType(open ? type : null)}
-          onSuccess={onRecordCreate}
+          onSuccess={onSuccess}
         />
       ))}
     </>
