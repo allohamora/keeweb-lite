@@ -1,6 +1,7 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import type { ComponentType } from 'react';
 import type { FileRecord } from '@/repositories/record';
+import { recordStorage } from '@/services/record';
 import { kebabCaseToTitle } from '@/utils/string';
 
 export type DialogProps = {
@@ -34,11 +35,12 @@ export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {
   CreateDialog?: ComponentType<DialogProps>;
 };
 
-type ProviderConfig<Type extends FileRecord['type']> = Pick<Provider<Type>, 'type' | 'storage'> &
-  Partial<Omit<Provider<Type>, 'type' | 'storage'>>;
+type ProviderConfig<Type extends FileRecord['type']> = Pick<Provider<Type>, 'type'> &
+  Partial<Omit<Provider<Type>, 'type'>>;
 
 export const defineProvider = <Type extends FileRecord['type']>(provider: ProviderConfig<Type>): Provider<Type> => ({
   label: kebabCaseToTitle(provider.type),
   isAvailable: () => true,
+  storage: recordStorage,
   ...provider,
 });

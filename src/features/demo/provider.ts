@@ -2,7 +2,7 @@ import type kdbxweb from '@/utils/kdbxweb';
 import demoKdbxUrl from '@/assets/demo.kdbx?url';
 import type { UnlockSession } from '@/features/unlock/services/session';
 import { cloneDatabase, unlockDatabase } from '@/services/database';
-import { defineProvider, type Storage } from '@/services/provider';
+import { defineProvider } from '@/services/provider';
 
 // matches the fixed password KeeWeb itself uses for its bundled demo file
 const DEMO_PASSWORD = 'demo';
@@ -18,15 +18,13 @@ export const loadDemoDatabase = async (): Promise<kdbxweb.Kdbx> => {
   return unlockDatabase({ encryptedBytes, password: DEMO_PASSWORD });
 };
 
-export const demoStorage: Storage = {
-  load: ({ database }) => cloneDatabase(database),
-  // demo records are never persisted, so there's nothing to write back
-  save: async ({ record }) => record,
-};
-
 export const demoProvider = defineProvider({
   type: 'demo',
-  storage: demoStorage,
+  storage: {
+    load: ({ database }) => cloneDatabase(database),
+    // demo records are never persisted, so there's nothing to write back
+    save: async ({ record }) => record,
+  },
 });
 
 export const createDemoSession = async (): Promise<UnlockSession> => {
