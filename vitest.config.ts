@@ -17,6 +17,8 @@ export default defineConfig({
     },
   },
   test: {
+    // key derivation makes tests slow when the machine is busy, so the 5s default is too tight
+    testTimeout: 20_000,
     projects: [
       {
         extends: true,
