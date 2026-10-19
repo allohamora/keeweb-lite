@@ -1,5 +1,5 @@
 import kdbxweb from '@/utils/kdbxweb';
-import { updateRecordDatabase } from '@/services/record-database';
+import { updateRecordDatabase } from '@/features/workspace/services/session';
 import type { FileRecord } from '@/repositories/record';
 import { getEntryIcon } from '@/features/workspace/services/icon';
 import { getEntryColor } from '@/features/workspace/services/color';

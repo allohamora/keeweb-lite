@@ -1,6 +1,6 @@
 import * as databaseService from '@/services/database';
 import * as downloadUtils from '@/utils/download';
-import * as sessionService from '@/features/unlock/services/session';
+import * as sessionService from '@/features/workspace/services/session';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';

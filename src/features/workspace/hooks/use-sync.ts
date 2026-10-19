@@ -1,6 +1,7 @@
 import { useMountedState } from 'react-use';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { syncSession, type SetSession, type UnlockSession } from '@/features/unlock/services/session';
+import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
+import { syncSession } from '@/features/workspace/services/session';
 
 type UseSyncProps = UnlockSession & {
   setSession: SetSession;

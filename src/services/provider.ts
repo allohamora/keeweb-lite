@@ -1,12 +1,34 @@
+import type kdbxweb from '@/utils/kdbxweb';
 import type { ComponentType } from 'react';
-import type { FileRecord } from '@/repositories/record';
-import { recordStorage, type RecordStorage } from '@/services/record-storage';
+import { getRecord, updateRecord, type FileRecord } from '@/repositories/record';
+import { loadDatabase, toEncryptedBytes } from '@/services/database';
 import { kebabCaseToTitle } from '@/utils/string';
 
 export type DialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+};
+
+export type RecordStorage = {
+  load: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<kdbxweb.Kdbx>;
+  save: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<FileRecord>;
+};
+
+export const recordStorage: RecordStorage = {
+  load: async ({ database, record }) => {
+    const { kdbx } = await getRecord(record.id);
+
+    return loadDatabase({ encryptedBytes: kdbx.encryptedBytes, credentials: database.credentials });
+  },
+  save: async ({ database, record }) => {
+    const encryptedBytes = await toEncryptedBytes(database);
+
+    return updateRecord(record.id, (currentRecord) => ({
+      ...currentRecord,
+      kdbx: { ...currentRecord.kdbx, encryptedBytes },
+    }));
+  },
 };
 
 type RecordsByType = { [Record in FileRecord as Record['type']]: Record };
