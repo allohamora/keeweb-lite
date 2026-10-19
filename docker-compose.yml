@@ -7,5 +7,3 @@ services:
         PUBLIC_GOOGLE_APP_ID: ${PUBLIC_GOOGLE_APP_ID:-}
     ports:
       - "4321:80"
-    env_file:
-      - .env
