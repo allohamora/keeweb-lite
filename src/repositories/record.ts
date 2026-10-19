@@ -62,6 +62,8 @@ const readRecords = async () => {
     return parseResult.data;
   }
 
+  // stored data is only written by this app and always matches the schema, so this isn't expected to happen
+  // in production; it's a safety net that keeps the data untouched so the user can fix it by hand
   console.error('Invalid stored records:', parseResult.error);
 
   throw new Error(
