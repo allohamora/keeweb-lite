@@ -58,3 +58,16 @@ export const SyncStatus = ({ session, setSession }: SyncStatusProps) => {
     </button>
   );
 };
+
+export const SyncUnavailable = ({ label }: { label: string }) => (
+  <button
+    aria-label="Sync status: unavailable"
+    className="flex shrink-0 cursor-pointer appearance-none items-center gap-1 border-0 bg-transparent p-0 text-[11px] text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+    onClick={() => toast.info(`${label} is not configured in this build, so changes are saved locally only.`)}
+    title="Sync unavailable"
+    type="button"
+  >
+    <span className="inline-block size-2 rounded-full bg-zinc-500" />
+    <span className="text-foreground">Sync unavailable</span>
+  </button>
+);

@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { toast } from 'sonner';
+import { googleDriveProvider } from '@/features/google-drive/services/provider';
 import { WorkspaceControls } from '@/features/workspace/components/workspace-controls';
 import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
@@ -104,6 +105,32 @@ describe('workspace-controls', () => {
       await user.click(screen.getByRole('button', { name: 'Download database' }));
 
       expect(downloadBytes).toHaveBeenCalledWith(expect.objectContaining({ fileName: 'Demo.kdbx' }));
+    });
+
+    it('shows sync as unavailable without syncing when Google Drive is not configured', async () => {
+      const database = await createTestDatabase();
+      const user = userEvent.setup();
+      using _googleConfig = vi.spyOn(googleDriveProvider, 'isConfigured').mockReturnValue(false);
+      using syncSession = vi.spyOn(sessionService, 'syncSession');
+      using toastInfo = vi.spyOn(toast, 'info').mockReturnValue('toast-id');
+
+      render(
+        <WorkspaceControls
+          session={{
+            database,
+            record: { id: 'drive-record', type: 'google-drive', kdbx: { ...record.kdbx }, source: { id: 'file-1' } },
+            version: 0,
+          }}
+          setSession={vi.fn()}
+          onWorkspaceLock={vi.fn()}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: 'Sync status: unavailable' }));
+
+      expect(toastInfo).toHaveBeenCalledWith(
+        'Google Drive is not configured in this build, so changes are saved locally only.',
+      );
+      expect(syncSession).not.toHaveBeenCalled();
     });
 
     it('shows a generic message and retries when a sync fails without an error message', async () => {

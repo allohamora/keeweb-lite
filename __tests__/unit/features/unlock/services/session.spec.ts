@@ -63,7 +63,7 @@ describe('session', () => {
       expect(updatedRecord?.lastOpenedAt).toBe(expectPersisted(result.record).lastOpenedAt);
     });
 
-    it('rejects a Google Drive record when Google is not configured', async () => {
+    it('unlocks a Google Drive record when Google is not configured', async () => {
       using _googleConfig = vi.spyOn(googleDriveProvider, 'isConfigured').mockReturnValue(false);
       const { encryptedBytes, password } = await createDatabase();
       const record = await createRecord({
@@ -73,9 +73,9 @@ describe('session', () => {
         source: { id: 'drive-file-1' },
       });
 
-      await expect(unlockSession({ password, record })).rejects.toThrow(
-        'Google Drive is not configured in this build, so this record is locked.',
-      );
+      const session = await unlockSession({ password, record });
+
+      expect(session.record.id).toBe('test-record');
     });
 
     it('throws on incorrect password', async () => {

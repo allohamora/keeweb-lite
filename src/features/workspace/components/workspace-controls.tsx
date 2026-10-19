@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
 import { DownloadButton } from '@/features/workspace/components/download-button';
 import { getProvider } from '@/services/provider-registry';
-import { SyncStatus } from '@/features/workspace/components/sync-status';
+import { SyncStatus, SyncUnavailable } from '@/features/workspace/components/sync-status';
 
 type WorkspaceControlsProps = {
   session: UnlockSession;
@@ -12,7 +12,7 @@ type WorkspaceControlsProps = {
 
 export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: WorkspaceControlsProps) => {
   const { record } = session;
-  const { sync } = getProvider(record);
+  const { sync, isConfigured, label } = getProvider(record);
 
   return (
     <header className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
@@ -21,7 +21,12 @@ export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: Work
           <span className="min-w-0 truncate font-medium text-foreground">
             {record.kdbx.name} ({record.type})
           </span>
-          {sync && <SyncStatus session={session} setSession={setSession} />}
+          {sync &&
+            (isConfigured() ? (
+              <SyncStatus session={session} setSession={setSession} />
+            ) : (
+              <SyncUnavailable label={label} />
+            ))}
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">

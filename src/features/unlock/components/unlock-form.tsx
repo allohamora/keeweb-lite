@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { unlockSession, type UnlockSession } from '@/features/unlock/services/session';
 import { getErrorMessage } from '@/utils/error';
 import { getRecordsByLastOpened } from '@/features/unlock/services/record';
-import { getProvider } from '@/services/provider-registry';
 import { toast } from 'sonner';
 import { RecordRemove } from './record-remove';
 
@@ -62,10 +61,7 @@ export const UnlockForm = ({
   const [showPassword, setShowPassword] = useState(false);
 
   const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
-  const selectedRecord = records.find(({ id }) => id === selectedRecordId);
-  const selectedProvider = selectedRecord && getProvider(selectedRecord);
-  const isSelectedRecordUnconfigured = selectedProvider ? !selectedProvider.isConfigured() : false;
-  const isUnlockDisabled = !selectedRecordId || isSelectedRecordUnconfigured || isBusy;
+  const isUnlockDisabled = !selectedRecordId || isBusy;
 
   const handleUnlockSubmit = handleSubmit(async ({ password, selectedRecordId }) => {
     await runUnlockAction(async () => {
@@ -154,11 +150,6 @@ export const UnlockForm = ({
                   ))}
                 </SelectContent>
               </Select>
-              {selectedProvider && isSelectedRecordUnconfigured && (
-                <p className="pt-1 text-xs text-zinc-400">
-                  {selectedProvider.label} is not configured in this build, so this record is locked.
-                </p>
-              )}
               <FieldError errors={[fieldState.error]} />
             </FieldContent>
           </Field>

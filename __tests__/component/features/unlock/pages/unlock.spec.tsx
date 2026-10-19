@@ -232,7 +232,7 @@ describe('unlock', () => {
       expect(screen.queryByRole('menuitem', { name: 'Google Drive' })).not.toBeInTheDocument();
     });
 
-    it('lists a Google Drive record but keeps it locked', async () => {
+    it('lets a Google Drive record be unlocked', async () => {
       using _googleConfig = vi.spyOn(googleDriveProvider, 'isConfigured').mockReturnValue(false);
       await createRecord({
         id: 'drive-1',
@@ -246,11 +246,8 @@ describe('unlock', () => {
       await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
       await user.click(await screen.findByRole('option', { name: 'drive.kdbx (google-drive)' }));
 
-      expect(
-        screen.getByText('Google Drive is not configured in this build, so this record is locked.'),
-      ).toBeInTheDocument();
-      expect(screen.getByLabelText('Password')).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+      expect(screen.getByLabelText('Password')).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
     });
   });
