@@ -18,6 +18,12 @@ export const loadDemoDatabase = async (): Promise<kdbxweb.Kdbx> => {
   return unlockDatabase({ encryptedBytes, password: DEMO_PASSWORD });
 };
 
+export const createDemoSession = async (): Promise<UnlockSession> => {
+  const database = await loadDemoDatabase();
+
+  return { database, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 };
+};
+
 export const demoProvider = defineProvider({
   type: 'demo',
   storage: {
@@ -26,9 +32,3 @@ export const demoProvider = defineProvider({
     save: async ({ record }) => record,
   },
 });
-
-export const createDemoSession = async (): Promise<UnlockSession> => {
-  const database = await loadDemoDatabase();
-
-  return { database, record: { id: 'demo', type: 'demo', kdbx: { name: 'Demo' } }, version: 0 };
-};
