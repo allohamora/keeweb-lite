@@ -29,9 +29,9 @@ export const ProviderMenu = ({ label, dialog, onSuccess, disabled = false }: Pro
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {items.map(({ type, label }) => (
+          {items.map(({ type, label: itemLabel }) => (
             <DropdownMenuItem key={type} onSelect={() => setOpenType(type)}>
-              {label}
+              {itemLabel}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
