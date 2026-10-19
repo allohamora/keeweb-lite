@@ -1,6 +1,5 @@
 import { useMountedState } from 'react-use';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { getProvider } from '@/services/provider-registry';
 import { syncSession, type SetSession, type UnlockSession } from '@/features/unlock/services/session';
 
 type UseSyncProps = UnlockSession & {
@@ -37,10 +36,6 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   };
 
   const triggerSync = () => {
-    if (!getProvider(record).sync) {
-      return;
-    }
-
     const callId = ++lastCallId.current;
 
     if (!state.loading) {
