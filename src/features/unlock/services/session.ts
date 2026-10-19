@@ -64,7 +64,7 @@ export const unlockSession = async ({
 }): Promise<UnlockSession> => {
   const { isAvailable, label } = getProvider(record);
   if (!isAvailable()) {
-    throw new Error(`${label} is not configured, so this record cannot be unlocked.`);
+    throw new Error(`${label} is not configured in this build, so this record is locked.`);
   }
 
   const database = await unlockDatabase({

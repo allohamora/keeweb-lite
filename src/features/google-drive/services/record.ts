@@ -57,7 +57,7 @@ export const createGoogleDriveRecord = async ({
       });
     } catch (cause) {
       throw new Error(
-        `"${kdbxFileName}" was created on Google Drive, but couldn't be saved locally. Use "Import from Google Drive" to add it.`,
+        `"${kdbxFileName}" was created on Google Drive, but couldn't be saved locally. Import it from Google Drive to add it.`,
         { cause },
       );
     }

@@ -67,7 +67,7 @@ export const ImportLocalDialog = ({ open, onOpenChange, onSuccess }: DialogProps
         }}
       >
         <DialogHeader>
-          <DialogTitle>Import File Record</DialogTitle>
+          <DialogTitle>Import Local Record</DialogTitle>
           <DialogDescription>Choose a local .kdbx file and optional key file.</DialogDescription>
         </DialogHeader>
 

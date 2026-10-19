@@ -156,7 +156,7 @@ export const UnlockForm = ({
               </Select>
               {selectedProvider && isSelectedRecordUnavailable && (
                 <p className="pt-1 text-xs text-zinc-400">
-                  {selectedProvider.label} is not set up in this build, so this record is locked.
+                  {selectedProvider.label} is not configured in this build, so this record is locked.
                 </p>
               )}
               <FieldError errors={[fieldState.error]} />

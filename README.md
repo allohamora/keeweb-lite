@@ -6,7 +6,7 @@ keeweb-lite is a lightweight, web-only password manager inspired by [KeeWeb](htt
 
 ## Features
 
-- Two source types only: `Local` and `Google Drive`.
+- Source types: `Local` and optional `Google Drive`.
 - Unlock with password and optional key file.
 - Key file stays in runtime memory during unlock flow.
 - Google Drive records sync after every change.

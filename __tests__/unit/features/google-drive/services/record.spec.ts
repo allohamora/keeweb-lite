@@ -147,7 +147,7 @@ describe('google-drive-record-service', () => {
       await expect(
         createGoogleDriveRecord({ databaseName: 'My Vault', password: 'test-password-123' }),
       ).rejects.toThrow(
-        '"My Vault.kdbx" was created on Google Drive, but couldn\'t be saved locally. Use "Import from Google Drive" to add it.',
+        '"My Vault.kdbx" was created on Google Drive, but couldn\'t be saved locally. Import it from Google Drive to add it.',
       );
     });
 

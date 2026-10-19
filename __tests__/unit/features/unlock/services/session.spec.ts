@@ -79,7 +79,9 @@ describe('session', () => {
         source: { id: 'drive-file-1' },
       });
 
-      await expect(unlockSession({ password, record })).rejects.toThrow('Google Drive is not configured');
+      await expect(unlockSession({ password, record })).rejects.toThrow(
+        'Google Drive is not configured in this build, so this record is locked.',
+      );
     });
 
     it('throws on incorrect password', async () => {

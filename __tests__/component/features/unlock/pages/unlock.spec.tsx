@@ -247,7 +247,7 @@ describe('unlock', () => {
       await user.click(await screen.findByRole('option', { name: 'drive.kdbx (google-drive)' }));
 
       expect(
-        screen.getByText('Google Drive is not set up in this build, so this record is locked.'),
+        screen.getByText('Google Drive is not configured in this build, so this record is locked.'),
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Password')).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
