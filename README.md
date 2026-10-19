@@ -79,7 +79,7 @@ docker compose up -d --build # App is available at `http://localhost:4321`.
 
 ## Google Drive Setup
 
-Google Drive is optional. It is enabled only when both `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` are set at build time. Without them, the Google scripts are not loaded and the Google Drive import and create options are hidden. Records saved earlier from Google Drive are still listed, but they stay locked until the app is built with Google Drive enabled.
+Google Drive is optional. It is enabled only when both `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` are set at build time. Without them, the Google scripts are not loaded and the Google Drive import and create options are hidden. Records saved earlier from Google Drive are still listed. They can be unlocked, edited and downloaded locally, but they are not synced until the app is built with Google Drive enabled.
 
 To enable Google Drive integration, you need a Google Cloud project with OAuth 2.0 credentials.
 
