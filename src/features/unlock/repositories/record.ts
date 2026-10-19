@@ -1,5 +1,5 @@
+import * as z from 'zod/mini';
 import { del, get, set } from 'idb-keyval';
-import { z } from 'zod';
 import { Lock } from '@/utils/lock';
 
 export const RECORDS_STORAGE_KEY = 'keeweb-lite.records';
@@ -19,16 +19,16 @@ const recordKdbxSchema = z.object({
 const localFileRecordSchema = z.object({
   id: z.string(),
   kdbx: recordKdbxSchema,
-  key: keySchema.optional(),
-  lastOpenedAt: z.string().optional(),
+  key: z.optional(keySchema),
+  lastOpenedAt: z.optional(z.string()),
   type: z.literal('local'),
 });
 
 const googleDriveFileRecordSchema = z.object({
   id: z.string(),
   kdbx: recordKdbxSchema,
-  key: keySchema.optional(),
-  lastOpenedAt: z.string().optional(),
+  key: z.optional(keySchema),
+  lastOpenedAt: z.optional(z.string()),
   source: z.object({
     id: z.string(),
   }),

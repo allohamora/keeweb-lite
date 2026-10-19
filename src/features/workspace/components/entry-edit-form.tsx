@@ -1,8 +1,8 @@
+import * as z from 'zod/mini';
 import type kdbxweb from '@/utils/kdbxweb';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { toast } from 'sonner';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Copy01Icon, LinkSquare02Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
@@ -49,8 +49,8 @@ const entryEditSchema = z.object({
   notes: z.string(),
   tags: z.array(z.string()),
   expiryTime: z.string(),
-  icon: z.number().int().min(0).max(68),
-  color: z.string().nullable(),
+  icon: z.int().check(z.minimum(0), z.maximum(68)),
+  color: z.nullable(z.string()),
 });
 
 type EntryEditValues = z.infer<typeof entryEditSchema>;
@@ -114,7 +114,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
   };
 
   const handleApplyHistory = (values: EntryEditValues) => {
-    for (const field of entryEditSchema.keyof().options) {
+    for (const field of z.keyof(entryEditSchema).options) {
       setValue(field, values[field], { shouldDirty: true });
     }
   };

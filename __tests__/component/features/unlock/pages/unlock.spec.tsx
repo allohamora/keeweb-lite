@@ -145,6 +145,35 @@ describe('unlock', () => {
       });
       expect(setSession).not.toHaveBeenCalled();
     });
+
+    it('requires a password', async () => {
+      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      const user = userEvent.setup();
+      const setSession = vi.fn();
+
+      render(<UnlockPage setSession={setSession} />);
+      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
+      await user.click(await screen.findByRole('option', { name: 'Vault.kdbx (local)' }));
+      await user.click(screen.getByRole('button', { name: 'Unlock' }));
+
+      expect(await screen.findByText('Enter a password to unlock.')).toBeInTheDocument();
+      expect(setSession).not.toHaveBeenCalled();
+    });
+
+    it('rejects a password that is only whitespace', async () => {
+      await recordService.createLocalRecord({ databaseName: 'Vault', password: 'secret' });
+      const user = userEvent.setup();
+      const setSession = vi.fn();
+
+      render(<UnlockPage setSession={setSession} />);
+      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
+      await user.click(await screen.findByRole('option', { name: 'Vault.kdbx (local)' }));
+      await user.type(screen.getByLabelText('Password'), '   ');
+      await user.click(screen.getByRole('button', { name: 'Unlock' }));
+
+      expect(await screen.findByText('Enter a password to unlock.')).toBeInTheDocument();
+      expect(setSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('remove record', () => {

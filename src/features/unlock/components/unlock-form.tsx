@@ -1,8 +1,8 @@
+import * as z from 'zod/mini';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useAsync } from 'react-use';
-import { z } from 'zod';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,8 @@ import { toast } from 'sonner';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
-  selectedRecordId: z.string().min(1, 'Create or select a record before unlocking.'),
-  password: z.string().trim().min(1, 'Enter a password to unlock.'),
+  selectedRecordId: z.string().check(z.minLength(1, 'Create or select a record before unlocking.')),
+  password: z.string().check(z.trim(), z.minLength(1, 'Enter a password to unlock.')),
 });
 
 type UnlockFormValues = z.infer<typeof unlockFormSchema>;

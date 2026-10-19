@@ -1,7 +1,7 @@
+import * as z from 'zod/mini';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,10 +27,12 @@ type ImportGoogleDriveDialogProps = {
 };
 
 const importGoogleDriveDialogSchema = z.object({
-  driveFile: driveFileSchema.pick({ id: true, name: true }).refine((file) => isKdbxFileName(file.name), {
-    message: 'Only .kdbx files are supported.',
-  }),
-  keyFile: fileListSchema('Select a key file.').optional(),
+  driveFile: z.pick(driveFileSchema, { id: true, name: true }).check(
+    z.refine((file) => isKdbxFileName(file.name), {
+      message: 'Only .kdbx files are supported.',
+    }),
+  ),
+  keyFile: z.optional(fileListSchema('Select a key file.')),
 });
 
 type ImportGoogleDriveDialogFormValues = z.infer<typeof importGoogleDriveDialogSchema>;
