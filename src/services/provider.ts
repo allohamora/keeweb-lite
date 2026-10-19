@@ -10,7 +10,7 @@ export type DialogProps = {
   onSuccess: () => void;
 };
 
-export type Storage = {
+export type RecordStorage = {
   load: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<kdbxweb.Kdbx>;
   save: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<FileRecord>;
 };
@@ -28,7 +28,7 @@ export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {
   label: string;
   isConfigured: () => boolean;
   scripts?: string[];
-  storage: Storage;
+  storage: RecordStorage;
   sync?: Sync<RecordOf<Type>>;
   ImportDialog?: ComponentType<DialogProps>;
   CreateDialog?: ComponentType<DialogProps>;
