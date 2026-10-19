@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
+import { getErrorMessage } from '@/utils/error';
 import { useSync } from '@/features/workspace/hooks/use-sync';
 
 type SyncStatusProps = {
@@ -18,7 +19,7 @@ export const SyncStatus = ({ session, setSession }: SyncStatusProps) => {
   const onSync = () => {
     switch (syncStatus) {
       case 'error':
-        toast.error(syncError?.message ?? 'Drive sync failed.');
+        toast.error(getErrorMessage({ error: syncError, fallback: 'Sync failed.' }));
         retrySync();
         break;
       case 'syncing':

@@ -79,7 +79,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   });
 
   useEffect(() => {
-    // syncing with Drive on every version change is the point of this effect, and `loading` tracks that sync
+    // syncing on every version change is the point of this effect, and `loading` tracks that sync
     // eslint-disable-next-line react-hooks/set-state-in-effect
     handleVersionSync();
   }, [version]);

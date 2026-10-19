@@ -1,8 +1,10 @@
 import * as databaseService from '@/services/database';
 import * as downloadUtils from '@/utils/download';
+import * as sessionService from '@/features/unlock/services/session';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { toast } from 'sonner';
 import { WorkspaceControls } from '@/features/workspace/components/workspace-controls';
 import { createTestDatabase, createTestRecord } from '@tests/utils/kdbx';
 import { render } from '@tests/utils/render';
@@ -99,6 +101,29 @@ describe('workspace-controls', () => {
       expect(screen.getByText('Demo (demo)')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Download database' })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Lock workspace' })).toBeInTheDocument();
+    });
+
+    it('shows a generic message and retries when a sync fails without an error message', async () => {
+      const database = await createTestDatabase();
+      const user = userEvent.setup();
+      using syncSession = vi.spyOn(sessionService, 'syncSession').mockRejectedValue(new Error(''));
+      using toastError = vi.spyOn(toast, 'error').mockReturnValue('toast-id');
+
+      render(
+        <WorkspaceControls
+          session={{
+            database,
+            record: { id: 'drive-record', type: 'google-drive', kdbx: { ...record.kdbx }, source: { id: 'file-1' } },
+            version: 0,
+          }}
+          setSession={vi.fn()}
+          onWorkspaceLock={vi.fn()}
+        />,
+      );
+      await user.click(await screen.findByRole('button', { name: 'Sync status: error' }));
+
+      expect(toastError).toHaveBeenCalledWith('Sync failed.');
+      expect(syncSession).toHaveBeenCalledTimes(2);
     });
   });
 });
