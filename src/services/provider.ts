@@ -18,10 +18,9 @@ export type Storage = {
 type RecordsByType = { [Record in FileRecord as Record['type']]: Record };
 export type RecordOf<Type extends FileRecord['type']> = RecordsByType[Type];
 
-// method syntax keeps Provider<'google-drive'> assignable to the Provider union
 export type Sync<Record extends FileRecord = FileRecord> = {
-  pull(record: Record): Promise<Uint8Array>;
-  push(record: Record, bytes: Uint8Array<ArrayBuffer>): Promise<unknown>;
+  pull: (record: Record) => Promise<Uint8Array>;
+  push: (record: Record, bytes: Uint8Array<ArrayBuffer>) => Promise<unknown>;
 };
 
 export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {

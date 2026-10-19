@@ -4,15 +4,16 @@ import { localProvider } from '@/features/local/services/provider';
 import type { FileRecord } from '@/repositories/record';
 import type { Provider } from '@/services/provider';
 
-const providersByType = {
+const providersByType: { [Type in FileRecord['type']]: Provider<Type> } = {
   local: localProvider,
   'google-drive': googleDriveProvider,
   demo: demoProvider,
-} satisfies { [Type in FileRecord['type']]: Provider<Type> };
+};
 
 export const providers = Object.values(providersByType);
 
-export const getProvider = ({ type }: Pick<FileRecord, 'type'>): Provider => providersByType[type];
+export const getProvider = <Type extends FileRecord['type']>({ type }: { type: Type }): Provider<Type> =>
+  providersByType[type];
 
 export const getImportItems = () =>
   providers.flatMap(({ type, label, ImportDialog, isAvailable }) =>
