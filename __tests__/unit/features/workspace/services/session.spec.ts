@@ -348,6 +348,54 @@ describe('session', () => {
       );
     });
 
+    it('merges a remote entry with an entry edit that is saved while the remote file is downloading', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+
+      const remoteDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
+      remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote Entry');
+      const remoteBytes = new Uint8Array(await remoteDatabase.save());
+
+      const { promise: remoteReady, resolve: releaseRemote } = Promise.withResolvers<void>();
+      const uploads: Uint8Array[] = [];
+      mockServer.addHandlers(
+        googleDriveApi.getFile.mock(async () => {
+          await remoteReady;
+          return new HttpResponse(remoteBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
+        }),
+        googleDriveApi.updateFile.mock(({ body }) => {
+          uploads.push(body);
+          return HttpResponse.json({ id: 'drive-file-id', modifiedTime: new Date().toISOString(), name: 'vault.kdbx' });
+        }),
+      );
+
+      const syncing = syncSession({ database, record });
+
+      const entry = database.getDefaultGroup().entries[0];
+      if (!entry) throw new Error('entry should exist');
+      await saveEntry({
+        database,
+        record,
+        entryUuid: entry.uuid.toString(),
+        values: { ...getEntryValues(entry), title: 'Edited Title' },
+      });
+
+      releaseRemote();
+      const result = await syncing;
+
+      const expectedTitles = ['Edited Title', 'Remote Entry'];
+      expect(getTitles(result.database)).toEqual(expectedTitles);
+      const [stored] = await getRecords();
+      if (!stored) throw new Error('record should exist');
+      expect(
+        getTitles(await unlockDatabase({ encryptedBytes: stored.kdbx.encryptedBytes, password: 'test-password' })),
+      ).toEqual(expectedTitles);
+      const [uploaded] = uploads;
+      if (!uploaded) throw new Error('nothing was uploaded');
+      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(
+        expectedTitles,
+      );
+    });
+
     it('does not save the merged remote changes when the upload fails', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
