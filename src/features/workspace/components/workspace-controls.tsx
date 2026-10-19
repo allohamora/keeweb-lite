@@ -25,7 +25,7 @@ export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: Work
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        {record.type !== 'demo' && <DownloadButton session={session} />}
+        <DownloadButton session={session} />
         <Button
           aria-label="Lock workspace"
           className="h-6 px-1.5 text-[11px]"

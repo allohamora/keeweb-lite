@@ -83,8 +83,11 @@ describe('workspace-controls', () => {
       expect(toEncryptedBytes).not.toHaveBeenCalled();
     });
 
-    it('hides the download button for demo records', async () => {
+    it('downloads a demo record as a .kdbx file', async () => {
       const database = await createTestDatabase();
+      const user = userEvent.setup();
+      using _toEncryptedBytes = vi.spyOn(databaseService, 'toEncryptedBytes').mockResolvedValue(new Uint8Array());
+      using downloadBytes = vi.spyOn(downloadUtils, 'downloadBytes').mockImplementation(() => {});
 
       render(
         <WorkspaceControls
@@ -98,9 +101,9 @@ describe('workspace-controls', () => {
         />,
       );
 
-      expect(screen.getByText('Demo (demo)')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Download database' })).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Lock workspace' })).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Download database' }));
+
+      expect(downloadBytes).toHaveBeenCalledWith(expect.objectContaining({ fileName: 'Demo.kdbx' }));
     });
 
     it('shows a generic message and retries when a sync fails without an error message', async () => {
