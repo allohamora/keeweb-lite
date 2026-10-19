@@ -1,10 +1,13 @@
 import './mocks';
 import { afterAll, afterEach, beforeAll, expect } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { auth } from '@/features/google-drive/repositories/google-drive';
 import { clearRecords } from '@/repositories/record';
 import { createMockServer } from './utils/mock-server';
 import '@testing-library/jest-dom/vitest';
+
+// key derivation makes creating and syncing databases slower than the default 1s when the suite runs in parallel
+configure({ asyncUtilTimeout: 5000 });
 
 export const mockServer = createMockServer();
 
