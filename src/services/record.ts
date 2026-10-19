@@ -1,6 +1,4 @@
-import { getRecord, updateRecord } from '@/repositories/record';
-import { loadDatabase, toEncryptedBytes, toKeyFileHash } from '@/services/database';
-import type { RecordStorage } from '@/services/provider';
+import { toKeyFileHash } from '@/services/database';
 import { toKdbxFileName } from '@/utils/kdbx-file-name';
 import { Lock } from '@/utils/lock';
 
@@ -35,20 +33,4 @@ export const validateNewDatabaseInput = (databaseName: string, password: string)
   const kdbxFileName = toKdbxFileName(name);
 
   return { name, kdbxFileName };
-};
-
-export const recordStorage: RecordStorage = {
-  load: async ({ database, record }) => {
-    const { kdbx } = await getRecord(record.id);
-
-    return loadDatabase({ encryptedBytes: kdbx.encryptedBytes, credentials: database.credentials });
-  },
-  save: async ({ database, record }) => {
-    const encryptedBytes = await toEncryptedBytes(database);
-
-    return updateRecord(record.id, (currentRecord) => ({
-      ...currentRecord,
-      kdbx: { ...currentRecord.kdbx, encryptedBytes },
-    }));
-  },
 };

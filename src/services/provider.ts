@@ -1,18 +1,12 @@
-import type kdbxweb from '@/utils/kdbxweb';
 import type { ComponentType } from 'react';
 import type { FileRecord } from '@/repositories/record';
-import { recordStorage } from '@/services/record';
+import { recordStorage, type RecordStorage } from '@/services/record-storage';
 import { kebabCaseToTitle } from '@/utils/string';
 
 export type DialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-};
-
-export type RecordStorage = {
-  load: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<kdbxweb.Kdbx>;
-  save: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<FileRecord>;
 };
 
 type RecordsByType = { [Record in FileRecord as Record['type']]: Record };
