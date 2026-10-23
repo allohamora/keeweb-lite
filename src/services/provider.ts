@@ -34,9 +34,19 @@ export const recordStorage: RecordStorage = {
 type RecordsByType = { [Record in FileRecord as Record['type']]: Record };
 export type RecordOf<Type extends FileRecord['type']> = RecordsByType[Type];
 
-export type Sync<Record extends FileRecord = FileRecord> = {
-  pull: (record: Record) => Promise<Uint8Array>;
-  push: (record: Record, bytes: Uint8Array<ArrayBuffer>) => Promise<unknown>;
+export class SyncConflictError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('The remote file changed during the sync.', options);
+    this.name = 'SyncConflictError';
+  }
+}
+
+// `SyncData` is anything the provider needs to detect a remote change between `pull` and `push`
+// (e.g. an ETag or a revision id). It is passed from `pull` to `push`.
+export type Sync<Record extends FileRecord = FileRecord, SyncData = undefined> = {
+  pull: (record: Record) => Promise<{ bytes: Uint8Array; data: SyncData }>;
+  // must throw SyncConflictError if the remote changed since the pull that returned `data`
+  push(record: Record, bytes: Uint8Array<ArrayBuffer>, data: SyncData): Promise<unknown>;
 };
 
 export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {
@@ -45,15 +55,17 @@ export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {
   isConfigured: () => boolean;
   scripts?: string[];
   storage: RecordStorage;
-  sync?: Sync<RecordOf<Type>>;
+  sync?: Sync<RecordOf<Type>, unknown>;
   ImportDialog?: ComponentType<DialogProps>;
   CreateDialog?: ComponentType<DialogProps>;
 };
 
-type ProviderConfig<Type extends FileRecord['type']> = Pick<Provider<Type>, 'type'> &
-  Partial<Omit<Provider<Type>, 'type'>>;
+type ProviderConfig<Type extends FileRecord['type'], SyncData> = Pick<Provider<Type>, 'type'> &
+  Partial<Omit<Provider<Type>, 'type' | 'sync'>> & { sync?: Sync<RecordOf<Type>, SyncData> };
 
-export const defineProvider = <Type extends FileRecord['type']>(provider: ProviderConfig<Type>): Provider<Type> => ({
+export const defineProvider = <Type extends FileRecord['type'], SyncData = undefined>(
+  provider: ProviderConfig<Type, SyncData>,
+): Provider<Type> => ({
   label: kebabCaseToTitle(provider.type),
   isConfigured: () => true,
   storage: recordStorage,

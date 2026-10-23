@@ -67,22 +67,15 @@ describe('use-sync', () => {
   describe('useSync', () => {
     it('syncs a google drive record on mount and merges the remote changes', async () => {
       const { session, remoteBytes } = await createSession();
-      const uploads: Uint8Array[] = [];
-      mockServer.addHandlers(
-        googleDriveApi.preflight.ok(),
-        googleDriveApi.getFile.ok({ bytes: remoteBytes }),
-        googleDriveApi.updateFile.mock(({ body, fileId }) => {
-          uploads.push(body);
-          return HttpResponse.json({ id: fileId, modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' });
-        }),
-      );
+      const drive = googleDriveApi.fakeFile({ bytes: remoteBytes });
+      mockServer.addHandlers(googleDriveApi.preflight.ok(), ...drive.handlers);
 
       render(<SyncHarness initialSession={session} />);
 
       expect(await screen.findByText('Remote entry')).toBeInTheDocument();
       expect(screen.getByTestId('status')).toHaveTextContent('idle');
       expect(screen.getByTestId('version')).toHaveTextContent('0');
-      expect(uploads).toHaveLength(1);
+      expect(drive.file.uploads).toHaveLength(1);
     });
 
     it('stops syncing on version changes after an error until retried', async () => {
@@ -90,7 +83,8 @@ describe('use-sync', () => {
       let downloads = 0;
       mockServer.addHandlers(
         googleDriveApi.preflight.ok(),
-        googleDriveApi.getFile.mock(() => {
+        googleDriveApi.getFile.ok(),
+        googleDriveApi.getRevision.mock(() => {
           downloads += 1;
           return new HttpResponse(null, { status: 500, statusText: 'Internal Server Error' });
         }),
@@ -104,7 +98,7 @@ describe('use-sync', () => {
       expect(screen.getByTestId('status')).toHaveTextContent('error');
       expect(downloads).toBe(1);
 
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: remoteBytes }), googleDriveApi.updateFile.ok());
+      mockServer.addHandlers(...googleDriveApi.fakeFile({ bytes: remoteBytes }).handlers);
       await user.click(screen.getByRole('button', { name: 'Retry' }));
 
       expect(await screen.findByText('Remote entry')).toBeInTheDocument();
@@ -114,14 +108,8 @@ describe('use-sync', () => {
     it('drops a sync result when the session changed while it was running', async () => {
       const { session, remoteBytes } = await createSession();
       const { promise: released, resolve: release } = Promise.withResolvers<void>();
-      mockServer.addHandlers(
-        googleDriveApi.preflight.ok(),
-        googleDriveApi.getFile.mock(async () => {
-          await released;
-          return new HttpResponse(remoteBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
-        }),
-        googleDriveApi.updateFile.ok(),
-      );
+      const drive = googleDriveApi.fakeFile({ bytes: remoteBytes, onDownload: () => released });
+      mockServer.addHandlers(googleDriveApi.preflight.ok(), ...drive.handlers);
       const user = userEvent.setup();
 
       render(<SyncHarness initialSession={session} />);

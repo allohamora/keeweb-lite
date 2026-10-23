@@ -7,6 +7,7 @@ import { mockServer } from '@tests/setup-unit-context';
 import { auth } from '@/features/google-drive/repositories/google-drive';
 import { clearRecords, createRecord, getRecords } from '@/repositories/record';
 import { unlockDatabase } from '@/services/database';
+import { SyncConflictError } from '@/services/provider';
 import { syncSession, updateRecordDatabase } from '@/features/workspace/services/session';
 import { getEntryValues, getFieldText, saveEntry } from '@/features/workspace/services/entry';
 import { expectPersisted } from '@tests/utils/kdbx';
@@ -207,7 +208,7 @@ describe('session', () => {
         source: { id: 'drive-file-id' },
       });
 
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+      mockServer.addHandlers(...googleDriveApi.fakeFile({ bytes: encryptedBytes }).handlers);
 
       const result = await syncSession({ database, record });
 
@@ -225,7 +226,7 @@ describe('session', () => {
         source: { id: 'drive-file-id' },
       });
 
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+      mockServer.addHandlers(...googleDriveApi.fakeFile({ bytes: encryptedBytes }).handlers);
 
       const result = await syncSession({ database, record });
 
@@ -245,7 +246,7 @@ describe('session', () => {
         source: { id: 'drive-file-id' },
       });
 
-      mockServer.addHandlers(googleDriveApi.getFile.error({ status: 500, statusText: 'Internal Server Error' }));
+      mockServer.addHandlers(googleDriveApi.getFile.ok(), googleDriveApi.getRevision.error());
 
       await expect(syncSession({ database, record })).rejects.toThrow();
     });
@@ -268,7 +269,7 @@ describe('session', () => {
         key: keyFileHashBase64 ? { hash: keyFileHashBase64, name: 'key.keyx' } : undefined,
       });
 
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: encryptedBytes }), googleDriveApi.updateFile.ok());
+      mockServer.addHandlers(...googleDriveApi.fakeFile({ bytes: encryptedBytes }).handlers);
 
       const result = await syncSession({ database, record });
 
@@ -321,14 +322,8 @@ describe('session', () => {
         },
       });
 
-      const uploads: Uint8Array[] = [];
-      mockServer.addHandlers(
-        googleDriveApi.getFile.ok({ bytes: remoteBytes }),
-        googleDriveApi.updateFile.mock(({ body }) => {
-          uploads.push(body);
-          return HttpResponse.json({ id: 'drive-file-id', modifiedTime: new Date().toISOString(), name: 'vault.kdbx' });
-        }),
-      );
+      const drive = googleDriveApi.fakeFile({ bytes: remoteBytes });
+      mockServer.addHandlers(...drive.handlers);
 
       const result = await syncSession({ database: localDatabase, record: localRecord });
 
@@ -341,7 +336,7 @@ describe('session', () => {
         password: 'test-password',
       });
       expect(getTitles(storedDatabase)).toEqual(expectedTitles);
-      const [uploaded] = uploads;
+      const [uploaded] = drive.file.uploads;
       if (!uploaded) throw new Error('nothing was uploaded');
       expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(
         expectedTitles,
@@ -356,17 +351,8 @@ describe('session', () => {
       const remoteBytes = new Uint8Array(await remoteDatabase.save());
 
       const { promise: remoteReady, resolve: releaseRemote } = Promise.withResolvers<void>();
-      const uploads: Uint8Array[] = [];
-      mockServer.addHandlers(
-        googleDriveApi.getFile.mock(async () => {
-          await remoteReady;
-          return new HttpResponse(remoteBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
-        }),
-        googleDriveApi.updateFile.mock(({ body }) => {
-          uploads.push(body);
-          return HttpResponse.json({ id: 'drive-file-id', modifiedTime: new Date().toISOString(), name: 'vault.kdbx' });
-        }),
-      );
+      const drive = googleDriveApi.fakeFile({ bytes: remoteBytes, onDownload: () => remoteReady });
+      mockServer.addHandlers(...drive.handlers);
 
       const syncing = syncSession({ database, record });
 
@@ -389,7 +375,7 @@ describe('session', () => {
       expect(
         getTitles(await unlockDatabase({ encryptedBytes: stored.kdbx.encryptedBytes, password: 'test-password' })),
       ).toEqual(expectedTitles);
-      const [uploaded] = uploads;
+      const [uploaded] = drive.file.uploads;
       if (!uploaded) throw new Error('nothing was uploaded');
       expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(
         expectedTitles,
@@ -403,7 +389,11 @@ describe('session', () => {
       remoteDatabase.createEntry(remoteDatabase.getDefaultGroup()).fields.set('Title', 'Remote Entry');
       const remoteBytes = new Uint8Array(await remoteDatabase.save());
 
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: remoteBytes }), googleDriveApi.updateFile.error());
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok(),
+        googleDriveApi.getRevision.ok({ bytes: remoteBytes }),
+        googleDriveApi.updateFile.error(),
+      );
 
       await expect(syncSession({ database, record })).rejects.toThrow();
 
@@ -417,13 +407,8 @@ describe('session', () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
       const { promise: remoteReady, resolve: releaseRemote } = Promise.withResolvers<void>();
-      mockServer.addHandlers(
-        googleDriveApi.getFile.mock(async () => {
-          await remoteReady;
-          return new HttpResponse(initialBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
-        }),
-        googleDriveApi.updateFile.ok(),
-      );
+      const drive = googleDriveApi.fakeFile({ bytes: initialBytes, onDownload: () => remoteReady });
+      mockServer.addHandlers(...drive.handlers);
 
       const syncing = syncSession({ database, record });
 
@@ -449,22 +434,89 @@ describe('session', () => {
       expect(getTitles(result.database)).toEqual(['Edited Title']);
     });
 
+    const createOtherDeviceDatabase = async (initialBytes: Uint8Array) => {
+      const otherDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
+      otherDatabase.createEntry(otherDatabase.getDefaultGroup()).fields.set('Title', 'Other Device Entry');
+
+      return new Uint8Array(await otherDatabase.save());
+    };
+
+    const expectLastUploadTitles = async (uploads: Uint8Array[], titles: string[]) => {
+      const uploaded = uploads.at(-1);
+      if (!uploaded) throw new Error('nothing was uploaded');
+      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(titles);
+    };
+
+    it('syncs again and keeps the other device changes when the file changes before the upload', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+      const otherBytes = await createOtherDeviceDatabase(initialBytes);
+      const drive = googleDriveApi.fakeFile({
+        bytes: initialBytes,
+        onRevRequest: (count) => {
+          if (count === 2) {
+            drive.change({ bytes: otherBytes, rev: 'rev-other-device' });
+          }
+        },
+      });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession({ database, record });
+
+      const expectedTitles = ['Original Title', 'Other Device Entry'];
+      expect(getTitles(result.database)).toEqual(expectedTitles);
+      expect(drive.file.uploads).toHaveLength(1);
+      await expectLastUploadTitles(drive.file.uploads, expectedTitles);
+    });
+
+    it('fails after 3 attempts when the file keeps changing and saves nothing', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+      let revRequests = 0;
+      const drive = googleDriveApi.fakeFile({
+        bytes: initialBytes,
+        onRevRequest: (count) => {
+          revRequests = count;
+          drive.change({ bytes: initialBytes, rev: `rev-changing-${count}` });
+        },
+      });
+      mockServer.addHandlers(...drive.handlers);
+
+      await expect(syncSession({ database, record })).rejects.toThrow(SyncConflictError);
+
+      expect(revRequests).toBe(6);
+      expect(drive.file.uploads).toEqual([]);
+      const [stored] = await getRecords();
+      expect(stored?.kdbx.encryptedBytes).toEqual(initialBytes);
+    });
+
+    it('does not retry when the upload fails for another reason', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+      const resolver = vi.fn(() => new HttpResponse(null, { status: 500, statusText: 'Internal Server Error' }));
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
+        googleDriveApi.getRevision.ok({ bytes: initialBytes }),
+        googleDriveApi.updateFile.mock(resolver),
+      );
+
+      await expect(syncSession({ database, record })).rejects.toThrow('Failed to update file: 500');
+
+      expect(resolver).toHaveBeenCalledTimes(1);
+    });
+
     it('runs concurrent syncs one at a time', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
       let inFlight = 0;
       let maxInFlight = 0;
-      mockServer.addHandlers(
-        googleDriveApi.getFile.mock(async () => {
+      const drive = googleDriveApi.fakeFile({
+        bytes: initialBytes,
+        onDownload: async () => {
           inFlight += 1;
           maxInFlight = Math.max(maxInFlight, inFlight);
           await new Promise((resolve) => setTimeout(resolve, 20));
           inFlight -= 1;
-
-          return new HttpResponse(initialBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
-        }),
-        googleDriveApi.updateFile.ok(),
-      );
+        },
+      });
+      mockServer.addHandlers(...drive.handlers);
 
       await Promise.all([syncSession({ database, record }), syncSession({ database, record })]);
 

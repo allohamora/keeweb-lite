@@ -2,6 +2,7 @@ import type kdbxweb from '@/utils/kdbxweb';
 import type { FileRecord } from '@/repositories/record';
 import { loadDatabase, toEncryptedBytes } from '@/services/database';
 import { getProvider } from '@/services/provider-registry';
+import { SyncConflictError } from '@/services/provider';
 import { Lock } from '@/utils/lock';
 
 const updateRecordDatabaseLock = new Lock('record.service.update-record-database');
@@ -32,6 +33,8 @@ type SyncSessionResult = {
 
 const syncSessionLock = new Lock('session.service.sync-session');
 
+const MAX_SYNC_ATTEMPTS = 3;
+
 export const syncSession = async ({
   record,
   database,
@@ -44,24 +47,38 @@ export const syncSession = async ({
     throw new Error(`${label} does not support sync.`);
   }
 
-  return syncSessionLock.runInLock(async () => {
-    const remoteBytes = await sync.pull(record);
+  const syncOnce = async (): Promise<SyncSessionResult> => {
+    const { bytes, data } = await sync.pull(record);
 
     const [nextDatabase, nextRecord] = await updateRecordDatabase({
       database,
       record,
       update: async (updatedDatabase) => {
         const remoteDatabase = await loadDatabase({
-          encryptedBytes: remoteBytes,
+          encryptedBytes: bytes,
           credentials: updatedDatabase.credentials,
         });
 
         updatedDatabase.merge(remoteDatabase);
 
-        await sync.push(record, await toEncryptedBytes(updatedDatabase));
+        await sync.push(record, await toEncryptedBytes(updatedDatabase), data);
       },
     });
 
     return { database: nextDatabase, record: nextRecord };
-  });
+  };
+
+  const syncWithRetry = async (attempt: number): Promise<SyncSessionResult> => {
+    try {
+      return await syncOnce();
+    } catch (error) {
+      if (error instanceof SyncConflictError && attempt < MAX_SYNC_ATTEMPTS) {
+        return syncWithRetry(attempt + 1);
+      }
+
+      throw error;
+    }
+  };
+
+  return syncSessionLock.runInLock(() => syncWithRetry(1));
 };

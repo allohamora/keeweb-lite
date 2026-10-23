@@ -1,4 +1,5 @@
 import * as z from 'zod/mini';
+import { SyncConflictError } from '@/services/provider';
 import { Lock } from '@/utils/lock';
 import { PUBLIC_GOOGLE_APP_ID, PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 
@@ -139,7 +140,53 @@ export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>
   return driveFileSchema.parse(await response.json());
 };
 
-export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<DriveFile> => {
+const revSchema = z.object({ headRevisionId: z.string() });
+
+export const getRev = async (fileId: string): Promise<string> => {
+  const accessToken = await auth.getAccessToken();
+
+  const params = new URLSearchParams({ fields: 'headRevisionId' });
+
+  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get file revision: ${response.status} ${response.statusText}`);
+  }
+
+  const { headRevisionId } = revSchema.parse(await response.json());
+
+  return headRevisionId;
+};
+
+export const getFileWithVer = async (fileId: string): Promise<{ bytes: Uint8Array<ArrayBuffer>; data: string }> => {
+  const rev = await getRev(fileId);
+  const accessToken = await auth.getAccessToken();
+
+  const params = new URLSearchParams({ alt: 'media' });
+
+  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}/revisions/${rev}?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get file: ${response.status} ${response.statusText}`);
+  }
+
+  return { bytes: new Uint8Array(await response.arrayBuffer()), data: rev };
+};
+
+// Drive ignores If-Match, so the revision is checked right before the upload instead
+export const updateFileWithVer = async (
+  fileId: string,
+  data: Uint8Array<ArrayBuffer>,
+  expectedRev: string,
+): Promise<DriveFile> => {
+  if ((await getRev(fileId)) !== expectedRev) {
+    throw new SyncConflictError();
+  }
+
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime' });
