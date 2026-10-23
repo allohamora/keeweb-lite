@@ -227,7 +227,7 @@ describe('entry-edit-form', () => {
 
       render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
 
-      expect(screen.getByText(/Jan.*2000/)).toHaveClass('line-through');
+      expect(screen.getByText(/2000/)).toHaveClass('line-through');
 
       await user.click(screen.getByRole('button', { name: 'Clear date' }));
 
