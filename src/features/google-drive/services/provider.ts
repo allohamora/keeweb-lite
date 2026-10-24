@@ -4,9 +4,9 @@ import {
   getHead,
   getRevisionFile,
   isGoogleDriveConfigured,
-  updateFileWithVer,
+  updateFile,
 } from '@/features/google-drive/repositories/google-drive';
-import { defineProvider } from '@/services/provider';
+import { defineProvider, SyncConflictError } from '@/services/provider';
 
 export const googleDriveProvider = defineProvider({
   type: 'google-drive',
@@ -23,7 +23,12 @@ export const googleDriveProvider = defineProvider({
       source: { ...source, rev },
     }),
     push: async ({ source }, bytes, rev) => {
-      const { headRevisionId } = await updateFileWithVer(source.id, bytes, rev);
+      // Drive ignores If-Match, so the revision is checked right before the upload instead
+      if ((await getHead(source.id)).headRevisionId !== rev) {
+        throw new SyncConflictError();
+      }
+
+      const { headRevisionId } = await updateFile(source.id, bytes);
 
       return { ...source, rev: headRevisionId };
     },

@@ -13,9 +13,8 @@ import {
   createFile,
   getHead,
   getRevisionFile,
-  updateFileWithVer,
+  updateFile,
 } from '@/features/google-drive/repositories/google-drive';
-import { SyncConflictError } from '@/services/provider';
 
 const useFakeDate = () => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -114,13 +113,13 @@ describe('google-drive', () => {
     });
   });
 
-  describe('updateFileWithVer', () => {
+  describe('updateFile', () => {
     it('uploads the bytes and returns the file metadata with the new revision', async () => {
       const drive = googleDriveApi.fakeFile({ rev: 'rev-1' });
       mockServer.addHandlers(...drive.handlers);
 
       const data = new Uint8Array([7, 8, 9]);
-      const result = await updateFileWithVer('file-xyz', data, 'rev-1');
+      const result = await updateFile('file-xyz', data);
 
       expect(drive.file.uploads).toEqual([data]);
       expect(result).toEqual({
@@ -140,9 +139,9 @@ describe('google-drive', () => {
           name: 'vault.kdbx',
         }),
       );
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-1' }), googleDriveApi.updateFile.mock(resolver));
+      mockServer.addHandlers(googleDriveApi.updateFile.mock(resolver));
 
-      await updateFileWithVer('file-xyz', new Uint8Array([1, 2, 3]), 'rev-1');
+      await updateFile('file-xyz', new Uint8Array([1, 2, 3]));
 
       const context = resolver.mock.calls[0]?.[0];
       expect(context?.uploadType).toBe('media');
@@ -158,42 +157,26 @@ describe('google-drive', () => {
           name: 'vault.kdbx',
         }),
       );
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-1' }), googleDriveApi.updateFile.mock(resolver));
+      mockServer.addHandlers(googleDriveApi.updateFile.mock(resolver));
 
-      await updateFileWithVer('file-xyz', new Uint8Array([1, 2, 3]), 'rev-1');
+      await updateFile('file-xyz', new Uint8Array([1, 2, 3]));
 
       const context = resolver.mock.calls[0]?.[0];
       expect(context?.authorization).toBe('Bearer test');
     });
 
-    it('throws a SyncConflictError without uploading when the file has a newer revision', async () => {
-      const drive = googleDriveApi.fakeFile({ rev: 'rev-9' });
-      mockServer.addHandlers(...drive.handlers);
-
-      await expect(updateFileWithVer('file-xyz', new Uint8Array([1, 2, 3]), 'rev-1')).rejects.toThrow(
-        SyncConflictError,
-      );
-      expect(drive.file.uploads).toEqual([]);
-    });
-
     it('throws when the API returns an error response', async () => {
-      mockServer.addHandlers(
-        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
-        googleDriveApi.updateFile.error({ status: 500, statusText: 'Internal Server Error' }),
-      );
+      mockServer.addHandlers(googleDriveApi.updateFile.error({ status: 500, statusText: 'Internal Server Error' }));
 
-      await expect(updateFileWithVer('file-xyz', new Uint8Array([1, 2, 3]), 'rev-1')).rejects.toThrow(
+      await expect(updateFile('file-xyz', new Uint8Array([1, 2, 3]))).rejects.toThrow(
         'Failed to update file: 500 Internal Server Error',
       );
     });
 
     it('throws when the API returns an unexpected response body', async () => {
-      mockServer.addHandlers(
-        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
-        googleDriveApi.updateFile.mock(() => HttpResponse.json({ id: 'file-xyz' })),
-      );
+      mockServer.addHandlers(googleDriveApi.updateFile.mock(() => HttpResponse.json({ id: 'file-xyz' })));
 
-      await expect(updateFileWithVer('file-xyz', new Uint8Array([1, 2, 3]), 'rev-1')).rejects.toThrow();
+      await expect(updateFile('file-xyz', new Uint8Array([1, 2, 3]))).rejects.toThrow();
     });
   });
 

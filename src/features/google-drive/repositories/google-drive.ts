@@ -1,5 +1,4 @@
 import * as z from 'zod/mini';
-import { SyncConflictError } from '@/services/provider';
 import { Lock } from '@/utils/lock';
 import { PUBLIC_GOOGLE_APP_ID, PUBLIC_GOOGLE_CLIENT_ID } from 'astro:env/client';
 
@@ -158,16 +157,7 @@ export const getRevisionFile = async (fileId: string, rev: string): Promise<Uint
   return new Uint8Array(await response.arrayBuffer());
 };
 
-// Drive ignores If-Match, so the revision is checked right before the upload instead
-export const updateFileWithVer = async (
-  fileId: string,
-  data: Uint8Array<ArrayBuffer>,
-  expectedRev: string,
-): Promise<DriveFile> => {
-  if ((await getHead(fileId)).headRevisionId !== expectedRev) {
-    throw new SyncConflictError();
-  }
-
+export const updateFile = async (fileId: string, data: Uint8Array<ArrayBuffer>): Promise<DriveFile> => {
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime,headRevisionId' });
