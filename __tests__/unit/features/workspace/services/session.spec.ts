@@ -581,6 +581,42 @@ describe('session', () => {
       expect(drive.file.uploads).toHaveLength(0);
     });
 
+    it('returns the stored database without downloading when the given session is outdated', async () => {
+      const { database, initialBytes, record } = await createSyncSetup({ isSynced: true });
+      // another tab synced a remote entry after this session was loaded
+      const otherTabDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
+      otherTabDatabase.createEntry(otherTabDatabase.getDefaultGroup()).fields.set('Title', 'Other Tab Entry');
+      const otherTabBytes = new Uint8Array(await otherTabDatabase.save());
+      await recordRepository.updateRecord(record.id, (current) =>
+        current.type === 'google-drive'
+          ? {
+              ...current,
+              kdbx: { ...current.kdbx, encryptedBytes: otherTabBytes },
+              source: { ...current.source, rev: 'rev-2' },
+            }
+          : current,
+      );
+      let downloads = 0;
+      const drive = googleDriveApi.fakeFile({
+        bytes: otherTabBytes,
+        rev: 'rev-2',
+        onDownload: () => {
+          downloads += 1;
+        },
+      });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession({ database, record });
+
+      expect(getTitles(result.database)).toEqual(['Original Title', 'Other Tab Entry']);
+      expect(downloads).toBe(0);
+      expect(drive.file.uploads).toEqual([]);
+      const [stored] = await getRecords();
+      if (!stored) throw new Error('record should exist');
+      expect(stored.kdbx.encryptedBytes).toEqual(otherTabBytes);
+      expect(stored.type === 'google-drive' && stored.source.rev).toBe('rev-2');
+    });
+
     it('uploads the local changes without downloading when the revision of the remote file is unchanged', async () => {
       const setup = await createSyncSetup({ isSynced: true });
       const local = await addLocalEntry(setup);

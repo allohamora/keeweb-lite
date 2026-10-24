@@ -60,8 +60,9 @@ export const syncSession = async ({
   };
 
   const syncOnce = async (): Promise<SyncSessionResult> => {
-    const { data, isRemoteChanged } = (await sync.check?.(record)) ?? { data: undefined, isRemoteChanged: true };
-    const remote = isRemoteChanged ? await sync.pull(record, data) : undefined;
+    const current = await getSyncableRecord(record.id);
+    const { data, isRemoteChanged } = (await sync.check?.(current)) ?? { data: undefined, isRemoteChanged: true };
+    const remote = isRemoteChanged ? await sync.pull(current, data) : undefined;
 
     // decided on the stored record inside the lock, so an edit saved in the meantime is never overwritten
     return updateRecordDatabaseLock.runInLock(async () => {
@@ -70,7 +71,13 @@ export const syncSession = async ({
       const isModified = stored.isModified !== false;
 
       if (!remote && !isModified) {
-        return { database, record: stored };
+        return {
+          database: await loadDatabase({
+            encryptedBytes: stored.kdbx.encryptedBytes,
+            credentials: database.credentials,
+          }),
+          record: stored,
+        };
       }
 
       // only the remote changed: it becomes the local copy, and there is nothing to upload
