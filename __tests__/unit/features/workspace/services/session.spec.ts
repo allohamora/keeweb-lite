@@ -623,6 +623,19 @@ describe('session', () => {
       expect(stored?.type === 'google-drive' && stored.isModified).toBe(false);
     });
 
+    it('returns the stored database when it uploads local changes that the given database does not have', async () => {
+      const setup = await createSyncSetup({ isSynced: true });
+      const local = await addLocalEntry(setup);
+      const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes, rev: 'rev-1' });
+      mockServer.addHandlers(...drive.handlers);
+
+      // the given database is older than the stored record, e.g. after an edit in another tab
+      const result = await syncSession({ database: setup.database, record: local.record });
+
+      expect(getTitles(result.database)).toEqual(['Local Entry', 'Original Title']);
+      await expectLastUploadTitles(drive.file.uploads, ['Local Entry', 'Original Title']);
+    });
+
     it('downloads, merges and uploads when both the local and the remote file changed', async () => {
       const setup = await createSyncSetup({ isSynced: true });
       const local = await addLocalEntry(setup);

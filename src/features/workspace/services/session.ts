@@ -86,12 +86,15 @@ export const syncSession = async ({
       }
 
       // local changes, merged with the remote if it changed, are uploaded and saved as one unit
-      const mergedDatabase = remote ? await mergeRemote(stored, remote.bytes) : undefined;
-      const encryptedBytes = mergedDatabase ? await toEncryptedBytes(mergedDatabase) : stored.kdbx.encryptedBytes;
+      // the database comes from the stored record, so it matches what is uploaded, also after an edit in another tab
+      const nextDatabase = remote
+        ? await mergeRemote(stored, remote.bytes)
+        : await storage.load({ database, record: stored });
+      const encryptedBytes = remote ? await toEncryptedBytes(nextDatabase) : stored.kdbx.encryptedBytes;
       const source = await sync.push(stored, encryptedBytes, data);
 
       return {
-        database: mergedDatabase ?? database,
+        database: nextDatabase,
         record: await storage.update(stored, { encryptedBytes, source, isModified: false }),
       };
     });
