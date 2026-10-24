@@ -667,6 +667,33 @@ describe('session', () => {
       expect(drive.file.uploads).toHaveLength(1);
     });
 
+    it('recovers on the next sync when saving the record fails after the upload', async () => {
+      const setup = await createSyncSetup({ isSynced: true });
+      const local = await addLocalEntry(setup);
+      const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes, rev: 'rev-1' });
+      mockServer.addHandlers(...drive.handlers);
+      using _updateRecord = vi
+        .spyOn(recordRepository, 'updateRecord')
+        .mockRejectedValueOnce(new Error('IndexedDB write failed'));
+
+      await expect(syncSession(local)).rejects.toThrow('IndexedDB write failed');
+
+      // the upload went through, but the record still has the old revision and is still modified
+      expect(drive.file.uploads).toHaveLength(1);
+      const [failed] = await getRecords();
+      expect(failed?.type === 'google-drive' && failed.source.rev).toBe('rev-1');
+      expect(failed?.type === 'google-drive' && failed.isModified).toBe(true);
+
+      const result = await syncSession(local);
+
+      expect(getTitles(result.database)).toEqual(['Local Entry', 'Original Title']);
+      expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(drive.file.uploads[1]);
+      const [stored] = await getRecords();
+      expect(stored?.type === 'google-drive' && stored.source.rev).toBe('rev-upload-2');
+      expect(stored?.type === 'google-drive' && stored.isModified).toBe(false);
+      await expectLastUploadTitles(drive.file.uploads, ['Local Entry', 'Original Title']);
+    });
+
     it('fails after 3 attempts when the file keeps changing and uploads nothing', async () => {
       const setup = await createSyncSetup();
       const { initialBytes } = setup;
