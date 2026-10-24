@@ -51,10 +51,11 @@ export const syncSession = async ({
     throw new Error(`${label} does not support sync.`);
   }
 
-  const syncOnce = async (): Promise<SyncSessionResult> => {
+  const syncOnce = async (attempt: number): Promise<SyncSessionResult> => {
     const { data, isChanged } = (await sync.check?.(record)) ?? { data: undefined, isChanged: true };
 
-    if (!isChanged) {
+    // after a failed upload `record` is older than the saved merge, so its check result can't be trusted
+    if (!isChanged && attempt === 1) {
       return { database, record };
     }
 
@@ -87,7 +88,7 @@ export const syncSession = async ({
 
   const syncWithRetry = async (attempt: number): Promise<SyncSessionResult> => {
     try {
-      return await syncOnce();
+      return await syncOnce(attempt);
     } catch (error) {
       if (error instanceof SyncConflictError && attempt < MAX_SYNC_ATTEMPTS) {
         return syncWithRetry(attempt + 1);

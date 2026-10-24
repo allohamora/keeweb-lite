@@ -460,6 +460,12 @@ describe('session', () => {
       expect(getTitles(result.database)).toEqual(['Edited Title', 'Other Device Entry']);
     });
 
+    const expectLastUploadTitles = async (uploads: Uint8Array[], titles: string[]) => {
+      const uploaded = uploads.at(-1);
+      if (!uploaded) throw new Error('nothing was uploaded');
+      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(titles);
+    };
+
     it('saves an entry edit only after the merged file is uploaded', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
       const otherBytes = await createOtherDeviceDatabase(initialBytes);
@@ -495,11 +501,26 @@ describe('session', () => {
       expect(getTitles(storedDatabase)).toEqual(['Edited Title', 'Other Device Entry']);
     });
 
-    const expectLastUploadTitles = async (uploads: Uint8Array[], titles: string[]) => {
-      const uploaded = uploads.at(-1);
-      if (!uploaded) throw new Error('nothing was uploaded');
-      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(titles);
-    };
+    it('uploads the saved merge when the file is reverted to the old one after a conflict', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+      const otherBytes = await createOtherDeviceDatabase(initialBytes);
+      const drive = googleDriveApi.fakeFile({
+        bytes: otherBytes,
+        // the 2nd rev read is the check right before the 1st upload
+        onRevRequest: (count) => {
+          if (count === 2) {
+            drive.change({ bytes: initialBytes, rev: 'rev-reverted' });
+          }
+        },
+      });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession({ database, record });
+
+      expect(drive.file.uploads).toHaveLength(1);
+      await expectLastUploadTitles(drive.file.uploads, ['Original Title', 'Other Device Entry']);
+      expect(getTitles(result.database)).toEqual(['Original Title', 'Other Device Entry']);
+    });
 
     it('syncs again and keeps the other device changes when the file changes before the upload', async () => {
       const setup = await createSyncSetup();
