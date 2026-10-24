@@ -1,6 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import type { FileRecord } from '@/repositories/record';
-import { loadDatabase, toEncryptedBytes } from '@/services/database';
+import { loadDatabase } from '@/services/database';
 import { getProvider } from '@/services/provider-registry';
 import { SyncConflictError } from '@/services/provider';
 import { Lock } from '@/utils/lock';
@@ -48,22 +48,33 @@ export const syncSession = async ({
   }
 
   const syncOnce = async (): Promise<SyncSessionResult> => {
-    const { bytes, data } = await sync.pull(record);
+    const { data, isChanged } = (await sync.check?.(record)) ?? { data: undefined, isChanged: true };
+
+    if (!isChanged) {
+      return { database, record };
+    }
+
+    const remoteBytes = await sync.pull(record, data);
 
     const [nextDatabase, nextRecord] = await updateRecordDatabase({
       database,
       record,
       update: async (updatedDatabase) => {
         const remoteDatabase = await loadDatabase({
-          encryptedBytes: bytes,
+          encryptedBytes: remoteBytes,
           credentials: updatedDatabase.credentials,
         });
 
         updatedDatabase.merge(remoteDatabase);
-
-        await sync.push(record, await toEncryptedBytes(updatedDatabase), data);
       },
     });
+
+    if (!('encryptedBytes' in nextRecord.kdbx)) {
+      throw new Error(`${label} record is not persisted.`);
+    }
+
+    // the saved bytes are pushed as is, so the next `check` sees the local copy equal to the remote
+    await sync.push(nextRecord, nextRecord.kdbx.encryptedBytes, data);
 
     return { database: nextDatabase, record: nextRecord };
   };

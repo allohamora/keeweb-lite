@@ -140,12 +140,12 @@ export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>
   return driveFileSchema.parse(await response.json());
 };
 
-const revSchema = z.object({ headRevisionId: z.string() });
+const headSchema = z.object({ headRevisionId: z.string(), sha256Checksum: z.optional(z.string()) });
 
-export const getRev = async (fileId: string): Promise<string> => {
+export const getHead = async (fileId: string) => {
   const accessToken = await auth.getAccessToken();
 
-  const params = new URLSearchParams({ fields: 'headRevisionId' });
+  const params = new URLSearchParams({ fields: 'headRevisionId,sha256Checksum' });
 
   const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?${params}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -155,13 +155,10 @@ export const getRev = async (fileId: string): Promise<string> => {
     throw new Error(`Failed to get file revision: ${response.status} ${response.statusText}`);
   }
 
-  const { headRevisionId } = revSchema.parse(await response.json());
-
-  return headRevisionId;
+  return headSchema.parse(await response.json());
 };
 
-export const getFileWithVer = async (fileId: string): Promise<{ bytes: Uint8Array<ArrayBuffer>; data: string }> => {
-  const rev = await getRev(fileId);
+export const getRevisionFile = async (fileId: string, rev: string): Promise<Uint8Array<ArrayBuffer>> => {
   const accessToken = await auth.getAccessToken();
 
   const params = new URLSearchParams({ alt: 'media' });
@@ -174,7 +171,7 @@ export const getFileWithVer = async (fileId: string): Promise<{ bytes: Uint8Arra
     throw new Error(`Failed to get file: ${response.status} ${response.statusText}`);
   }
 
-  return { bytes: new Uint8Array(await response.arrayBuffer()), data: rev };
+  return new Uint8Array(await response.arrayBuffer());
 };
 
 // Drive ignores If-Match, so the revision is checked right before the upload instead
@@ -183,7 +180,7 @@ export const updateFileWithVer = async (
   data: Uint8Array<ArrayBuffer>,
   expectedRev: string,
 ): Promise<DriveFile> => {
-  if ((await getRev(fileId)) !== expectedRev) {
+  if ((await getHead(fileId)).headRevisionId !== expectedRev) {
     throw new SyncConflictError();
   }
 

@@ -41,11 +41,13 @@ export class SyncConflictError extends Error {
   }
 }
 
-// `SyncData` is anything the provider needs to detect a remote change between `pull` and `push`
-// (e.g. an ETag or a revision id). It is passed from `pull` to `push`.
+// `check` cheaply reads the remote state (`data`, e.g. an ETag or a revision id) and tells whether the remote
+// differs from the local copy. `data` is passed to `pull` and `push`. Without `check` the remote is always pulled.
+// After a `push` the local copy must be exactly the pushed bytes, or `check` always reports a change.
 export type Sync<Record extends FileRecord = FileRecord, SyncData = undefined> = {
-  pull: (record: Record) => Promise<{ bytes: Uint8Array; data: SyncData }>;
-  // must throw SyncConflictError if the remote changed since the pull that returned `data`
+  check?: (record: Record) => Promise<{ data: SyncData; isChanged: boolean }>;
+  pull(record: Record, data: SyncData): Promise<Uint8Array>;
+  // must throw SyncConflictError if the remote changed since `check` returned `data`
   push(record: Record, bytes: Uint8Array<ArrayBuffer>, data: SyncData): Promise<unknown>;
 };
 

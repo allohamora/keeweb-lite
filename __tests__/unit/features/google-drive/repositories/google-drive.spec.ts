@@ -13,8 +13,8 @@ import {
   auth,
   createFile,
   getFile,
-  getFileWithVer,
-  getRev,
+  getHead,
+  getRevisionFile,
   updateFileWithVer,
 } from '@/features/google-drive/repositories/google-drive';
 import { SyncConflictError } from '@/services/provider';
@@ -125,52 +125,43 @@ describe('google-drive', () => {
     });
   });
 
-  describe('getRev', () => {
-    it('returns the head revision id of the file', async () => {
+  describe('getHead', () => {
+    it('returns the head revision id and the sha256 checksum of the file', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-7', sha256: 'abc123' }));
+
+      await expect(getHead('file-xyz')).resolves.toEqual({ headRevisionId: 'rev-7', sha256Checksum: 'abc123' });
+    });
+
+    it('returns no sha256 checksum when Drive does not provide it', async () => {
       mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-7' }));
 
-      await expect(getRev('file-xyz')).resolves.toBe('rev-7');
+      await expect(getHead('file-xyz')).resolves.toEqual({ headRevisionId: 'rev-7' });
     });
 
     it('throws when the API returns an error response', async () => {
       mockServer.addHandlers(googleDriveApi.getRevError({ status: 404, statusText: 'Not Found' }));
 
-      await expect(getRev('file-xyz')).rejects.toThrow('Failed to get file revision: 404 Not Found');
+      await expect(getHead('file-xyz')).rejects.toThrow('Failed to get file revision: 404 Not Found');
     });
   });
 
-  describe('getFileWithVer', () => {
-    it('returns the bytes of the head revision with its id', async () => {
-      const bytes = new Uint8Array([10, 20, 30]);
+  describe('getRevisionFile', () => {
+    it('returns the bytes of the given revision', async () => {
+      const bytes = new Uint8Array([4, 5, 6]);
       const resolver = vi.fn((_: GetRevisionRequestContext) => new HttpResponse(bytes));
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-7' }), googleDriveApi.getRevision.mock(resolver));
+      mockServer.addHandlers(googleDriveApi.getRevision.mock(resolver));
 
-      await expect(getFileWithVer('file-xyz')).resolves.toEqual({ bytes, data: 'rev-7' });
+      await expect(getRevisionFile('file-xyz', 'rev-3')).resolves.toEqual(bytes);
 
       const context = resolver.mock.calls[0]?.[0];
-      expect(context?.revId).toBe('rev-7');
+      expect(context?.revId).toBe('rev-3');
       expect(context?.authorization).toBe('Bearer test');
     });
 
-    it('returns the bytes of the rev it read when the file changes during the download', async () => {
-      const bytes = new Uint8Array([10, 20, 30]);
-      const drive = googleDriveApi.fakeFile({
-        bytes,
-        rev: 'rev-1',
-        onDownload: () => drive.change({ bytes: new Uint8Array([9, 9, 9]), rev: 'rev-2' }),
-      });
-      mockServer.addHandlers(...drive.handlers);
-
-      await expect(getFileWithVer('file-xyz')).resolves.toEqual({ bytes, data: 'rev-1' });
-    });
-
     it('throws when the API returns an error response', async () => {
-      mockServer.addHandlers(
-        googleDriveApi.getFile.ok({ rev: 'rev-7' }),
-        googleDriveApi.getRevision.mock(() => new HttpResponse(null, { status: 404, statusText: 'Not Found' })),
-      );
+      mockServer.addHandlers(googleDriveApi.getRevision.error({ status: 404, statusText: 'Not Found' }));
 
-      await expect(getFileWithVer('file-xyz')).rejects.toThrow('Failed to get file: 404 Not Found');
+      await expect(getRevisionFile('file-xyz', 'rev-3')).rejects.toThrow('Failed to get file: 404 Not Found');
     });
   });
 

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
 import { auth } from '@/features/google-drive/repositories/google-drive';
-import { clearRecords, createRecord, getRecords } from '@/repositories/record';
+import { clearRecords, createRecord, getRecords, type FileRecord } from '@/repositories/record';
 import { unlockDatabase } from '@/services/database';
 import { SyncConflictError } from '@/services/provider';
 import { syncSession, updateRecordDatabase } from '@/features/workspace/services/session';
@@ -178,6 +178,25 @@ describe('session', () => {
   });
 
   describe('syncSession', () => {
+    const createOtherDeviceDatabase = async (initialBytes: Uint8Array) => {
+      const otherDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
+      otherDatabase.createEntry(otherDatabase.getDefaultGroup()).fields.set('Title', 'Other Device Entry');
+
+      return new Uint8Array(await otherDatabase.save());
+    };
+
+    const addLocalEntry = async ({ database, record }: { database: kdbxweb.Kdbx; record: FileRecord }) => {
+      const [nextDatabase, nextRecord] = await updateRecordDatabase({
+        database,
+        record,
+        update: (updatedDatabase) => {
+          updatedDatabase.createEntry(updatedDatabase.getDefaultGroup()).fields.set('Title', 'Local Entry');
+        },
+      });
+
+      return { database: nextDatabase, record: nextRecord };
+    };
+
     const createSyncableDatabase = async (password = 'sync-test-password') => {
       const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString(password));
       await credentials.ready;
@@ -210,9 +229,11 @@ describe('session', () => {
 
       mockServer.addHandlers(...googleDriveApi.fakeFile({ bytes: encryptedBytes }).handlers);
 
-      const result = await syncSession({ database, record });
+      const local = await addLocalEntry({ database, record });
 
-      expect(result.database).not.toBe(database);
+      const result = await syncSession(local);
+
+      expect(result.database).not.toBe(local.database);
       expect(result.record.id).toBe(record.id);
       expect(result.record.type).toBe('google-drive');
     });
@@ -382,7 +403,7 @@ describe('session', () => {
       );
     });
 
-    it('does not save the merged remote changes when the upload fails', async () => {
+    it('keeps the merged remote changes saved locally when the upload fails', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
       const remoteDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
@@ -399,7 +420,11 @@ describe('session', () => {
 
       const [stored] = await getRecords();
       if (!stored) throw new Error('record should exist');
-      expect(stored.kdbx.encryptedBytes).toEqual(initialBytes);
+      const storedDatabase = await unlockDatabase({
+        encryptedBytes: stored.kdbx.encryptedBytes,
+        password: 'test-password',
+      });
+      expect(getTitles(storedDatabase)).toEqual(['Original Title', 'Remote Entry']);
       expect(getTitles(database)).toEqual(['Original Title']);
     });
 
@@ -407,7 +432,8 @@ describe('session', () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
       const { promise: remoteReady, resolve: releaseRemote } = Promise.withResolvers<void>();
-      const drive = googleDriveApi.fakeFile({ bytes: initialBytes, onDownload: () => remoteReady });
+      const otherBytes = await createOtherDeviceDatabase(initialBytes);
+      const drive = googleDriveApi.fakeFile({ bytes: otherBytes, onDownload: () => remoteReady });
       mockServer.addHandlers(...drive.handlers);
 
       const syncing = syncSession({ database, record });
@@ -430,16 +456,9 @@ describe('session', () => {
         encryptedBytes: stored.kdbx.encryptedBytes,
         password: 'test-password',
       });
-      expect(getTitles(storedDatabase)).toEqual(['Edited Title']);
-      expect(getTitles(result.database)).toEqual(['Edited Title']);
+      expect(getTitles(storedDatabase)).toEqual(['Edited Title', 'Other Device Entry']);
+      expect(getTitles(result.database)).toEqual(['Edited Title', 'Other Device Entry']);
     });
-
-    const createOtherDeviceDatabase = async (initialBytes: Uint8Array) => {
-      const otherDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
-      otherDatabase.createEntry(otherDatabase.getDefaultGroup()).fields.set('Title', 'Other Device Entry');
-
-      return new Uint8Array(await otherDatabase.save());
-    };
 
     const expectLastUploadTitles = async (uploads: Uint8Array[], titles: string[]) => {
       const uploaded = uploads.at(-1);
@@ -448,7 +467,9 @@ describe('session', () => {
     };
 
     it('syncs again and keeps the other device changes when the file changes before the upload', async () => {
-      const { database, initialBytes, record } = await createSyncSetup();
+      const setup = await createSyncSetup();
+      const { initialBytes } = setup;
+      const local = await addLocalEntry(setup);
       const otherBytes = await createOtherDeviceDatabase(initialBytes);
       const drive = googleDriveApi.fakeFile({
         bytes: initialBytes,
@@ -460,16 +481,78 @@ describe('session', () => {
       });
       mockServer.addHandlers(...drive.handlers);
 
-      const result = await syncSession({ database, record });
+      const result = await syncSession(local);
 
-      const expectedTitles = ['Original Title', 'Other Device Entry'];
+      const expectedTitles = ['Local Entry', 'Original Title', 'Other Device Entry'];
       expect(getTitles(result.database)).toEqual(expectedTitles);
       expect(drive.file.uploads).toHaveLength(1);
       await expectLastUploadTitles(drive.file.uploads, expectedTitles);
     });
 
-    it('fails after 3 attempts when the file keeps changing and saves nothing', async () => {
+    it('does not download or upload the file when the local file is the same as the remote file', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
+      const downloads = vi.fn();
+      const drive = googleDriveApi.fakeFile({ bytes: initialBytes, onDownload: downloads });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession({ database, record });
+
+      expect(result).toEqual({ database, record });
+      expect(downloads).not.toHaveBeenCalled();
+      expect(drive.file.uploads).toHaveLength(0);
+    });
+
+    it('downloads and uploads when the remote file is missing the checksum', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+      const drive = googleDriveApi.fakeFile({ bytes: initialBytes, checksum: false });
+      mockServer.addHandlers(...drive.handlers);
+
+      await syncSession({ database, record });
+
+      expect(drive.file.uploads).toHaveLength(1);
+    });
+
+    it('uploads the local changes when the remote file is unchanged', async () => {
+      const setup = await createSyncSetup();
+      const local = await addLocalEntry(setup);
+      const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes });
+      mockServer.addHandlers(...drive.handlers);
+
+      await syncSession(local);
+
+      expect(drive.file.uploads).toHaveLength(1);
+      await expectLastUploadTitles(drive.file.uploads, ['Local Entry', 'Original Title']);
+    });
+
+    it('downloads, merges and uploads when the remote file changed', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+      const otherBytes = await createOtherDeviceDatabase(initialBytes);
+      const drive = googleDriveApi.fakeFile({ bytes: otherBytes, rev: 'rev-2' });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession({ database, record });
+
+      expect(getTitles(result.database)).toEqual(['Original Title', 'Other Device Entry']);
+      expect(drive.file.uploads).toHaveLength(1);
+    });
+
+    it('saves the uploaded bytes in the record, so the next sync has nothing to do', async () => {
+      const setup = await createSyncSetup();
+      const local = await addLocalEntry(setup);
+      const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession(local);
+      await syncSession(result);
+
+      expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(drive.file.uploads[0]);
+      expect(drive.file.uploads).toHaveLength(1);
+    });
+
+    it('fails after 3 attempts when the file keeps changing and uploads nothing', async () => {
+      const setup = await createSyncSetup();
+      const { initialBytes } = setup;
+      const local = await addLocalEntry(setup);
       let revRequests = 0;
       const drive = googleDriveApi.fakeFile({
         bytes: initialBytes,
@@ -480,12 +563,10 @@ describe('session', () => {
       });
       mockServer.addHandlers(...drive.handlers);
 
-      await expect(syncSession({ database, record })).rejects.toThrow(SyncConflictError);
+      await expect(syncSession(local)).rejects.toThrow(SyncConflictError);
 
       expect(revRequests).toBe(6);
       expect(drive.file.uploads).toEqual([]);
-      const [stored] = await getRecords();
-      expect(stored?.kdbx.encryptedBytes).toEqual(initialBytes);
     });
 
     it('does not retry when the upload fails for another reason', async () => {
@@ -503,7 +584,9 @@ describe('session', () => {
     });
 
     it('runs concurrent syncs one at a time', async () => {
-      const { database, initialBytes, record } = await createSyncSetup();
+      const setup = await createSyncSetup();
+      const { initialBytes } = setup;
+      const local = await addLocalEntry(setup);
 
       let inFlight = 0;
       let maxInFlight = 0;
@@ -518,7 +601,7 @@ describe('session', () => {
       });
       mockServer.addHandlers(...drive.handlers);
 
-      await Promise.all([syncSession({ database, record }), syncSession({ database, record })]);
+      await Promise.all([syncSession(local), syncSession(local)]);
 
       expect(maxInFlight).toBe(1);
     });
