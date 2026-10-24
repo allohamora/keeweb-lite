@@ -11,16 +11,20 @@ export const updateRecordDatabase = async <Result>({
   database,
   record,
   update,
+  afterSave,
 }: {
   database: kdbxweb.Kdbx;
   record: FileRecord;
   update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
+  afterSave?: (nextRecord: FileRecord) => Promise<void>;
 }): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
   return updateRecordDatabaseLock.runInLock(async () => {
     const { storage } = getProvider(record);
     const nextDatabase = await storage.load({ database, record });
     const result = await update(nextDatabase);
     const nextRecord = await storage.save({ database: nextDatabase, record });
+
+    await afterSave?.(nextRecord);
 
     return [nextDatabase, nextRecord, result];
   });
@@ -67,14 +71,16 @@ export const syncSession = async ({
 
         updatedDatabase.merge(remoteDatabase);
       },
+      // pushed inside the lock, so a local edit can't be saved between the merge and the upload
+      afterSave: async (savedRecord) => {
+        if (!('encryptedBytes' in savedRecord.kdbx)) {
+          throw new Error(`${label} record is not persisted.`);
+        }
+
+        // the saved bytes are pushed as is, so the next `check` sees the local copy equal to the remote
+        await sync.push(savedRecord, savedRecord.kdbx.encryptedBytes, data);
+      },
     });
-
-    if (!('encryptedBytes' in nextRecord.kdbx)) {
-      throw new Error(`${label} record is not persisted.`);
-    }
-
-    // the saved bytes are pushed as is, so the next `check` sees the local copy equal to the remote
-    await sync.push(nextRecord, nextRecord.kdbx.encryptedBytes, data);
 
     return { database: nextDatabase, record: nextRecord };
   };

@@ -460,6 +460,41 @@ describe('session', () => {
       expect(getTitles(result.database)).toEqual(['Edited Title', 'Other Device Entry']);
     });
 
+    it('saves an entry edit only after the merged file is uploaded', async () => {
+      const { database, initialBytes, record } = await createSyncSetup();
+      const otherBytes = await createOtherDeviceDatabase(initialBytes);
+      const entry = database.getDefaultGroup().entries[0];
+      if (!entry) throw new Error('entry should exist');
+
+      let saving: Promise<number> | undefined;
+      const drive = googleDriveApi.fakeFile({
+        bytes: otherBytes,
+        onUpload: async () => {
+          saving = saveEntry({
+            database,
+            record,
+            entryUuid: entry.uuid.toString(),
+            values: { ...getEntryValues(entry), title: 'Edited Title' },
+          }).then(() => drive.file.uploads.length);
+
+          // gives an unlocked save time to finish while the upload is still running
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        },
+      });
+      mockServer.addHandlers(...drive.handlers);
+
+      await syncSession({ database, record });
+
+      expect(await saving).toBe(1);
+      const [stored] = await getRecords();
+      if (!stored) throw new Error('record should exist');
+      const storedDatabase = await unlockDatabase({
+        encryptedBytes: stored.kdbx.encryptedBytes,
+        password: 'test-password',
+      });
+      expect(getTitles(storedDatabase)).toEqual(['Edited Title', 'Other Device Entry']);
+    });
+
     const expectLastUploadTitles = async (uploads: Uint8Array[], titles: string[]) => {
       const uploaded = uploads.at(-1);
       if (!uploaded) throw new Error('nothing was uploaded');

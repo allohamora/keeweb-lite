@@ -239,6 +239,7 @@ const fakeFile = ({
   rev = 'rev-1',
   onDownload,
   onRevRequest,
+  onUpload,
   checksum = true,
 }: {
   bytes?: Uint8Array;
@@ -247,6 +248,8 @@ const fakeFile = ({
   onDownload?: () => void | Promise<void>;
   // called with the 1-based count of the rev reads, before the rev is read
   onRevRequest?: (count: number) => void;
+  // called when an upload arrives, before it is applied
+  onUpload?: () => void | Promise<void>;
 } = {}) => {
   const file: FakeFile = { bytes, rev, uploads: [] };
   const history = new Map<string, Uint8Array>([[rev, bytes]]);
@@ -276,7 +279,9 @@ const fakeFile = ({
 
       return new HttpResponse(revBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
     }),
-    updateFile.mock(({ body, fileId }) => {
+    updateFile.mock(async ({ body, fileId }) => {
+      await onUpload?.();
+
       file.uploads.push(body);
       change({ bytes: body, rev: `rev-upload-${file.uploads.length}` });
 
