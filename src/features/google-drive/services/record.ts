@@ -24,6 +24,7 @@ export const importGoogleDriveRecord = async ({
 
     await createRecord({
       id: crypto.randomUUID(),
+      isModified: false,
       kdbx: { encryptedBytes, name: fileName },
       key,
       source: { id: fileId, rev: headRevisionId },
@@ -51,6 +52,7 @@ export const createGoogleDriveRecord = async ({
     try {
       await createRecord({
         id: crypto.randomUUID(),
+        isModified: false,
         kdbx: { encryptedBytes, name: kdbxFileName },
         key: generatedKey?.key,
         source: { id: driveFile.id, rev: driveFile.headRevisionId },

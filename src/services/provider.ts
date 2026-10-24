@@ -14,7 +14,7 @@ export type RecordStorage = {
   load: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<kdbxweb.Kdbx>;
   update: (
     record: FileRecord,
-    changes: { encryptedBytes?: Uint8Array<ArrayBuffer>; source?: SourceOf<FileRecord> },
+    changes: { encryptedBytes?: Uint8Array<ArrayBuffer>; source?: SourceOf<FileRecord>; isModified?: boolean },
   ) => Promise<FileRecord>;
 };
 
@@ -24,11 +24,12 @@ export const recordStorage: RecordStorage = {
 
     return loadDatabase({ encryptedBytes: kdbx.encryptedBytes, credentials: database.credentials });
   },
-  update: (record, { encryptedBytes, source }) =>
+  update: (record, { encryptedBytes, source, isModified }) =>
     updateRecord(record.id, (currentRecord) => ({
       ...currentRecord,
       ...(encryptedBytes && { kdbx: { ...currentRecord.kdbx, encryptedBytes } }),
       ...(source && { source }),
+      ...(isModified !== undefined && { isModified }),
     })),
 };
 
@@ -45,20 +46,15 @@ export class SyncConflictError extends Error {
 }
 
 // `check` cheaply reads the remote state (`data`, e.g. an ETag or a revision id) and tells whether the remote
-// changed since the last sync and whether the local copy differs from the remote. `data` is passed to `pull` and
-// `push`.
-// Without `check` the remote is always pulled and pushed.
-// The bytes of a `push` are the saved local bytes, so the next `check` sees the local copy equal to the remote.
-// `push` may return the new `source` of the record (e.g. with the new revision id), which is saved on the record.
+// changed since the last sync. `data` is passed to `pull` and `push`. Without `check` the remote is always pulled.
+// `pull` also returns the `source` the record gets if its local copy is replaced by the pulled bytes.
+// `push` returns the new `source` of the record, which is saved with the pushed bytes.
+// Whether the local copy changed since the last sync is tracked by `isModified` on the record.
 export type Sync<Record extends FileRecord = FileRecord, SyncData = undefined> = {
-  check?: (record: Record) => Promise<{
-    data: SyncData;
-    isRemoteChanged: boolean;
-    isLocalChanged: boolean;
-  }>;
-  pull(record: Record, data: SyncData): Promise<Uint8Array>;
+  check?: (record: Record) => Promise<{ data: SyncData; isRemoteChanged: boolean }>;
+  pull(record: Record, data: SyncData): Promise<{ bytes: Uint8Array<ArrayBuffer>; source: SourceOf<Record> }>;
   // must throw SyncConflictError if the remote changed since `check` returned `data`
-  push(record: Record, bytes: Uint8Array<ArrayBuffer>, data: SyncData): Promise<SourceOf<Record> | undefined>;
+  push(record: Record, bytes: Uint8Array<ArrayBuffer>, data: SyncData): Promise<SourceOf<Record>>;
 };
 
 export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {

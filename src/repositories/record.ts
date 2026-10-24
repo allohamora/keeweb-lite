@@ -18,6 +18,7 @@ const recordKdbxSchema = z.object({
 
 const localFileRecordSchema = z.object({
   id: z.string(),
+  isModified: z.optional(z.boolean()),
   kdbx: recordKdbxSchema,
   key: z.optional(keySchema),
   lastOpenedAt: z.optional(z.string()),
@@ -26,6 +27,7 @@ const localFileRecordSchema = z.object({
 
 const googleDriveFileRecordSchema = z.object({
   id: z.string(),
+  isModified: z.optional(z.boolean()),
   kdbx: recordKdbxSchema,
   key: z.optional(keySchema),
   lastOpenedAt: z.optional(z.string()),

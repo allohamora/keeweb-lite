@@ -74,6 +74,7 @@ describe('google-drive-record-service', () => {
       expect(record.type).toBe('google-drive');
       if (record.type === 'google-drive') {
         expect(record.source).toEqual({ id: 'drive-file-id-xyz', rev: 'rev-created' });
+        expect(record.isModified).toBe(false);
       }
     });
 
@@ -264,6 +265,7 @@ describe('google-drive-record-service', () => {
       const record = records[0];
       if (record.type === 'google-drive') {
         expect(record.source).toEqual({ id: testFileId, rev: 'rev-1' });
+        expect(record.isModified).toBe(false);
       }
     });
 

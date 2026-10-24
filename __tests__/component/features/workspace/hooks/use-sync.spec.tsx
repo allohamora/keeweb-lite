@@ -43,12 +43,13 @@ const SyncHarness = ({ initialSession }: { initialSession: UnlockSession }) => {
   return session && <SyncStatus session={session} setSession={setSession} />;
 };
 
-const createSession = async () => {
+const createSession = async ({ isSynced = false } = {}) => {
   const { encryptedBytes } = await createEmptyDatabase({ name: 'Vault', password: 'secret' });
   const record = await createRecord({
     id: 'record-1',
+    isModified: isSynced ? false : undefined,
     kdbx: { encryptedBytes, name: 'vault.kdbx' },
-    source: { id: 'drive-1' },
+    source: { id: 'drive-1', rev: isSynced ? 'rev-1' : undefined },
     type: 'google-drive',
   });
   const session = await unlockSession({
@@ -119,6 +120,22 @@ describe('use-sync', () => {
       expect(await screen.findByText('Remote entry')).toBeInTheDocument();
       expect(screen.getByTestId('status')).toHaveTextContent('idle');
       expect(screen.getByTestId('version')).toHaveTextContent('1');
+    });
+
+    it('shows the remote changes after a dropped sync result when the record is already synced', async () => {
+      const { session, remoteBytes } = await createSession({ isSynced: true });
+      const { promise: released, resolve: release } = Promise.withResolvers<void>();
+      const drive = googleDriveApi.fakeFile({ bytes: remoteBytes, rev: 'rev-2', onDownload: () => released });
+      mockServer.addHandlers(googleDriveApi.preflight.ok(), ...drive.handlers);
+      const user = userEvent.setup();
+
+      render(<SyncHarness initialSession={session} />);
+      await user.click(screen.getByRole('button', { name: 'Bump version' }));
+      release();
+
+      expect(await screen.findByText('Remote entry')).toBeInTheDocument();
+      expect(screen.getByTestId('status')).toHaveTextContent('idle');
+      expect(drive.file.uploads).toHaveLength(0);
     });
   });
 });
