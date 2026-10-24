@@ -1,5 +1,5 @@
 import type kdbxweb from '@/utils/kdbxweb';
-import { getRecord, type FileRecord } from '@/repositories/record';
+import { getSyncableRecord, type FileRecord } from '@/repositories/record';
 import { loadDatabase, toEncryptedBytes } from '@/services/database';
 import { getProvider } from '@/services/provider-registry';
 import { SyncConflictError } from '@/services/provider';
@@ -17,12 +17,12 @@ export const updateRecordDatabase = async <Result>({
   update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
 }): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
   return updateRecordDatabaseLock.runInLock(async () => {
-    const { storage } = getProvider(record);
+    const { storage, sync } = getProvider(record);
     const nextDatabase = await storage.load({ database, record });
     const result = await update(nextDatabase);
     const nextRecord = await storage.update(record, {
       encryptedBytes: await toEncryptedBytes(nextDatabase),
-      isModified: true,
+      isModified: sync ? true : undefined,
     });
 
     return [nextDatabase, nextRecord, result];
@@ -65,7 +65,7 @@ export const syncSession = async ({
 
     // decided on the stored record inside the lock, so an edit saved in the meantime is never overwritten
     return updateRecordDatabaseLock.runInLock(async () => {
-      const stored = await getRecord(record.id);
+      const stored = await getSyncableRecord(record.id);
       // a record that was never marked as synced may have edits that were not uploaded
       const isModified = stored.isModified !== false;
 

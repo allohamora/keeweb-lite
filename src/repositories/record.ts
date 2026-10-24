@@ -18,7 +18,6 @@ const recordKdbxSchema = z.object({
 
 const localFileRecordSchema = z.object({
   id: z.string(),
-  isModified: z.optional(z.boolean()),
   kdbx: recordKdbxSchema,
   key: z.optional(keySchema),
   lastOpenedAt: z.optional(z.string()),
@@ -80,11 +79,24 @@ export const getRecords = async () => {
   return lock.runInLock(readRecords);
 };
 
+export type SyncableRecord = Extract<PersistedFileRecord, { source: unknown }>;
+
+const isSyncable = (record: PersistedFileRecord): record is SyncableRecord => 'source' in record;
+
 export const getRecord = async (recordId: string) => {
   const records = await getRecords();
   const record = records.find(({ id }) => id === recordId);
   if (!record) {
     throw new Error('Record not found.');
+  }
+
+  return record;
+};
+
+export const getSyncableRecord = async (recordId: string) => {
+  const record = await getRecord(recordId);
+  if (!isSyncable(record)) {
+    throw new Error('Record does not sync.');
   }
 
   return record;

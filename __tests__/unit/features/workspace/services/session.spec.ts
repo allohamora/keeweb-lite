@@ -83,13 +83,28 @@ describe('session', () => {
       await expect(getStoredTitles()).resolves.toEqual(['New Entry']);
     });
 
-    it('marks the record as modified', async () => {
+    it('marks a record that syncs as modified', async () => {
+      const { database, initialBytes } = await createStoredDatabase();
+      const record = await createRecord({
+        id: 'gd-update-record',
+        type: 'google-drive',
+        kdbx: { encryptedBytes: initialBytes, name: 'update.kdbx' },
+        source: { id: 'drive-file-id' },
+      });
+
+      await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
+
+      const stored = await recordRepository.getSyncableRecord('gd-update-record');
+      expect(stored.isModified).toBe(true);
+    });
+
+    it('does not mark a record that does not sync as modified', async () => {
       const { database, record } = await createStoredDatabase();
 
       await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
 
       const [stored] = await recordRepository.getRecords();
-      expect(stored?.isModified).toBe(true);
+      expect(stored && 'isModified' in stored).toBe(false);
     });
 
     it('preserves existing record metadata when updating', async () => {
@@ -506,7 +521,7 @@ describe('session', () => {
       });
       expect(getTitles(storedDatabase)).toEqual(['Edited Title', 'Other Device Entry']);
       // the edit came after the upload, so it is still waiting to be uploaded
-      expect(stored.isModified).toBe(true);
+      expect(stored.type === 'google-drive' && stored.isModified).toBe(true);
     });
 
     it('uploads the local changes when the file is reverted to the old one after a conflict', async () => {
@@ -605,7 +620,7 @@ describe('session', () => {
       const [stored] = await getRecords();
       expect(stored?.kdbx.encryptedBytes).toEqual(otherBytes);
       expect(stored?.type === 'google-drive' && stored.source.rev).toBe('rev-2');
-      expect(stored?.isModified).toBe(false);
+      expect(stored?.type === 'google-drive' && stored.isModified).toBe(false);
     });
 
     it('downloads, merges and uploads when both the local and the remote file changed', async () => {
@@ -635,7 +650,7 @@ describe('session', () => {
 
       expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(drive.file.uploads[0]);
       expect(stored?.type === 'google-drive' && stored.source.rev).toBe('rev-upload-1');
-      expect(stored?.isModified).toBe(false);
+      expect(stored?.type === 'google-drive' && stored.isModified).toBe(false);
       expect(drive.file.uploads).toHaveLength(1);
     });
 
