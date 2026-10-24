@@ -31,6 +31,7 @@ const googleDriveFileRecordSchema = z.object({
   lastOpenedAt: z.optional(z.string()),
   source: z.object({
     id: z.string(),
+    rev: z.optional(z.string()),
   }),
   type: z.literal('google-drive'),
 });

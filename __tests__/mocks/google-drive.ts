@@ -8,6 +8,7 @@ const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 const metadataSchema = z.object({ name: z.string() });
 
 type UpdatedDriveFile = {
+  headRevisionId: string;
   id: string;
   modifiedTime: string;
   name: string;
@@ -182,6 +183,7 @@ const updateFile = {
   ok: ({ file }: { file?: Partial<UpdatedDriveFile> } = {}) => {
     return updateFile.mock(({ fileId }) =>
       HttpResponse.json({
+        headRevisionId: file?.headRevisionId ?? 'rev-uploaded',
         id: file?.id ?? fileId,
         modifiedTime: file?.modifiedTime ?? new Date('2026-01-01T00:00:00.000Z').toISOString(),
         name: file?.name ?? 'vault.kdbx',
@@ -215,6 +217,7 @@ const createFile = {
   ok: ({ file }: { file?: Partial<UpdatedDriveFile> } = {}) => {
     return createFile.mock(({ metadata }) =>
       HttpResponse.json({
+        headRevisionId: file?.headRevisionId ?? 'rev-created',
         id: file?.id ?? 'drive-file-id-xyz',
         modifiedTime: file?.modifiedTime ?? new Date('2026-01-01T00:00:00.000Z').toISOString(),
         name: file?.name ?? metadata?.name ?? 'vault.kdbx',
@@ -286,6 +289,7 @@ const fakeFile = ({
       change({ bytes: body, rev: `rev-upload-${file.uploads.length}` });
 
       return HttpResponse.json({
+        headRevisionId: file.rev,
         id: fileId,
         modifiedTime: new Date('2026-01-01T00:00:00.000Z').toISOString(),
         name: 'vault.kdbx',

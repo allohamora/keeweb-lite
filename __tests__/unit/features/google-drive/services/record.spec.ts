@@ -73,13 +73,14 @@ describe('google-drive-record-service', () => {
       const record = records[0];
       expect(record.type).toBe('google-drive');
       if (record.type === 'google-drive') {
-        expect(record.source.id).toBe('drive-file-id-xyz');
+        expect(record.source).toEqual({ id: 'drive-file-id-xyz', rev: 'rev-created' });
       }
     });
 
     it('sends the built kdbx bytes as the file content to Drive', async () => {
       const resolver = vi.fn((context: CreateFileRequestContext) =>
         HttpResponse.json({
+          headRevisionId: 'rev-created',
           id: 'drive-file-id-xyz',
           modifiedTime: '2026-01-01T00:00:00.000Z',
           name: context.metadata?.name,
@@ -109,6 +110,7 @@ describe('google-drive-record-service', () => {
     it('persists both records when creating two google-drive records concurrently', async () => {
       const resolver = vi.fn((context: CreateFileRequestContext) =>
         HttpResponse.json({
+          headRevisionId: 'rev-created',
           id: `drive-file-id-${context.metadata?.name}`,
           modifiedTime: '2026-01-01T00:00:00.000Z',
           name: context.metadata?.name,
@@ -235,7 +237,10 @@ describe('google-drive-record-service', () => {
     const testBytes = new Uint8Array([1, 2, 3, 4, 5]);
 
     it('imports a Google Drive record with file bytes fetched from Drive', async () => {
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
+        googleDriveApi.getRevision.ok({ bytes: testBytes }),
+      );
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
@@ -246,8 +251,11 @@ describe('google-drive-record-service', () => {
       expect(records[0].kdbx.encryptedBytes).toEqual(testBytes);
     });
 
-    it('sets type google-drive and source.id equal to the provided fileId', async () => {
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+    it('sets type google-drive and source to the provided fileId and its head revision', async () => {
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
+        googleDriveApi.getRevision.ok({ bytes: testBytes }),
+      );
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
@@ -255,12 +263,15 @@ describe('google-drive-record-service', () => {
       expect(records[0].type).toBe('google-drive');
       const record = records[0];
       if (record.type === 'google-drive') {
-        expect(record.source.id).toBe(testFileId);
+        expect(record.source).toEqual({ id: testFileId, rev: 'rev-1' });
       }
     });
 
     it('does not add a key when keyFile is not provided', async () => {
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
+        googleDriveApi.getRevision.ok({ bytes: testBytes }),
+      );
 
       await importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName });
 
@@ -269,7 +280,10 @@ describe('google-drive-record-service', () => {
     });
 
     it('adds a key hash and name when keyFile FileList is provided', async () => {
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
+        googleDriveApi.getRevision.ok({ bytes: testBytes }),
+      );
 
       const keyFile = new File([new Uint8Array([10, 20, 30])], 'vault.keyx');
       await importGoogleDriveRecord({
@@ -312,7 +326,10 @@ describe('google-drive-record-service', () => {
     });
 
     it('rejects one of two concurrent imports with the same source.id and persists only one record', async () => {
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes: testBytes }));
+      mockServer.addHandlers(
+        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
+        googleDriveApi.getRevision.ok({ bytes: testBytes }),
+      );
 
       const results = await Promise.allSettled([
         importGoogleDriveRecord({ fileId: testFileId, fileName: testFileName }),

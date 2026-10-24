@@ -17,10 +17,18 @@ export const googleDriveProvider = defineProvider({
     check: async ({ source, kdbx }) => {
       const { headRevisionId, sha256Checksum } = await getHead(source.id);
 
-      return { data: headRevisionId, isChanged: sha256Checksum !== (await toSha256Hex(kdbx.encryptedBytes)) };
+      return {
+        data: headRevisionId,
+        isRemoteChanged: headRevisionId !== source.rev,
+        isLocalChanged: sha256Checksum !== (await toSha256Hex(kdbx.encryptedBytes)),
+      };
     },
     pull: ({ source }, rev) => getRevisionFile(source.id, rev),
-    push: ({ source }, bytes, rev) => updateFileWithVer(source.id, bytes, rev),
+    push: async ({ source }, bytes, rev) => {
+      const { headRevisionId } = await updateFileWithVer(source.id, bytes, rev);
+
+      return { ...source, rev: headRevisionId };
+    },
   },
   ImportDialog: ImportGoogleDriveDialog,
   CreateDialog: CreateGoogleDriveDialog,

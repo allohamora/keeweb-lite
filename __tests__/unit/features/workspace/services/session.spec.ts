@@ -303,7 +303,7 @@ describe('session', () => {
       expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(updated?.kdbx.encryptedBytes);
     });
 
-    const createSyncSetup = async () => {
+    const createSyncSetup = async (rev?: string) => {
       const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
       await credentials.ready;
       const initialDatabase = kdbxweb.Kdbx.create(credentials, 'Sync Race DB');
@@ -314,7 +314,7 @@ describe('session', () => {
         id: 'gd-sync-setup',
         type: 'google-drive',
         kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
-        source: { id: 'drive-file-id' },
+        source: { id: 'drive-file-id', rev },
       });
       const database = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
 
@@ -403,7 +403,7 @@ describe('session', () => {
       );
     });
 
-    it('keeps the merged remote changes saved locally when the upload fails', async () => {
+    it('does not save the merged remote changes when the upload fails', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
 
       const remoteDatabase = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
@@ -420,11 +420,7 @@ describe('session', () => {
 
       const [stored] = await getRecords();
       if (!stored) throw new Error('record should exist');
-      const storedDatabase = await unlockDatabase({
-        encryptedBytes: stored.kdbx.encryptedBytes,
-        password: 'test-password',
-      });
-      expect(getTitles(storedDatabase)).toEqual(['Original Title', 'Remote Entry']);
+      expect(stored.kdbx.encryptedBytes).toEqual(initialBytes);
       expect(getTitles(database)).toEqual(['Original Title']);
     });
 
@@ -501,7 +497,7 @@ describe('session', () => {
       expect(getTitles(storedDatabase)).toEqual(['Edited Title', 'Other Device Entry']);
     });
 
-    it('uploads the saved merge when the file is reverted to the old one after a conflict', async () => {
+    it('leaves the record as it was when the file is reverted to the old one after a conflict', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
       const otherBytes = await createOtherDeviceDatabase(initialBytes);
       const drive = googleDriveApi.fakeFile({
@@ -517,9 +513,10 @@ describe('session', () => {
 
       const result = await syncSession({ database, record });
 
-      expect(drive.file.uploads).toHaveLength(1);
-      await expectLastUploadTitles(drive.file.uploads, ['Original Title', 'Other Device Entry']);
-      expect(getTitles(result.database)).toEqual(['Original Title', 'Other Device Entry']);
+      expect(drive.file.uploads).toHaveLength(0);
+      expect(result).toEqual({ database, record });
+      const [stored] = await getRecords();
+      expect(stored?.kdbx.encryptedBytes).toEqual(initialBytes);
     });
 
     it('syncs again and keeps the other device changes when the file changes before the upload', async () => {
@@ -546,7 +543,7 @@ describe('session', () => {
     });
 
     it('does not download or upload the file when the local file is the same as the remote file', async () => {
-      const { database, initialBytes, record } = await createSyncSetup();
+      const { database, initialBytes, record } = await createSyncSetup('rev-1');
       const downloads = vi.fn();
       const drive = googleDriveApi.fakeFile({ bytes: initialBytes, onDownload: downloads });
       mockServer.addHandlers(...drive.handlers);
@@ -568,20 +565,22 @@ describe('session', () => {
       expect(drive.file.uploads).toHaveLength(1);
     });
 
-    it('uploads the local changes when the remote file is unchanged', async () => {
-      const setup = await createSyncSetup();
+    it('uploads the local changes without downloading when the revision of the remote file is unchanged', async () => {
+      const setup = await createSyncSetup('rev-1');
       const local = await addLocalEntry(setup);
-      const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes });
+      const downloads = vi.fn();
+      const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes, rev: 'rev-1', onDownload: downloads });
       mockServer.addHandlers(...drive.handlers);
 
       await syncSession(local);
 
+      expect(downloads).not.toHaveBeenCalled();
       expect(drive.file.uploads).toHaveLength(1);
       await expectLastUploadTitles(drive.file.uploads, ['Local Entry', 'Original Title']);
     });
 
-    it('downloads, merges and uploads when the remote file changed', async () => {
-      const { database, initialBytes, record } = await createSyncSetup();
+    it('downloads, merges and uploads when the revision of the remote file changed', async () => {
+      const { database, initialBytes, record } = await createSyncSetup('rev-1');
       const otherBytes = await createOtherDeviceDatabase(initialBytes);
       const drive = googleDriveApi.fakeFile({ bytes: otherBytes, rev: 'rev-2' });
       mockServer.addHandlers(...drive.handlers);
@@ -592,16 +591,18 @@ describe('session', () => {
       expect(drive.file.uploads).toHaveLength(1);
     });
 
-    it('saves the uploaded bytes in the record, so the next sync has nothing to do', async () => {
+    it('saves the uploaded bytes and revision in the record, so the next sync has nothing to do', async () => {
       const setup = await createSyncSetup();
       const local = await addLocalEntry(setup);
       const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes });
       mockServer.addHandlers(...drive.handlers);
 
       const result = await syncSession(local);
+      const [stored] = await getRecords();
       await syncSession(result);
 
       expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(drive.file.uploads[0]);
+      expect(stored?.type === 'google-drive' && stored.source.rev).toBe('rev-upload-1');
       expect(drive.file.uploads).toHaveLength(1);
     });
 

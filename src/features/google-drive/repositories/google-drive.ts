@@ -81,26 +81,10 @@ export const driveFileSchema = z.object({
   id: z.string(),
   name: z.string(),
   modifiedTime: z.string(),
+  headRevisionId: z.string(),
 });
 
 export type DriveFile = z.infer<typeof driveFileSchema>;
-
-export const getFile = async (fileId: string): Promise<Uint8Array<ArrayBuffer>> => {
-  const accessToken = await auth.getAccessToken();
-
-  const params = new URLSearchParams({ alt: 'media' });
-
-  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to get file: ${response.status} ${response.statusText}`);
-  }
-
-  const buffer = await response.arrayBuffer();
-  return new Uint8Array(buffer);
-};
 
 export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>): Promise<DriveFile> => {
   const accessToken = await auth.getAccessToken();
@@ -122,7 +106,7 @@ export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>
     `\r\n--${boundary}--`,
   ]);
 
-  const params = new URLSearchParams({ uploadType: 'multipart', fields: 'id,name,modifiedTime' });
+  const params = new URLSearchParams({ uploadType: 'multipart', fields: 'id,name,modifiedTime,headRevisionId' });
 
   const response = await fetch(`${DRIVE_UPLOAD_BASE}/files?${params}`, {
     method: 'POST',
@@ -186,7 +170,7 @@ export const updateFileWithVer = async (
 
   const accessToken = await auth.getAccessToken();
 
-  const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime' });
+  const params = new URLSearchParams({ uploadType: 'media', fields: 'id,name,modifiedTime,headRevisionId' });
 
   const response = await fetch(`${DRIVE_UPLOAD_BASE}/files/${fileId}?${params}`, {
     method: 'PATCH',

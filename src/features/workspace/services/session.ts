@@ -1,6 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import type { FileRecord } from '@/repositories/record';
-import { loadDatabase } from '@/services/database';
+import { loadDatabase, toEncryptedBytes } from '@/services/database';
 import { getProvider } from '@/services/provider-registry';
 import { SyncConflictError } from '@/services/provider';
 import { Lock } from '@/utils/lock';
@@ -11,20 +11,16 @@ export const updateRecordDatabase = async <Result>({
   database,
   record,
   update,
-  afterSave,
 }: {
   database: kdbxweb.Kdbx;
   record: FileRecord;
   update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
-  afterSave?: (nextRecord: FileRecord) => Promise<void>;
 }): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
   return updateRecordDatabaseLock.runInLock(async () => {
     const { storage } = getProvider(record);
     const nextDatabase = await storage.load({ database, record });
     const result = await update(nextDatabase);
-    const nextRecord = await storage.save({ database: nextDatabase, record });
-
-    await afterSave?.(nextRecord);
+    const nextRecord = await storage.update(record, { encryptedBytes: await toEncryptedBytes(nextDatabase) });
 
     return [nextDatabase, nextRecord, result];
   });
@@ -39,6 +35,8 @@ const syncSessionLock = new Lock('session.service.sync-session');
 
 const MAX_SYNC_ATTEMPTS = 3;
 
+const ALWAYS_CHANGED = { data: undefined, isRemoteChanged: true, isLocalChanged: true };
+
 export const syncSession = async ({
   record,
   database,
@@ -46,49 +44,54 @@ export const syncSession = async ({
   record: FileRecord;
   database: kdbxweb.Kdbx;
 }): Promise<SyncSessionResult> => {
-  const { sync, label } = getProvider(record);
+  const { sync, label, storage } = getProvider(record);
   if (!sync) {
     throw new Error(`${label} does not support sync.`);
   }
 
-  const syncOnce = async (attempt: number): Promise<SyncSessionResult> => {
-    const { data, isChanged } = (await sync.check?.(record)) ?? { data: undefined, isChanged: true };
+  const syncOnce = async (): Promise<SyncSessionResult> => {
+    const { data, isRemoteChanged, isLocalChanged } = (await sync.check?.(record)) ?? ALWAYS_CHANGED;
 
-    // after a failed upload `record` is older than the saved merge, so its check result can't be trusted
-    if (!isChanged && attempt === 1) {
+    // same content as the remote: nothing to merge or upload
+    if (!isLocalChanged) {
       return { database, record };
+    }
+
+    // only local changes: they are already saved, so the saved bytes are uploaded as they are
+    if (!isRemoteChanged) {
+      if (!('encryptedBytes' in record.kdbx)) {
+        throw new Error(`${label} record is not persisted.`);
+      }
+
+      const source = await sync.push(record, record.kdbx.encryptedBytes, data);
+
+      return { database, record: await storage.update(record, { source }) };
     }
 
     const remoteBytes = await sync.pull(record, data);
 
-    const [nextDatabase, nextRecord] = await updateRecordDatabase({
-      database,
-      record,
-      update: async (updatedDatabase) => {
-        const remoteDatabase = await loadDatabase({
-          encryptedBytes: remoteBytes,
-          credentials: updatedDatabase.credentials,
-        });
+    // merged, uploaded and saved in one critical section, so a failed upload leaves the record as it was
+    return updateRecordDatabaseLock.runInLock(async () => {
+      const mergedDatabase = await storage.load({ database, record });
+      const remoteDatabase = await loadDatabase({
+        encryptedBytes: remoteBytes,
+        credentials: mergedDatabase.credentials,
+      });
 
-        updatedDatabase.merge(remoteDatabase);
-      },
-      // pushed inside the lock, so a local edit can't be saved between the merge and the upload
-      afterSave: async (savedRecord) => {
-        if (!('encryptedBytes' in savedRecord.kdbx)) {
-          throw new Error(`${label} record is not persisted.`);
-        }
+      mergedDatabase.merge(remoteDatabase);
 
-        // the saved bytes are pushed as is, so the next `check` sees the local copy equal to the remote
-        await sync.push(savedRecord, savedRecord.kdbx.encryptedBytes, data);
-      },
+      // the saved bytes are the uploaded ones, so the next `check` sees the local copy equal to the remote
+      const encryptedBytes = await toEncryptedBytes(mergedDatabase);
+      const source = await sync.push(record, encryptedBytes, data);
+      const nextRecord = await storage.update(record, { encryptedBytes, source });
+
+      return { database: mergedDatabase, record: nextRecord };
     });
-
-    return { database: nextDatabase, record: nextRecord };
   };
 
   const syncWithRetry = async (attempt: number): Promise<SyncSessionResult> => {
     try {
-      return await syncOnce(attempt);
+      return await syncOnce();
     } catch (error) {
       if (error instanceof SyncConflictError && attempt < MAX_SYNC_ATTEMPTS) {
         return syncWithRetry(attempt + 1);
