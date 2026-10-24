@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { HttpResponse } from 'msw';
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { useSync } from '@/features/workspace/hooks/use-sync';
 import { createRecord } from '@/repositories/record';
@@ -120,6 +120,33 @@ describe('use-sync', () => {
       expect(await screen.findByText('Remote entry')).toBeInTheDocument();
       expect(screen.getByTestId('status')).toHaveTextContent('idle');
       expect(screen.getByTestId('version')).toHaveTextContent('1');
+    });
+
+    it('runs one waiting sync for the version changes made during a sync', async () => {
+      const { session, remoteBytes } = await createSession();
+      const { promise: released, resolve: release } = Promise.withResolvers<void>();
+      let revRequests = 0;
+      const drive = googleDriveApi.fakeFile({
+        bytes: remoteBytes,
+        onDownload: () => released,
+        onRevRequest: (count) => {
+          revRequests = count;
+        },
+      });
+      mockServer.addHandlers(googleDriveApi.preflight.ok(), ...drive.handlers);
+      const user = userEvent.setup();
+
+      render(<SyncHarness initialSession={session} />);
+      await user.click(screen.getByRole('button', { name: 'Bump version' }));
+      await user.click(screen.getByRole('button', { name: 'Bump version' }));
+      release();
+
+      expect(await screen.findByText('Remote entry')).toBeInTheDocument();
+      await vi.waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('idle'));
+      expect(screen.getByTestId('version')).toHaveTextContent('2');
+      // the first sync reads the revision to check and to upload, the waiting one only to check
+      expect(revRequests).toBe(3);
+      expect(drive.file.uploads).toHaveLength(1);
     });
 
     it('shows the remote changes after a dropped sync result when the record is already synced', async () => {

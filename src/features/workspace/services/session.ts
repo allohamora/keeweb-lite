@@ -70,7 +70,7 @@ export const syncSession = async ({
       const isModified = stored.isModified !== false;
 
       if (!remote && !isModified) {
-        return { database, record };
+        return { database, record: stored };
       }
 
       // only the remote changed: it becomes the local copy, and there is nothing to upload
@@ -100,17 +100,15 @@ export const syncSession = async ({
     });
   };
 
-  const syncWithRetry = async (attempt: number): Promise<SyncSessionResult> => {
-    try {
-      return await syncOnce();
-    } catch (error) {
-      if (error instanceof SyncConflictError && attempt < MAX_SYNC_ATTEMPTS) {
-        return syncWithRetry(attempt + 1);
+  return syncSessionLock.runInLock(async () => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await syncOnce();
+      } catch (error) {
+        if (!(error instanceof SyncConflictError) || attempt >= MAX_SYNC_ATTEMPTS) {
+          throw error;
+        }
       }
-
-      throw error;
     }
-  };
-
-  return syncSessionLock.runInLock(() => syncWithRetry(1));
+  });
 };
