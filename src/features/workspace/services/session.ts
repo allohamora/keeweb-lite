@@ -1,7 +1,8 @@
 import type kdbxweb from '@/utils/kdbxweb';
-import type { FileRecord } from '@/repositories/record';
+import { getSyncableRecord, type FileRecord } from '@/repositories/record';
 import { loadDatabase, toEncryptedBytes } from '@/services/database';
 import { getProvider } from '@/services/provider-registry';
+import { SyncConflictError } from '@/services/provider';
 import { Lock } from '@/utils/lock';
 
 const updateRecordDatabaseLock = new Lock('record.service.update-record-database');
@@ -16,10 +17,13 @@ export const updateRecordDatabase = async <Result>({
   update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
 }): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
   return updateRecordDatabaseLock.runInLock(async () => {
-    const { storage } = getProvider(record);
+    const { storage, sync } = getProvider(record);
     const nextDatabase = await storage.load({ database, record });
     const result = await update(nextDatabase);
-    const nextRecord = await storage.save({ database: nextDatabase, record });
+    const nextRecord = await storage.update(record, {
+      encryptedBytes: await toEncryptedBytes(nextDatabase),
+      isModified: sync ? true : undefined,
+    });
 
     return [nextDatabase, nextRecord, result];
   });
@@ -32,6 +36,8 @@ type SyncSessionResult = {
 
 const syncSessionLock = new Lock('session.service.sync-session');
 
+const MAX_SYNC_ATTEMPTS = 3;
+
 export const syncSession = async ({
   record,
   database,
@@ -39,29 +45,77 @@ export const syncSession = async ({
   record: FileRecord;
   database: kdbxweb.Kdbx;
 }): Promise<SyncSessionResult> => {
-  const { sync, label } = getProvider(record);
+  const { sync, label, storage } = getProvider(record);
   if (!sync) {
     throw new Error(`${label} does not support sync.`);
   }
 
-  return syncSessionLock.runInLock(async () => {
-    const remoteBytes = await sync.pull(record);
+  const mergeRemote = async (stored: FileRecord, remoteBytes: Uint8Array) => {
+    const mergedDatabase = await storage.load({ database, record: stored });
+    const remoteDatabase = await loadDatabase({ encryptedBytes: remoteBytes, credentials: mergedDatabase.credentials });
 
-    const [nextDatabase, nextRecord] = await updateRecordDatabase({
-      database,
-      record,
-      update: async (updatedDatabase) => {
-        const remoteDatabase = await loadDatabase({
-          encryptedBytes: remoteBytes,
-          credentials: updatedDatabase.credentials,
-        });
+    mergedDatabase.merge(remoteDatabase);
 
-        updatedDatabase.merge(remoteDatabase);
+    return mergedDatabase;
+  };
 
-        await sync.push(record, await toEncryptedBytes(updatedDatabase));
-      },
+  const syncOnce = async (): Promise<SyncSessionResult> => {
+    const current = await getSyncableRecord(record.id);
+    const { data, isRemoteChanged } = (await sync.check?.(current)) ?? { data: undefined, isRemoteChanged: true };
+    const remote = isRemoteChanged ? await sync.pull(current, data) : undefined;
+
+    // decided on the stored record inside the lock, so an edit saved in the meantime is never overwritten
+    return updateRecordDatabaseLock.runInLock(async () => {
+      const stored = await getSyncableRecord(record.id);
+      // a record that was never marked as synced may have edits that were not uploaded
+      const isModified = stored.isModified !== false;
+
+      if (!remote && !isModified) {
+        return {
+          database: await loadDatabase({
+            encryptedBytes: stored.kdbx.encryptedBytes,
+            credentials: database.credentials,
+          }),
+          record: stored,
+        };
+      }
+
+      // only the remote changed: it becomes the local copy, and there is nothing to upload
+      if (remote && !isModified) {
+        return {
+          database: await loadDatabase({ encryptedBytes: remote.bytes, credentials: database.credentials }),
+          record: await storage.update(stored, {
+            encryptedBytes: remote.bytes,
+            source: remote.source,
+            isModified: false,
+          }),
+        };
+      }
+
+      // local changes, merged with the remote if it changed, are uploaded and saved as one unit
+      // the database comes from the stored record, so it matches what is uploaded, also after an edit in another tab
+      const nextDatabase = remote
+        ? await mergeRemote(stored, remote.bytes)
+        : await storage.load({ database, record: stored });
+      const encryptedBytes = remote ? await toEncryptedBytes(nextDatabase) : stored.kdbx.encryptedBytes;
+      const source = await sync.push(stored, encryptedBytes, data);
+
+      return {
+        database: nextDatabase,
+        record: await storage.update(stored, { encryptedBytes, source, isModified: false }),
+      };
     });
+  };
 
-    return { database: nextDatabase, record: nextRecord };
+  return syncSessionLock.runInLock(async () => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await syncOnce();
+      } catch (error) {
+        if (!(error instanceof SyncConflictError) || attempt >= MAX_SYNC_ATTEMPTS) {
+          throw error;
+        }
+      }
+    }
   });
 };

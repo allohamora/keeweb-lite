@@ -2,13 +2,19 @@ import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import {
   type CreateFileRequestContext,
-  type GetFileRequestContext,
+  type GetRevisionRequestContext,
   type UpdateFileRequestContext,
   googleDriveApi,
 } from '@tests/mocks/google-drive';
 import { mockGoogleIdentityError, mockGoogleIdentitySuccess } from '@tests/mocks/google-identity';
 import { mockServer } from '@tests/setup-unit-context';
-import { auth, createFile, getFile, updateFile } from '@/features/google-drive/repositories/google-drive';
+import {
+  auth,
+  createFile,
+  getHead,
+  getRevisionFile,
+  updateFile,
+} from '@/features/google-drive/repositories/google-drive';
 
 const useFakeDate = () => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -73,82 +79,65 @@ describe('google-drive', () => {
     });
   });
 
-  describe('getFile', () => {
-    it('returns the file bytes as Uint8Array', async () => {
-      const bytes = new Uint8Array([10, 20, 30]);
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ bytes }));
+  describe('getHead', () => {
+    it('returns the head revision id of the file', async () => {
+      mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-7' }));
 
-      const result = await getFile('file-xyz');
-
-      expect(result).toEqual(bytes);
+      await expect(getHead('file-xyz')).resolves.toEqual({ headRevisionId: 'rev-7' });
     });
 
-    it('sends alt=media query param', async () => {
-      const resolver = vi.fn(
-        (_: GetFileRequestContext) =>
-          new HttpResponse(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'application/octet-stream' } }),
-      );
-      mockServer.addHandlers(googleDriveApi.getFile.mock(resolver));
+    it('throws when the API returns an error response', async () => {
+      mockServer.addHandlers(googleDriveApi.getRevError({ status: 404, statusText: 'Not Found' }));
 
-      await getFile('file-xyz');
-
-      const context = resolver.mock.calls[0]?.[0];
-      expect(context?.alt).toBe('media');
+      await expect(getHead('file-xyz')).rejects.toThrow('Failed to get file revision: 404 Not Found');
     });
+  });
 
-    it('sends the Authorization header with the access token', async () => {
-      const resolver = vi.fn(
-        (_: GetFileRequestContext) =>
-          new HttpResponse(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'application/octet-stream' } }),
-      );
-      mockServer.addHandlers(googleDriveApi.getFile.mock(resolver));
+  describe('getRevisionFile', () => {
+    it('returns the bytes of the given revision', async () => {
+      const bytes = new Uint8Array([4, 5, 6]);
+      const resolver = vi.fn((_: GetRevisionRequestContext) => new HttpResponse(bytes));
+      mockServer.addHandlers(googleDriveApi.getRevision.mock(resolver));
 
-      await getFile('file-xyz');
+      await expect(getRevisionFile('file-xyz', 'rev-3')).resolves.toEqual(bytes);
 
       const context = resolver.mock.calls[0]?.[0];
+      expect(context?.revId).toBe('rev-3');
       expect(context?.authorization).toBe('Bearer test');
     });
 
     it('throws when the API returns an error response', async () => {
-      mockServer.addHandlers(googleDriveApi.getFile.error({ status: 404, statusText: 'Not Found' }));
+      mockServer.addHandlers(googleDriveApi.getRevision.error({ status: 404, statusText: 'Not Found' }));
 
-      await expect(getFile('file-xyz')).rejects.toThrow('Failed to get file: 404 Not Found');
+      await expect(getRevisionFile('file-xyz', 'rev-3')).rejects.toThrow('Failed to get file: 404 Not Found');
     });
   });
 
   describe('updateFile', () => {
-    it('returns the file metadata', async () => {
-      mockServer.addHandlers(
-        googleDriveApi.updateFile.ok({
-          file: { id: 'file-xyz', modifiedTime: '2026-02-01T00:00:00.000Z', name: 'vault.kdbx' },
-        }),
-      );
+    it('uploads the bytes and returns the file metadata with the new revision', async () => {
+      const drive = googleDriveApi.fakeFile({ rev: 'rev-1' });
+      mockServer.addHandlers(...drive.handlers);
 
-      const result = await updateFile('file-xyz', new Uint8Array([1, 2, 3]));
+      const data = new Uint8Array([7, 8, 9]);
+      const result = await updateFile('file-xyz', data);
 
+      expect(drive.file.uploads).toEqual([data]);
       expect(result).toEqual({
         id: 'file-xyz',
-        modifiedTime: '2026-02-01T00:00:00.000Z',
+        modifiedTime: '2026-01-01T00:00:00.000Z',
         name: 'vault.kdbx',
+        headRevisionId: 'rev-upload-1',
       });
     });
 
-    it('sends the file bytes as the request body', async () => {
+    it('sends uploadType=media and fields=id,name,modifiedTime,headRevisionId query params', async () => {
       const resolver = vi.fn(({ fileId }: UpdateFileRequestContext) =>
-        HttpResponse.json({ id: fileId, modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
-      );
-      mockServer.addHandlers(googleDriveApi.updateFile.mock(resolver));
-
-      const data = new Uint8Array([7, 8, 9]);
-      await updateFile('file-xyz', data);
-
-      const context = resolver.mock.calls[0]?.[0];
-      expect(context?.body).toEqual(data);
-    });
-
-    it('sends uploadType=media and fields=id,name,modifiedTime query params', async () => {
-      const resolver = vi.fn(({ fileId }: UpdateFileRequestContext) =>
-        HttpResponse.json({ id: fileId, modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+        HttpResponse.json({
+          headRevisionId: 'rev-2',
+          id: fileId,
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: 'vault.kdbx',
+        }),
       );
       mockServer.addHandlers(googleDriveApi.updateFile.mock(resolver));
 
@@ -156,12 +145,17 @@ describe('google-drive', () => {
 
       const context = resolver.mock.calls[0]?.[0];
       expect(context?.uploadType).toBe('media');
-      expect(context?.fields).toBe('id,name,modifiedTime');
+      expect(context?.fields).toBe('id,name,modifiedTime,headRevisionId');
     });
 
     it('sends the Authorization header with the access token', async () => {
       const resolver = vi.fn(({ fileId }: UpdateFileRequestContext) =>
-        HttpResponse.json({ id: fileId, modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+        HttpResponse.json({
+          headRevisionId: 'rev-2',
+          id: fileId,
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: 'vault.kdbx',
+        }),
       );
       mockServer.addHandlers(googleDriveApi.updateFile.mock(resolver));
 
@@ -190,7 +184,12 @@ describe('google-drive', () => {
     it('returns the file metadata', async () => {
       mockServer.addHandlers(
         googleDriveApi.createFile.ok({
-          file: { id: 'drive-file-id-xyz', modifiedTime: '2026-02-01T00:00:00.000Z', name: 'vault.kdbx' },
+          file: {
+            headRevisionId: 'rev-5',
+            id: 'drive-file-id-xyz',
+            modifiedTime: '2026-02-01T00:00:00.000Z',
+            name: 'vault.kdbx',
+          },
         }),
       );
 
@@ -200,12 +199,18 @@ describe('google-drive', () => {
         id: 'drive-file-id-xyz',
         modifiedTime: '2026-02-01T00:00:00.000Z',
         name: 'vault.kdbx',
+        headRevisionId: 'rev-5',
       });
     });
 
     it('sends the file name as JSON metadata in the multipart body', async () => {
       const resolver = vi.fn((_: CreateFileRequestContext) =>
-        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+        HttpResponse.json({
+          headRevisionId: 'rev-1',
+          id: 'drive-file-id-xyz',
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: 'vault.kdbx',
+        }),
       );
       mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
 
@@ -217,7 +222,12 @@ describe('google-drive', () => {
 
     it('sends the file bytes as the octet-stream part of the multipart body', async () => {
       const resolver = vi.fn((_: CreateFileRequestContext) =>
-        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+        HttpResponse.json({
+          headRevisionId: 'rev-1',
+          id: 'drive-file-id-xyz',
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: 'vault.kdbx',
+        }),
       );
       mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
 
@@ -228,9 +238,14 @@ describe('google-drive', () => {
       expect(context?.fileBytes).toEqual(data);
     });
 
-    it('sends uploadType=multipart and fields=id,name,modifiedTime query params', async () => {
+    it('sends uploadType=multipart and fields=id,name,modifiedTime,headRevisionId query params', async () => {
       const resolver = vi.fn((_: CreateFileRequestContext) =>
-        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+        HttpResponse.json({
+          headRevisionId: 'rev-1',
+          id: 'drive-file-id-xyz',
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: 'vault.kdbx',
+        }),
       );
       mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
 
@@ -238,12 +253,17 @@ describe('google-drive', () => {
 
       const context = resolver.mock.calls[0]?.[0];
       expect(context?.uploadType).toBe('multipart');
-      expect(context?.fields).toBe('id,name,modifiedTime');
+      expect(context?.fields).toBe('id,name,modifiedTime,headRevisionId');
     });
 
     it('sends a multipart/related content type with a boundary', async () => {
       const resolver = vi.fn((_: CreateFileRequestContext) =>
-        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+        HttpResponse.json({
+          headRevisionId: 'rev-1',
+          id: 'drive-file-id-xyz',
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: 'vault.kdbx',
+        }),
       );
       mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
 
@@ -255,7 +275,12 @@ describe('google-drive', () => {
 
     it('sends the Authorization header with the access token', async () => {
       const resolver = vi.fn((_: CreateFileRequestContext) =>
-        HttpResponse.json({ id: 'drive-file-id-xyz', modifiedTime: '2026-01-01T00:00:00.000Z', name: 'vault.kdbx' }),
+        HttpResponse.json({
+          headRevisionId: 'rev-1',
+          id: 'drive-file-id-xyz',
+          modifiedTime: '2026-01-01T00:00:00.000Z',
+          name: 'vault.kdbx',
+        }),
       );
       mockServer.addHandlers(googleDriveApi.createFile.mock(resolver));
 

@@ -13,7 +13,8 @@ describe('import-google-drive-dialog', () => {
     it('imports the picked .kdbx file from Google Drive', async () => {
       mockServer.addHandlers(
         googleDriveApi.preflight.ok(),
-        googleDriveApi.getFile.ok({ bytes: new Uint8Array([1, 2, 3]) }),
+        googleDriveApi.getFile.ok({ rev: 'rev-1' }),
+        googleDriveApi.getRevision.ok({ bytes: new Uint8Array([1, 2, 3]) }),
       );
       using _picker = mockGooglePicker({ id: 'drive-file-1', name: 'vault.kdbx' });
       const user = userEvent.setup();
@@ -31,7 +32,7 @@ describe('import-google-drive-dialog', () => {
       const [record] = await getRecords();
       expect(record?.type).toBe('google-drive');
       expect(record?.kdbx).toEqual({ encryptedBytes: new Uint8Array([1, 2, 3]), name: 'vault.kdbx' });
-      expect(record?.type === 'google-drive' && record.source).toEqual({ id: 'drive-file-1' });
+      expect(record?.type === 'google-drive' && record.source).toEqual({ id: 'drive-file-1', rev: 'rev-1' });
     });
 
     it('rejects a picked file without the .kdbx extension', async () => {

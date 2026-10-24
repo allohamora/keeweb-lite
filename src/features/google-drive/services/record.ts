@@ -1,4 +1,4 @@
-import { createFile, getFile } from '@/features/google-drive/repositories/google-drive';
+import { createFile, getHead, getRevisionFile } from '@/features/google-drive/repositories/google-drive';
 import { createRecord, getRecords } from '@/repositories/record';
 import { createEmptyDatabase } from '@/services/database';
 import { mutateRecords, toKey, validateNewDatabaseInput } from '@/services/record';
@@ -18,14 +18,16 @@ export const importGoogleDriveRecord = async ({
       throw new Error('A record for this file already exists.');
     }
 
-    const encryptedBytes = await getFile(fileId);
+    const { headRevisionId } = await getHead(fileId);
+    const encryptedBytes = await getRevisionFile(fileId, headRevisionId);
     const key = await toKey(keyFile);
 
     await createRecord({
       id: crypto.randomUUID(),
+      isModified: false,
       kdbx: { encryptedBytes, name: fileName },
       key,
-      source: { id: fileId },
+      source: { id: fileId, rev: headRevisionId },
       type: 'google-drive',
     });
   });
@@ -50,9 +52,10 @@ export const createGoogleDriveRecord = async ({
     try {
       await createRecord({
         id: crypto.randomUUID(),
+        isModified: false,
         kdbx: { encryptedBytes, name: kdbxFileName },
         key: generatedKey?.key,
-        source: { id: driveFile.id },
+        source: { id: driveFile.id, rev: driveFile.headRevisionId },
         type: 'google-drive',
       });
     } catch (cause) {
