@@ -566,16 +566,6 @@ describe('session', () => {
       expect(drive.file.uploads).toHaveLength(0);
     });
 
-    it('downloads and uploads when the remote file is missing the checksum', async () => {
-      const { database, initialBytes, record } = await createSyncSetup();
-      const drive = googleDriveApi.fakeFile({ bytes: initialBytes, checksum: false });
-      mockServer.addHandlers(...drive.handlers);
-
-      await syncSession({ database, record });
-
-      expect(drive.file.uploads).toHaveLength(1);
-    });
-
     it('uploads the local changes without downloading when the revision of the remote file is unchanged', async () => {
       const setup = await createSyncSetup({ isSynced: true });
       const local = await addLocalEntry(setup);

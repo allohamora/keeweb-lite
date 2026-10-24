@@ -1,5 +1,4 @@
 import * as z from 'zod/mini';
-import { createHash } from 'node:crypto';
 import { http, HttpResponse } from 'msw';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
@@ -50,9 +49,6 @@ export type CreateFileRequestContext = {
 type HandlerResponse = Response | Promise<Response>;
 
 type Rev = string | (() => string);
-type Sha256 = string | (() => string);
-
-const toSha256Hex = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -96,19 +92,13 @@ const parseMultipartRelated = (bodyBytes: Uint8Array, contentType: string | null
 };
 
 const getFile = {
-  // requests without alt=media read the file metadata, which is answered here with the rev and the sha256
-  mock: (
-    resolver: (context: GetFileRequestContext) => HandlerResponse,
-    { rev = 'rev-1', sha256 }: { rev?: Rev; sha256?: Sha256 } = {},
-  ) => {
+  // requests without alt=media read the file metadata, which is answered here with the rev
+  mock: (resolver: (context: GetFileRequestContext) => HandlerResponse, { rev = 'rev-1' }: { rev?: Rev } = {}) => {
     return http.get(`${DRIVE_API_BASE}/files/:fileId`, ({ params, request }) => {
       const url = new URL(request.url);
 
       if (url.searchParams.get('alt') !== 'media') {
-        return HttpResponse.json({
-          headRevisionId: typeof rev === 'function' ? rev() : rev,
-          ...(sha256 !== undefined && { sha256Checksum: typeof sha256 === 'function' ? sha256() : sha256 }),
-        });
+        return HttpResponse.json({ headRevisionId: typeof rev === 'function' ? rev() : rev });
       }
 
       return resolver({
@@ -119,14 +109,14 @@ const getFile = {
       });
     });
   },
-  ok: ({ bytes = new Uint8Array([1, 2, 3]), rev, sha256 }: { bytes?: Uint8Array; rev?: Rev; sha256?: Sha256 } = {}) => {
+  ok: ({ bytes = new Uint8Array([1, 2, 3]), rev }: { bytes?: Uint8Array; rev?: Rev } = {}) => {
     return getFile.mock(
       () => {
         return new HttpResponse(bytes, {
           headers: { 'Content-Type': 'application/octet-stream' },
         });
       },
-      { rev, sha256 },
+      { rev },
     );
   },
   error: ({ status = 500, statusText = 'Internal Server Error' }: { status?: number; statusText?: string } = {}) => {
@@ -243,11 +233,9 @@ const fakeFile = ({
   onDownload,
   onRevRequest,
   onUpload,
-  checksum = true,
 }: {
   bytes?: Uint8Array;
   rev?: string;
-  checksum?: boolean;
   onDownload?: () => void | Promise<void>;
   // called with the 1-based count of the rev reads, before the rev is read
   onRevRequest?: (count: number) => void;
@@ -272,7 +260,6 @@ const fakeFile = ({
 
         return file.rev;
       },
-      sha256: checksum ? () => toSha256Hex(file.bytes) : undefined,
     }),
     getRevision.mock(async ({ revId }) => {
       await onDownload?.();

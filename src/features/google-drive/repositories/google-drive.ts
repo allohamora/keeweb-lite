@@ -124,12 +124,12 @@ export const createFile = async (fileName: string, data: Uint8Array<ArrayBuffer>
   return driveFileSchema.parse(await response.json());
 };
 
-const headSchema = z.object({ headRevisionId: z.string(), sha256Checksum: z.optional(z.string()) });
+const headSchema = z.object({ headRevisionId: z.string() });
 
 export const getHead = async (fileId: string) => {
   const accessToken = await auth.getAccessToken();
 
-  const params = new URLSearchParams({ fields: 'headRevisionId,sha256Checksum' });
+  const params = new URLSearchParams({ fields: 'headRevisionId' });
 
   const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?${params}`, {
     headers: { Authorization: `Bearer ${accessToken}` },

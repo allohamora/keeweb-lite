@@ -81,13 +81,7 @@ describe('google-drive', () => {
   });
 
   describe('getHead', () => {
-    it('returns the head revision id and the sha256 checksum of the file', async () => {
-      mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-7', sha256: 'abc123' }));
-
-      await expect(getHead('file-xyz')).resolves.toEqual({ headRevisionId: 'rev-7', sha256Checksum: 'abc123' });
-    });
-
-    it('returns no sha256 checksum when Drive does not provide it', async () => {
+    it('returns the head revision id of the file', async () => {
       mockServer.addHandlers(googleDriveApi.getFile.ok({ rev: 'rev-7' }));
 
       await expect(getHead('file-xyz')).resolves.toEqual({ headRevisionId: 'rev-7' });
