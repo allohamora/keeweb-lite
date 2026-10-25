@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type kdbxweb from '@/utils/kdbxweb';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { EntryEditForm } from '@/features/workspace/components/entry-edit-form';
 import { useSafeNet } from '@/features/workspace/hooks/use-safe-net';
 import { createTestDatabase, createTestEntry, createTestRecord } from '@tests/utils/kdbx';
@@ -85,7 +85,7 @@ describe('entry-edit-form', () => {
       expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
     });
 
-    it('reverts edits and brings Remove back when Discard is clicked', async () => {
+    it('keeps the edits when the Discard confirmation is cancelled', async () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
       const user = userEvent.setup();
@@ -93,6 +93,22 @@ describe('entry-edit-form', () => {
       render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
       await user.type(screen.getByLabelText('Title'), '!');
       await user.click(screen.getByRole('button', { name: 'Discard' }));
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(screen.getByLabelText('Title')).toHaveValue('Test Entry!');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
+    it('reverts edits and brings Remove back when Discard is confirmed', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
+      const user = userEvent.setup();
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
+      await user.type(screen.getByLabelText('Title'), '!');
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
+      expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument();
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Discard' }));
 
       expect(screen.getByLabelText('Title')).toHaveValue('Test Entry');
       expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();

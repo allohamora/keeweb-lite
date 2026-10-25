@@ -63,7 +63,7 @@ type EntryEditFormProps = {
 };
 
 export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEditFormProps) => {
-  const { setDirty, registerDiscard } = useSafeNet();
+  const { guardNavigation, setDirty, registerDiscard } = useSafeNet();
   const lastModTime = entry.times.lastModTime?.getTime();
   const { isMutating, setMutating } = useEntryMutation();
   const {
@@ -442,7 +442,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
               <Button
                 className="h-8 px-4 text-xs"
                 disabled={isMutating}
-                onClick={() => reset()}
+                onClick={() => guardNavigation(() => reset())}
                 type="button"
                 variant="secondary"
               >
