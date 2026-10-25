@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { GithubIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { useAsyncLock } from '@/features/unlock/hooks/use-async-lock';
 import { useHydrated } from '@/features/unlock/hooks/use-hydrated';
@@ -33,8 +35,8 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
     });
 
   return (
-    <main className="mx-auto box-border flex min-h-svh w-full max-w-5xl flex-col px-3 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] sm:min-h-dvh sm:px-4 sm:py-6">
-      <section className="mx-auto flex min-h-full w-full max-w-5xl flex-1 items-center justify-center py-2 text-zinc-100 sm:min-h-[78vh] sm:py-8">
+    <div className="mx-auto box-border flex min-h-svh w-full max-w-5xl flex-col px-3 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] sm:min-h-dvh sm:px-4 sm:py-6">
+      <main className="mx-auto flex min-h-full w-full max-w-5xl flex-1 items-center justify-center py-2 text-zinc-100 sm:min-h-[78vh] sm:py-8">
         <div className="w-full max-w-3xl space-y-4">
           <div className="border border-zinc-700/80 bg-zinc-950/60 p-3 sm:p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -63,7 +65,19 @@ export const UnlockPage = ({ setSession }: UnlockPageProps) => {
             />
           </div>
         </div>
-      </section>
-    </main>
+      </main>
+
+      <footer className="flex justify-center pt-4">
+        <a
+          className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300"
+          href="https://github.com/allohamora/keeweb-lite"
+          rel="noreferrer"
+          target="_blank"
+        >
+          <HugeiconsIcon icon={GithubIcon} strokeWidth={2} className="size-4" />
+          GitHub
+        </a>
+      </footer>
+    </div>
   );
 };
