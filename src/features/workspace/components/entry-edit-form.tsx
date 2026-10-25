@@ -63,7 +63,7 @@ type EntryEditFormProps = {
 };
 
 export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEditFormProps) => {
-  const { setDirty, registerDiscard } = useSafeNet();
+  const { guardNavigation, setDirty, registerDiscard } = useSafeNet();
   const lastModTime = entry.times.lastModTime?.getTime();
   const { isMutating, setMutating } = useEntryMutation();
   const {
@@ -191,6 +191,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                   <div className="relative">
                     <Input
                       {...field}
+                      autoComplete="off"
                       aria-invalid={fieldState.invalid}
                       className="h-8 px-8 text-xs"
                       id="entry-title"
@@ -250,6 +251,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                     openOnInputClick
                   >
                     <AutocompleteInput
+                      autoComplete="off"
                       aria-invalid={fieldState.invalid}
                       className="h-8 text-xs"
                       id="entry-username"
@@ -294,7 +296,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                   <div className="relative">
                     <Input
                       {...field}
-                      autoComplete="off"
+                      autoComplete="new-password"
                       aria-invalid={fieldState.invalid}
                       className="h-8 pr-24 text-xs"
                       id="entry-password"
@@ -342,6 +344,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                   <div className="relative">
                     <Input
                       {...field}
+                      autoComplete="off"
                       aria-invalid={fieldState.invalid}
                       className="h-8 pr-16 text-xs"
                       id="entry-url"
@@ -420,6 +423,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                 <FieldContent>
                   <Textarea
                     {...field}
+                    autoComplete="off"
                     aria-invalid={fieldState.invalid}
                     className="min-h-24 resize-none text-xs"
                     id="entry-notes"
@@ -434,9 +438,23 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onEntryRemove={handleSave} />
-            {isInTrash && (
-              <EntryRestore database={database} entry={entry} record={record} onEntryRestore={handleSave} />
+            {isDirty ? (
+              <Button
+                className="h-8 px-4 text-xs"
+                disabled={isMutating}
+                onClick={() => guardNavigation(() => reset())}
+                type="button"
+                variant="secondary"
+              >
+                Discard
+              </Button>
+            ) : (
+              <>
+                <EntryRemove database={database} entry={entry} record={record} onEntryRemove={handleSave} />
+                {isInTrash && (
+                  <EntryRestore database={database} entry={entry} record={record} onEntryRestore={handleSave} />
+                )}
+              </>
             )}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isMutating} type="submit" variant="outline">

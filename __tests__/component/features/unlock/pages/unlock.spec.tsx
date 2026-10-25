@@ -22,6 +22,15 @@ describe('unlock', () => {
     kdbx: { ...createTestRecord().kdbx, name: 'My Vault' },
   };
 
+  it('links to the GitHub repository', () => {
+    render(<UnlockPage setSession={vi.fn()} />);
+
+    expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
+      'href',
+      'https://github.com/allohamora/keeweb-lite',
+    );
+  });
+
   it('starts an in-memory demo session when the Demo button is clicked', async () => {
     mockServer.addHandlers(demoFile.ok());
 

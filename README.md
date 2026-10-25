@@ -55,12 +55,15 @@ The Docker image builds the Astro app inside the container, then serves the stat
 
 `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` are optional. They are compiled into the client bundle at build time, so changing them requires rebuilding the image. Leave both unset to build without Google Drive.
 
+`PUBLIC_GOOGLE_SITE_VERIFICATION` is optional too. When set, it adds the Google Search Console `google-site-verification` meta tag to every page.
+
 Build image:
 
 ```bash
 docker build \
   --build-arg PUBLIC_GOOGLE_CLIENT_ID=your-client-id \
   --build-arg PUBLIC_GOOGLE_APP_ID=your-project-number \
+  --build-arg PUBLIC_GOOGLE_SITE_VERIFICATION=your-verification-token \
   -t keeweb-lite .
 ```
 
@@ -73,7 +76,7 @@ docker run --rm -p 4321:80 keeweb-lite
 Use Docker Compose:
 
 ```bash
-# Optionally set `PUBLIC_GOOGLE_CLIENT_ID` and `PUBLIC_GOOGLE_APP_ID` in `.env`, then run:
+# Optionally set `PUBLIC_GOOGLE_CLIENT_ID`, `PUBLIC_GOOGLE_APP_ID` and `PUBLIC_GOOGLE_SITE_VERIFICATION` in `.env`, then run:
 docker compose up -d --build # App is available at `http://localhost:4321`.
 ```
 

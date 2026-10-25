@@ -98,7 +98,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
   return (
     <div className="box-border flex h-svh min-h-svh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-foreground sm:h-dvh sm:min-h-dvh sm:py-0">
       <WorkspaceControls session={session} setSession={setSession} onWorkspaceLock={handleLock} />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <main className="flex min-h-0 flex-1 overflow-hidden">
         {isDesktopMode && (
           <MenuPane
             className="flex"
@@ -130,7 +130,7 @@ export const WorkspacePage = ({ session, setSession }: WorkspacePageProps) => {
             onBack={handleBack}
           />
         )}
-      </div>
+      </main>
       {isMobile && (
         <WorkspaceMobileMenu
           open={isMobile && isMobileMenuOpen}
