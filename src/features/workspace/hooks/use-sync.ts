@@ -1,6 +1,7 @@
 import { useMountedState } from 'react-use';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { SetSession, UnlockSession } from '@/features/unlock/services/session';
+import { useCoalesce } from '@/features/workspace/hooks/use-coalesce';
 import { syncSession } from '@/features/workspace/services/session';
 
 type UseSyncProps = UnlockSession & {
@@ -17,7 +18,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
   const isMounted = useMountedState();
   const [state, set] = useState<State>({ loading: false });
 
-  const sync = async () => {
+  const sync = useCoalesce(async () => {
     const syncedSession = await syncSession({ record, database });
 
     setSession((previousSession) => {
@@ -34,7 +35,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
         version,
       };
     });
-  };
+  });
 
   const triggerSync = () => {
     const callId = ++lastCallId.current;
@@ -82,6 +83,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
 
   return {
     ...state,
+    triggerSync,
     retrySync,
   };
 };

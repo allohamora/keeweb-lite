@@ -6,6 +6,6 @@ export const demoProvider = defineProvider({
   storage: {
     load: ({ database }) => cloneDatabase(database),
     // demo records are never persisted, so there's nothing to write back
-    save: async ({ record }) => record,
+    update: async (record) => record,
   },
 });

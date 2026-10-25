@@ -1,7 +1,7 @@
 import * as z from 'zod/mini';
 import type kdbxweb from '@/utils/kdbxweb';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -64,6 +64,7 @@ type EntryEditFormProps = {
 
 export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEditFormProps) => {
   const { setDirty, registerDiscard } = useSafeNet();
+  const lastModTime = entry.times.lastModTime?.getTime();
   const { isMutating, setMutating } = useEntryMutation();
   const {
     control,
@@ -77,6 +78,15 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
   });
 
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleEntryValuesChange = useEffectEvent(() => {
+    // a sync can bring new entry data: show it, but keep what the user is typing
+    reset(getEntryValues(entry), { keepDirtyValues: true });
+  });
+
+  useEffect(() => {
+    handleEntryValuesChange();
+  }, [lastModTime]);
 
   useEffect(() => {
     setDirty(isDirty);

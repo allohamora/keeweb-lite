@@ -72,6 +72,39 @@ describe('workspace', () => {
       expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
     });
 
+    it('shows the synced entry data when the form has no unsaved changes', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
+      const user = userEvent.setup();
+
+      const view = render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: /Test Entry/ }));
+
+      entry.fields.set('Title', 'New');
+      entry.times.lastModTime = new Date(Date.now() + 1000);
+      view.rerender(<WorkspacePage session={{ database, record, version: 1 }} setSession={vi.fn()} />);
+
+      expect(screen.getByLabelText('Title')).toHaveValue('New');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    it('keeps the typed value and shows the other synced fields when the form has unsaved changes', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
+      const user = userEvent.setup();
+
+      const view = render(<WorkspacePage session={{ database, record, version: 0 }} setSession={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: /Test Entry/ }));
+      await user.type(screen.getByLabelText('Title'), '!');
+
+      entry.fields.set('UserName', 'new-user');
+      entry.times.lastModTime = new Date(Date.now() + 1000);
+      view.rerender(<WorkspacePage session={{ database, record, version: 1 }} setSession={vi.fn()} />);
+
+      expect(screen.getByLabelText('Title')).toHaveValue('Test Entry!');
+      expect(screen.getByLabelText('Username')).toHaveValue('new-user');
+    });
+
     it('guards the filter select, create entry, and lock actions the same way', async () => {
       const database = await createTestDatabase();
       createTestEntry(database);

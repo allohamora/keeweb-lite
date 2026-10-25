@@ -133,6 +133,29 @@ describe('workspace-controls', () => {
       expect(syncSession).not.toHaveBeenCalled();
     });
 
+    it('syncs again when the synced status is clicked', async () => {
+      const database = await createTestDatabase();
+      const user = userEvent.setup();
+      using syncSession = vi
+        .spyOn(sessionService, 'syncSession')
+        .mockResolvedValue({ database, record: createTestRecord() });
+
+      render(
+        <WorkspaceControls
+          session={{
+            database,
+            record: { id: 'drive-record', type: 'google-drive', kdbx: { ...record.kdbx }, source: { id: 'file-1' } },
+            version: 0,
+          }}
+          setSession={vi.fn()}
+          onWorkspaceLock={vi.fn()}
+        />,
+      );
+      await user.click(await screen.findByRole('button', { name: 'Sync status: synced' }));
+
+      expect(syncSession).toHaveBeenCalledTimes(2);
+    });
+
     it('shows a generic message and retries when a sync fails without an error message', async () => {
       const database = await createTestDatabase();
       const user = userEvent.setup();

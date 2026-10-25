@@ -28,7 +28,7 @@ describe('create-google-drive-dialog', () => {
       expect(onOpenChange).toHaveBeenCalledWith(false);
 
       const [record] = await getRecords();
-      expect(record?.type === 'google-drive' && record.source).toEqual({ id: 'drive-file-1' });
+      expect(record?.type === 'google-drive' && record.source).toEqual({ id: 'drive-file-1', rev: 'rev-created' });
       expect(record?.kdbx.name).toBe('My Vault.kdbx');
     });
   });

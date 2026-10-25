@@ -7,6 +7,7 @@ const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 const metadataSchema = z.object({ name: z.string() });
 
 type UpdatedDriveFile = {
+  headRevisionId: string;
   id: string;
   modifiedTime: string;
   name: string;
@@ -17,6 +18,13 @@ export type GetFileRequestContext = {
   authorization: string | null;
   fileId: string;
   request: Request;
+};
+
+export type GetRevisionRequestContext = {
+  authorization: string | null;
+  fileId: string;
+  request: Request;
+  revId: string;
 };
 
 export type UpdateFileRequestContext = {
@@ -39,6 +47,8 @@ export type CreateFileRequestContext = {
 };
 
 type HandlerResponse = Response | Promise<Response>;
+
+type Rev = string | (() => string);
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -82,9 +92,14 @@ const parseMultipartRelated = (bodyBytes: Uint8Array, contentType: string | null
 };
 
 const getFile = {
-  mock: (resolver: (context: GetFileRequestContext) => HandlerResponse) => {
+  // requests without alt=media read the file metadata, which is answered here with the rev
+  mock: (resolver: (context: GetFileRequestContext) => HandlerResponse, { rev = 'rev-1' }: { rev?: Rev } = {}) => {
     return http.get(`${DRIVE_API_BASE}/files/:fileId`, ({ params, request }) => {
       const url = new URL(request.url);
+
+      if (url.searchParams.get('alt') !== 'media') {
+        return HttpResponse.json({ headRevisionId: typeof rev === 'function' ? rev() : rev });
+      }
 
       return resolver({
         alt: url.searchParams.get('alt'),
@@ -94,16 +109,49 @@ const getFile = {
       });
     });
   },
-  ok: ({ bytes = new Uint8Array([1, 2, 3]) }: { bytes?: Uint8Array } = {}) => {
-    return getFile.mock(() => {
-      return new HttpResponse(bytes, {
-        headers: { 'Content-Type': 'application/octet-stream' },
-      });
-    });
+  ok: ({ bytes = new Uint8Array([1, 2, 3]), rev }: { bytes?: Uint8Array; rev?: Rev } = {}) => {
+    return getFile.mock(
+      () => {
+        return new HttpResponse(bytes, {
+          headers: { 'Content-Type': 'application/octet-stream' },
+        });
+      },
+      { rev },
+    );
   },
   error: ({ status = 500, statusText = 'Internal Server Error' }: { status?: number; statusText?: string } = {}) => {
     return getFile.mock(() => new HttpResponse(null, { status, statusText }));
   },
+};
+
+const getRevision = {
+  mock: (resolver: (context: GetRevisionRequestContext) => HandlerResponse) => {
+    return http.get(`${DRIVE_API_BASE}/files/:fileId/revisions/:revId`, ({ params, request }) => {
+      return resolver({
+        authorization: request.headers.get('authorization'),
+        fileId: String(params.fileId),
+        request,
+        revId: String(params.revId),
+      });
+    });
+  },
+  ok: ({ bytes = new Uint8Array([1, 2, 3]) }: { bytes?: Uint8Array } = {}) => {
+    return getRevision.mock(() => new HttpResponse(bytes, { headers: { 'Content-Type': 'application/octet-stream' } }));
+  },
+  error: ({ status = 500, statusText = 'Internal Server Error' }: { status?: number; statusText?: string } = {}) => {
+    return getRevision.mock(() => new HttpResponse(null, { status, statusText }));
+  },
+};
+
+const getRevError = ({
+  status = 500,
+  statusText = 'Internal Server Error',
+}: { status?: number; statusText?: string } = {}) => {
+  return http.get(`${DRIVE_API_BASE}/files/:fileId`, ({ request }) => {
+    return new URL(request.url).searchParams.get('alt') === 'media'
+      ? undefined
+      : new HttpResponse(null, { status, statusText });
+  });
 };
 
 const updateFile = {
@@ -125,6 +173,7 @@ const updateFile = {
   ok: ({ file }: { file?: Partial<UpdatedDriveFile> } = {}) => {
     return updateFile.mock(({ fileId }) =>
       HttpResponse.json({
+        headRevisionId: file?.headRevisionId ?? 'rev-uploaded',
         id: file?.id ?? fileId,
         modifiedTime: file?.modifiedTime ?? new Date('2026-01-01T00:00:00.000Z').toISOString(),
         name: file?.name ?? 'vault.kdbx',
@@ -158,6 +207,7 @@ const createFile = {
   ok: ({ file }: { file?: Partial<UpdatedDriveFile> } = {}) => {
     return createFile.mock(({ metadata }) =>
       HttpResponse.json({
+        headRevisionId: file?.headRevisionId ?? 'rev-created',
         id: file?.id ?? 'drive-file-id-xyz',
         modifiedTime: file?.modifiedTime ?? new Date('2026-01-01T00:00:00.000Z').toISOString(),
         name: file?.name ?? metadata?.name ?? 'vault.kdbx',
@@ -167,6 +217,74 @@ const createFile = {
   error: ({ status = 500, statusText = 'Internal Server Error' }: { status?: number; statusText?: string } = {}) => {
     return createFile.mock(() => new HttpResponse(null, { status, statusText }));
   },
+};
+
+type FakeFile = {
+  bytes: Uint8Array;
+  rev: string;
+  uploads: Uint8Array[];
+};
+
+// A Drive file that gets a new rev on every upload and keeps the bytes of every rev.
+// Call `change` to act as another device.
+const fakeFile = ({
+  bytes = new Uint8Array([1, 2, 3]),
+  rev = 'rev-1',
+  onDownload,
+  onRevRequest,
+  onUpload,
+}: {
+  bytes?: Uint8Array;
+  rev?: string;
+  onDownload?: () => void | Promise<void>;
+  // called with the 1-based count of the rev reads, before the rev is read
+  onRevRequest?: (count: number) => void;
+  // called when an upload arrives, before it is applied
+  onUpload?: () => void | Promise<void>;
+} = {}) => {
+  const file: FakeFile = { bytes, rev, uploads: [] };
+  const history = new Map<string, Uint8Array>([[rev, bytes]]);
+  let revRequests = 0;
+
+  const change = (next: { bytes: Uint8Array; rev: string }) => {
+    file.bytes = next.bytes;
+    file.rev = next.rev;
+    history.set(next.rev, next.bytes);
+  };
+
+  const handlers = [
+    getFile.mock(() => new HttpResponse(null, { status: 500 }), {
+      rev: () => {
+        revRequests += 1;
+        onRevRequest?.(revRequests);
+
+        return file.rev;
+      },
+    }),
+    getRevision.mock(async ({ revId }) => {
+      await onDownload?.();
+
+      const revBytes = history.get(revId);
+      if (!revBytes) return new HttpResponse(null, { status: 404, statusText: 'Not Found' });
+
+      return new HttpResponse(revBytes, { headers: { 'Content-Type': 'application/octet-stream' } });
+    }),
+    updateFile.mock(async ({ body, fileId }) => {
+      await onUpload?.();
+
+      file.uploads.push(body);
+      change({ bytes: body, rev: `rev-upload-${file.uploads.length}` });
+
+      return HttpResponse.json({
+        headRevisionId: file.rev,
+        id: fileId,
+        modifiedTime: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        name: 'vault.kdbx',
+      });
+    }),
+  ];
+
+  return { change, file, handlers };
 };
 
 // happy-dom's fetch sends a CORS preflight before the authorized Drive requests, plain Node doesn't
@@ -187,7 +305,10 @@ const preflight = {
 
 export const googleDriveApi = {
   createFile,
+  fakeFile,
   preflight,
   getFile,
+  getRevError,
+  getRevision,
   updateFile,
 };

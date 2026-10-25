@@ -7,3 +7,6 @@ export const asArrayBuffer = (bytes: Uint8Array) => {
 export const asUint8Array = (bytes: ArrayBuffer) => {
   return new Uint8Array(bytes);
 };
+
+export const isSameBytes = (a: Uint8Array, b: Uint8Array) =>
+  a.length === b.length && a.every((byte, index) => byte === b[index]);
