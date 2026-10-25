@@ -9,6 +9,7 @@ import {
 import { loadDatabase, toEncryptedBytes } from '@/services/database';
 import { getProvider } from '@/services/provider-registry';
 import { SyncConflictError } from '@/services/provider';
+import { isSameBytes } from '@/utils/buffer';
 import { Lock } from '@/utils/lock';
 
 const updateRecordDatabaseLock = new Lock('record.service.update-record-database');
@@ -93,8 +94,9 @@ export const syncSession = async ({
   const apply = (snapshot: SyncableRecord, synced: Synced) =>
     updateRecordDatabaseLock.runInLock(async () => {
       const stored = await getSyncableRecord(record.id);
-      const nextDatabase = await merge(stored.kdbx.encryptedBytes, synced.encryptedBytes);
-      const encryptedBytes = await toEncryptedBytes(nextDatabase);
+      const encryptedBytes = isSameBytes(stored.kdbx.encryptedBytes, snapshot.kdbx.encryptedBytes)
+        ? synced.encryptedBytes
+        : await toEncryptedBytes(await merge(stored.kdbx.encryptedBytes, synced.encryptedBytes));
 
       const nextRecord = await updateSyncableRecord(stored.id, (current) => ({
         ...current,
@@ -103,7 +105,7 @@ export const syncSession = async ({
         syncedVersion: snapshot.version ?? 0,
       }));
 
-      return { database: nextDatabase, record: nextRecord };
+      return { database: await load(encryptedBytes), record: nextRecord };
     });
 
   const syncOnce = async (): Promise<SyncSessionResult> => {
