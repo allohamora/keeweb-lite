@@ -438,9 +438,23 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
-            <EntryRemove database={database} entry={entry} record={record} onEntryRemove={handleSave} />
-            {isInTrash && (
-              <EntryRestore database={database} entry={entry} record={record} onEntryRestore={handleSave} />
+            {isDirty ? (
+              <Button
+                className="h-8 px-4 text-xs"
+                disabled={isMutating}
+                onClick={() => reset()}
+                type="button"
+                variant="secondary"
+              >
+                Discard
+              </Button>
+            ) : (
+              <>
+                <EntryRemove database={database} entry={entry} record={record} onEntryRemove={handleSave} />
+                {isInTrash && (
+                  <EntryRestore database={database} entry={entry} record={record} onEntryRestore={handleSave} />
+                )}
+              </>
             )}
           </div>
           <Button className="h-8 px-4 text-xs" disabled={!isDirty || isMutating} type="submit" variant="outline">
