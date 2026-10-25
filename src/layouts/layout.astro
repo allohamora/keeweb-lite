@@ -28,6 +28,15 @@ const scripts = providers.filter(({ isConfigured }) => isConfigured()).flatMap((
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content={APP_NAME} />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <script is:inline>
+      // iOS zooms into focused fields with a font under 16px. maximum-scale=1 stops that and, unlike on
+      // Android, iOS still allows pinch-zoom. -webkit-touch-callout is only supported on iOS WebKit.
+      if (CSS.supports('-webkit-touch-callout', 'none')) {
+        document
+          .querySelector('meta[name="viewport"]')
+          ?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover');
+      }
+    </script>
     <meta name="generator" content={Astro.generator} />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
