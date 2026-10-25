@@ -191,6 +191,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                   <div className="relative">
                     <Input
                       {...field}
+                      autoComplete="off"
                       aria-invalid={fieldState.invalid}
                       className="h-8 px-8 text-xs"
                       id="entry-title"
@@ -250,6 +251,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                     openOnInputClick
                   >
                     <AutocompleteInput
+                      autoComplete="off"
                       aria-invalid={fieldState.invalid}
                       className="h-8 text-xs"
                       id="entry-username"
@@ -294,7 +296,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                   <div className="relative">
                     <Input
                       {...field}
-                      autoComplete="off"
+                      autoComplete="new-password"
                       aria-invalid={fieldState.invalid}
                       className="h-8 pr-24 text-xs"
                       id="entry-password"
@@ -342,6 +344,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                   <div className="relative">
                     <Input
                       {...field}
+                      autoComplete="off"
                       aria-invalid={fieldState.invalid}
                       className="h-8 pr-16 text-xs"
                       id="entry-url"
@@ -420,6 +423,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                 <FieldContent>
                   <Textarea
                     {...field}
+                    autoComplete="off"
                     aria-invalid={fieldState.invalid}
                     className="min-h-24 resize-none text-xs"
                     id="entry-notes"

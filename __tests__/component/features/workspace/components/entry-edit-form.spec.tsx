@@ -40,6 +40,18 @@ describe('entry-edit-form', () => {
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     });
 
+    it('turns browser autocomplete off on the text fields', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
+
+      for (const label of ['Title', 'Username', 'URL', 'Notes']) {
+        expect(screen.getByLabelText(label)).toHaveAttribute('autocomplete', 'off');
+      }
+      expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'new-password');
+    });
+
     it('enables Save once a field is edited', async () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
