@@ -3,7 +3,7 @@ import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { type CreateFileRequestContext, googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
-import { createRecord } from '@/repositories/record';
+import { createRecord, isModified } from '@/repositories/record';
 import { getRecordsByLastOpened } from '@/features/unlock/services/record';
 import { unlockDatabase } from '@/services/database';
 import { createFileList } from '@tests/utils/file-list';
@@ -74,7 +74,7 @@ describe('google-drive-record-service', () => {
       expect(record.type).toBe('google-drive');
       if (record.type === 'google-drive') {
         expect(record.source).toEqual({ id: 'drive-file-id-xyz', rev: 'rev-created' });
-        expect(record.isModified).toBe(false);
+        expect(isModified(record)).toBe(false);
       }
     });
 
@@ -265,7 +265,7 @@ describe('google-drive-record-service', () => {
       const record = records[0];
       if (record.type === 'google-drive') {
         expect(record.source).toEqual({ id: testFileId, rev: 'rev-1' });
-        expect(record.isModified).toBe(false);
+        expect(isModified(record)).toBe(false);
       }
     });
 

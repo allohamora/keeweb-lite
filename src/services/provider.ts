@@ -1,6 +1,6 @@
 import type kdbxweb from '@/utils/kdbxweb';
 import type { ComponentType } from 'react';
-import { getRecord, updateRecord, type FileRecord } from '@/repositories/record';
+import { getRecord, markSaved, updateRecord, type FileRecord } from '@/repositories/record';
 import { loadDatabase } from '@/services/database';
 import { kebabCaseToTitle } from '@/utils/string';
 
@@ -12,10 +12,7 @@ export type DialogProps = {
 
 export type RecordStorage = {
   load: (input: { database: kdbxweb.Kdbx; record: FileRecord }) => Promise<kdbxweb.Kdbx>;
-  update: (
-    record: FileRecord,
-    changes: { encryptedBytes?: Uint8Array<ArrayBuffer>; source?: SourceOf<FileRecord>; isModified?: boolean },
-  ) => Promise<FileRecord>;
+  update: (record: FileRecord, changes: { encryptedBytes: Uint8Array<ArrayBuffer> }) => Promise<FileRecord>;
 };
 
 export const recordStorage: RecordStorage = {
@@ -24,13 +21,10 @@ export const recordStorage: RecordStorage = {
 
     return loadDatabase({ encryptedBytes: kdbx.encryptedBytes, credentials: database.credentials });
   },
-  update: (record, { encryptedBytes, source, isModified }) =>
-    updateRecord(record.id, (currentRecord) => ({
-      ...currentRecord,
-      ...(encryptedBytes && { kdbx: { ...currentRecord.kdbx, encryptedBytes } }),
-      ...(source && { source }),
-      ...(isModified !== undefined && { isModified }),
-    })),
+  update: (record, { encryptedBytes }) =>
+    updateRecord(record.id, (currentRecord) =>
+      markSaved({ ...currentRecord, kdbx: { ...currentRecord.kdbx, encryptedBytes } }),
+    ),
 };
 
 type RecordsByType = { [Record in FileRecord as Record['type']]: Record };
@@ -49,7 +43,7 @@ export class SyncConflictError extends Error {
 // changed since the last sync. `data` is passed to `pull` and `push`. Without `check` the remote is always pulled.
 // `pull` also returns the `source` the record gets if its local copy is replaced by the pulled bytes.
 // `push` returns the new `source` of the record, which is saved with the pushed bytes.
-// Whether the local copy changed since the last sync is tracked by `isModified` on the record.
+// Whether the local copy changed since the last sync is tracked by `version` and `syncedVersion` on the record.
 export type Sync<Record extends FileRecord = FileRecord, SyncData = undefined> = {
   check?: (record: Record) => Promise<{ data: SyncData; isRemoteChanged: boolean }>;
   pull(record: Record, data: SyncData): Promise<{ bytes: Uint8Array<ArrayBuffer>; source: SourceOf<Record> }>;

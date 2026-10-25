@@ -26,7 +26,6 @@ const localFileRecordSchema = z.object({
 
 const googleDriveFileRecordSchema = z.object({
   id: z.string(),
-  isModified: z.optional(z.boolean()),
   kdbx: recordKdbxSchema,
   key: z.optional(keySchema),
   lastOpenedAt: z.optional(z.string()),
@@ -34,6 +33,8 @@ const googleDriveFileRecordSchema = z.object({
     id: z.string(),
     rev: z.optional(z.string()),
   }),
+  version: z.optional(z.number()),
+  syncedVersion: z.optional(z.number()),
   type: z.literal('google-drive'),
 });
 
@@ -82,6 +83,13 @@ export const getRecords = async () => {
 export type SyncableRecord = Extract<PersistedFileRecord, { source: unknown }>;
 
 const isSyncable = (record: PersistedFileRecord): record is SyncableRecord => 'source' in record;
+
+// `version` counts the local saves and `syncedVersion` is the version that was last synced,
+// a record that was never synced has no `syncedVersion`
+export const isModified = ({ version = 0, syncedVersion }: SyncableRecord) => syncedVersion !== version;
+
+export const markSaved = (record: PersistedFileRecord): PersistedFileRecord =>
+  isSyncable(record) ? { ...record, version: (record.version ?? 0) + 1 } : record;
 
 export const getRecord = async (recordId: string) => {
   const records = await getRecords();
@@ -147,5 +155,15 @@ export const updateRecord = async (recordId: string, update: (record: PersistedF
     const nextRecords = oldRecords.map((currentRecord) => (currentRecord.id === recordId ? nextRecord : currentRecord));
 
     return { nextRecords, result: nextRecord };
+  });
+};
+
+export const updateSyncableRecord = async (recordId: string, update: (record: SyncableRecord) => SyncableRecord) => {
+  return updateRecord(recordId, (record) => {
+    if (!isSyncable(record)) {
+      throw new Error('Record does not sync.');
+    }
+
+    return update(record);
   });
 };

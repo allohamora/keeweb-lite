@@ -47,9 +47,9 @@ const createSession = async ({ isSynced = false } = {}) => {
   const { encryptedBytes } = await createEmptyDatabase({ name: 'Vault', password: 'secret' });
   const record = await createRecord({
     id: 'record-1',
-    isModified: isSynced ? false : undefined,
     kdbx: { encryptedBytes, name: 'vault.kdbx' },
     source: { id: 'drive-1', rev: isSynced ? 'rev-1' : undefined },
+    syncedVersion: isSynced ? 0 : undefined,
     type: 'google-drive',
   });
   const session = await unlockSession({

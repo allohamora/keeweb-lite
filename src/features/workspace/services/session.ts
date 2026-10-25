@@ -1,5 +1,11 @@
 import type kdbxweb from '@/utils/kdbxweb';
-import { getSyncableRecord, type FileRecord } from '@/repositories/record';
+import {
+  getSyncableRecord,
+  isModified,
+  updateSyncableRecord,
+  type FileRecord,
+  type SyncableRecord,
+} from '@/repositories/record';
 import { loadDatabase, toEncryptedBytes } from '@/services/database';
 import { getProvider } from '@/services/provider-registry';
 import { SyncConflictError } from '@/services/provider';
@@ -17,13 +23,10 @@ export const updateRecordDatabase = async <Result>({
   update: (nextDatabase: kdbxweb.Kdbx) => Result | Promise<Result>;
 }): Promise<[nextDatabase: kdbxweb.Kdbx, nextRecord: FileRecord, result: Result]> => {
   return updateRecordDatabaseLock.runInLock(async () => {
-    const { storage, sync } = getProvider(record);
+    const { storage } = getProvider(record);
     const nextDatabase = await storage.load({ database, record });
     const result = await update(nextDatabase);
-    const nextRecord = await storage.update(record, {
-      encryptedBytes: await toEncryptedBytes(nextDatabase),
-      isModified: sync ? true : undefined,
-    });
+    const nextRecord = await storage.update(record, { encryptedBytes: await toEncryptedBytes(nextDatabase) });
 
     return [nextDatabase, nextRecord, result];
   });
@@ -32,6 +35,11 @@ export const updateRecordDatabase = async <Result>({
 type SyncSessionResult = {
   database: kdbxweb.Kdbx;
   record: FileRecord;
+};
+
+type Synced = {
+  encryptedBytes: Uint8Array<ArrayBuffer>;
+  source: SyncableRecord['source'];
 };
 
 const syncSessionLock = new Lock('session.service.sync-session');
@@ -45,66 +53,64 @@ export const syncSession = async ({
   record: FileRecord;
   database: kdbxweb.Kdbx;
 }): Promise<SyncSessionResult> => {
-  const { sync, label, storage } = getProvider(record);
+  const { sync, label } = getProvider(record);
   if (!sync) {
     throw new Error(`${label} does not support sync.`);
   }
 
-  const mergeRemote = async (stored: FileRecord, remoteBytes: Uint8Array) => {
-    const mergedDatabase = await storage.load({ database, record: stored });
-    const remoteDatabase = await loadDatabase({ encryptedBytes: remoteBytes, credentials: mergedDatabase.credentials });
+  const load = (encryptedBytes: Uint8Array) => loadDatabase({ encryptedBytes, credentials: database.credentials });
 
-    mergedDatabase.merge(remoteDatabase);
+  const merge = async (localBytes: Uint8Array, remoteBytes: Uint8Array) => {
+    const merged = await load(localBytes);
+    merged.merge(await load(remoteBytes));
 
-    return mergedDatabase;
+    return merged;
   };
 
-  const syncOnce = async (): Promise<SyncSessionResult> => {
-    const current = await getSyncableRecord(record.id);
-    const { data, isRemoteChanged } = (await sync.check?.(current)) ?? { data: undefined, isRemoteChanged: true };
-    const remote = isRemoteChanged ? await sync.pull(current, data) : undefined;
+  // remote only: brings the snapshot and the remote file to the same state, without writing the local record
+  const syncSnapshot = async (snapshot: SyncableRecord): Promise<Synced | undefined> => {
+    const isLocalChanged = isModified(snapshot);
+    const { data, isRemoteChanged } = (await sync.check?.(snapshot)) ?? { data: undefined, isRemoteChanged: true };
 
-    // decided on the stored record inside the lock, so an edit saved in the meantime is never overwritten
-    return updateRecordDatabaseLock.runInLock(async () => {
+    if (!isLocalChanged && !isRemoteChanged) {
+      return undefined;
+    }
+
+    const remote = isRemoteChanged ? await sync.pull(snapshot, data) : undefined;
+    if (remote && !isLocalChanged) {
+      return { encryptedBytes: remote.bytes, source: remote.source };
+    }
+
+    const encryptedBytes = remote
+      ? await toEncryptedBytes(await merge(snapshot.kdbx.encryptedBytes, remote.bytes))
+      : snapshot.kdbx.encryptedBytes;
+
+    return { encryptedBytes, source: await sync.push(snapshot, encryptedBytes, data) };
+  };
+
+  // local only: merges the result into what is stored now, like any other change, and marks only the
+  // snapshot version as synced, so saves made during the sync are kept and uploaded by the next one
+  const apply = (snapshot: SyncableRecord, synced: Synced) =>
+    updateRecordDatabaseLock.runInLock(async () => {
       const stored = await getSyncableRecord(record.id);
-      // a record that was never marked as synced may have edits that were not uploaded
-      const isModified = stored.isModified !== false;
+      const nextDatabase = await merge(stored.kdbx.encryptedBytes, synced.encryptedBytes);
+      const encryptedBytes = await toEncryptedBytes(nextDatabase);
 
-      if (!remote && !isModified) {
-        return {
-          database: await loadDatabase({
-            encryptedBytes: stored.kdbx.encryptedBytes,
-            credentials: database.credentials,
-          }),
-          record: stored,
-        };
-      }
+      const nextRecord = await updateSyncableRecord(stored.id, (current) => ({
+        ...current,
+        kdbx: { ...current.kdbx, encryptedBytes },
+        source: synced.source,
+        syncedVersion: snapshot.version ?? 0,
+      }));
 
-      // only the remote changed: it becomes the local copy, and there is nothing to upload
-      if (remote && !isModified) {
-        return {
-          database: await loadDatabase({ encryptedBytes: remote.bytes, credentials: database.credentials }),
-          record: await storage.update(stored, {
-            encryptedBytes: remote.bytes,
-            source: remote.source,
-            isModified: false,
-          }),
-        };
-      }
-
-      // local changes, merged with the remote if it changed, are uploaded and saved as one unit
-      // the database comes from the stored record, so it matches what is uploaded, also after an edit in another tab
-      const nextDatabase = remote
-        ? await mergeRemote(stored, remote.bytes)
-        : await storage.load({ database, record: stored });
-      const encryptedBytes = remote ? await toEncryptedBytes(nextDatabase) : stored.kdbx.encryptedBytes;
-      const source = await sync.push(stored, encryptedBytes, data);
-
-      return {
-        database: nextDatabase,
-        record: await storage.update(stored, { encryptedBytes, source, isModified: false }),
-      };
+      return { database: nextDatabase, record: nextRecord };
     });
+
+  const syncOnce = async (): Promise<SyncSessionResult> => {
+    const snapshot = await getSyncableRecord(record.id);
+    const synced = await syncSnapshot(snapshot);
+
+    return synced ? apply(snapshot, synced) : { database: await load(snapshot.kdbx.encryptedBytes), record: snapshot };
   };
 
   return syncSessionLock.runInLock(async () => {

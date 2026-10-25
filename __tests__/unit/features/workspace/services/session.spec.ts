@@ -1,11 +1,19 @@
 import * as recordRepository from '@/repositories/record';
 import kdbxweb from '@/utils/kdbxweb';
+import { set } from 'idb-keyval';
 import { HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { googleDriveApi } from '@tests/mocks/google-drive';
 import { mockServer } from '@tests/setup-unit-context';
 import { auth } from '@/features/google-drive/repositories/google-drive';
-import { clearRecords, createRecord, getRecords, type FileRecord } from '@/repositories/record';
+import {
+  clearRecords,
+  createRecord,
+  getRecords,
+  isModified,
+  RECORDS_STORAGE_KEY,
+  type FileRecord,
+} from '@/repositories/record';
 import { unlockDatabase } from '@/services/database';
 import { SyncConflictError } from '@/services/provider';
 import { syncSession, updateRecordDatabase } from '@/features/workspace/services/session';
@@ -95,7 +103,7 @@ describe('session', () => {
       await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
 
       const stored = await recordRepository.getSyncableRecord('gd-update-record');
-      expect(stored.isModified).toBe(true);
+      expect(isModified(stored)).toBe(true);
     });
 
     it('does not mark a record that does not sync as modified', async () => {
@@ -104,7 +112,7 @@ describe('session', () => {
       await updateRecordDatabase({ database, record, update: addEntry('New Entry') });
 
       const [stored] = await recordRepository.getRecords();
-      expect(stored && 'isModified' in stored).toBe(false);
+      expect(stored && 'version' in stored).toBe(false);
     });
 
     it('preserves existing record metadata when updating', async () => {
@@ -338,8 +346,8 @@ describe('session', () => {
         id: 'gd-sync-setup',
         type: 'google-drive',
         kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
-        isModified: isSynced ? false : undefined,
         source: { id: 'drive-file-id', rev: isSynced ? 'rev-1' : undefined },
+        syncedVersion: isSynced ? 0 : undefined,
       });
       const database = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
 
@@ -351,6 +359,12 @@ describe('session', () => {
         .getDefaultGroup()
         .entries.map((entry) => getFieldText(entry.fields.get('Title')))
         .toSorted();
+    };
+
+    const expectLastUploadTitles = async (uploads: Uint8Array[], titles: string[]) => {
+      const uploaded = uploads.at(-1);
+      if (!uploaded) throw new Error('nothing was uploaded');
+      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(titles);
     };
 
     it('merges the remote file into the latest saved state and uploads the merged database', async () => {
@@ -421,11 +435,9 @@ describe('session', () => {
       expect(
         getTitles(await unlockDatabase({ encryptedBytes: stored.kdbx.encryptedBytes, password: 'test-password' })),
       ).toEqual(expectedTitles);
-      const [uploaded] = drive.file.uploads;
-      if (!uploaded) throw new Error('nothing was uploaded');
-      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(
-        expectedTitles,
-      );
+      // the upload has the state the sync started with, the edit is uploaded by the next sync
+      await expectLastUploadTitles(drive.file.uploads, ['Original Title', 'Remote Entry']);
+      expect(stored.type === 'google-drive' && isModified(stored)).toBe(true);
     });
 
     it('does not save the merged remote changes when the upload fails', async () => {
@@ -481,47 +493,86 @@ describe('session', () => {
       expect(getTitles(result.database)).toEqual(['Edited Title', 'Other Device Entry']);
     });
 
-    const expectLastUploadTitles = async (uploads: Uint8Array[], titles: string[]) => {
-      const uploaded = uploads.at(-1);
-      if (!uploaded) throw new Error('nothing was uploaded');
-      expect(getTitles(await unlockDatabase({ encryptedBytes: uploaded, password: 'test-password' }))).toEqual(titles);
-    };
-
-    it('saves an entry edit only after the merged file is uploaded', async () => {
+    it('keeps saves made during the upload and uploads them with the next sync', async () => {
       const { database, initialBytes, record } = await createSyncSetup();
       const otherBytes = await createOtherDeviceDatabase(initialBytes);
-      const entry = database.getDefaultGroup().entries[0];
-      if (!entry) throw new Error('entry should exist');
-
-      let saving: Promise<number> | undefined;
+      const savedTitles = ['Save 1', 'Save 2', 'Save 3', 'Save 4', 'Save 5'];
+      let isSaved = false;
       const drive = googleDriveApi.fakeFile({
         bytes: otherBytes,
         onUpload: async () => {
-          saving = saveEntry({
-            database,
-            record,
-            entryUuid: entry.uuid.toString(),
-            values: { ...getEntryValues(entry), title: 'Edited Title' },
-          }).then(() => drive.file.uploads.length);
+          if (isSaved) return;
+          isSaved = true;
 
-          // gives an unlocked save time to finish while the upload is still running
-          await new Promise((resolve) => setTimeout(resolve, 50));
+          for (const title of savedTitles) {
+            await updateRecordDatabase({
+              database,
+              record,
+              update: (nextDatabase) => {
+                nextDatabase.createEntry(nextDatabase.getDefaultGroup()).fields.set('Title', title);
+              },
+            });
+          }
         },
       });
       mockServer.addHandlers(...drive.handlers);
 
       await syncSession({ database, record });
 
-      expect(await saving).toBe(1);
       const [stored] = await getRecords();
       if (!stored) throw new Error('record should exist');
       const storedDatabase = await unlockDatabase({
         encryptedBytes: stored.kdbx.encryptedBytes,
         password: 'test-password',
       });
-      expect(getTitles(storedDatabase)).toEqual(['Edited Title', 'Other Device Entry']);
-      // the edit came after the upload, so it is still waiting to be uploaded
-      expect(stored.type === 'google-drive' && stored.isModified).toBe(true);
+      expect(getTitles(storedDatabase)).toEqual(['Original Title', 'Other Device Entry', ...savedTitles]);
+      expect(stored.type === 'google-drive' && isModified(stored)).toBe(true);
+      await expectLastUploadTitles(drive.file.uploads, ['Original Title', 'Other Device Entry']);
+
+      await syncSession({ database, record });
+
+      expect(drive.file.uploads).toHaveLength(2);
+      await expectLastUploadTitles(drive.file.uploads, ['Original Title', 'Other Device Entry', ...savedTitles]);
+      const [synced] = await getRecords();
+      expect(synced?.type === 'google-drive' && isModified(synced)).toBe(false);
+    });
+
+    it('keeps the state another tab synced while the remote file is downloading', async () => {
+      const { database, initialBytes, record } = await createSyncSetup({ isSynced: true });
+      const otherDeviceBytes = await createOtherDeviceDatabase(initialBytes);
+      const otherTabDatabase = await unlockDatabase({ encryptedBytes: otherDeviceBytes, password: 'test-password' });
+      otherTabDatabase.createEntry(otherTabDatabase.getDefaultGroup()).fields.set('Title', 'Other Tab Entry');
+      const otherTabBytes = new Uint8Array(await otherTabDatabase.save());
+      const drive = googleDriveApi.fakeFile({
+        bytes: otherDeviceBytes,
+        rev: 'rev-2',
+        onDownload: async () => {
+          // another tab merges the same remote file and syncs one more revision
+          drive.change({ bytes: otherTabBytes, rev: 'rev-3' });
+          await recordRepository.updateRecord(record.id, (current) =>
+            current.type === 'google-drive'
+              ? {
+                  ...current,
+                  kdbx: { ...current.kdbx, encryptedBytes: otherTabBytes },
+                  source: { ...current.source, rev: 'rev-3' },
+                }
+              : current,
+          );
+        },
+      });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession({ database, record });
+
+      expect(getTitles(result.database)).toEqual(['Original Title', 'Other Device Entry', 'Other Tab Entry']);
+      expect(drive.file.uploads).toEqual([]);
+      const [stored] = await getRecords();
+      if (!stored) throw new Error('record should exist');
+      const storedDatabase = await unlockDatabase({
+        encryptedBytes: stored.kdbx.encryptedBytes,
+        password: 'test-password',
+      });
+      expect(getTitles(storedDatabase)).toEqual(['Original Title', 'Other Device Entry', 'Other Tab Entry']);
     });
 
     it('uploads the local changes when the file is reverted to the old one after a conflict', async () => {
@@ -654,9 +705,16 @@ describe('session', () => {
       expect(getTitles(result.database)).toEqual(['Original Title', 'Other Device Entry']);
       expect(drive.file.uploads).toHaveLength(0);
       const [stored] = await getRecords();
-      expect(stored?.kdbx.encryptedBytes).toEqual(otherBytes);
+      expect(
+        getTitles(
+          await unlockDatabase({
+            encryptedBytes: expectPersisted(stored).kdbx.encryptedBytes,
+            password: 'test-password',
+          }),
+        ),
+      ).toEqual(['Original Title', 'Other Device Entry']);
       expect(stored?.type === 'google-drive' && stored.source.rev).toBe('rev-2');
-      expect(stored?.type === 'google-drive' && stored.isModified).toBe(false);
+      expect(stored?.type === 'google-drive' && isModified(stored)).toBe(false);
     });
 
     it('returns the stored database when it uploads local changes that the given database does not have', async () => {
@@ -697,9 +755,16 @@ describe('session', () => {
       const [stored] = await getRecords();
       await syncSession(result);
 
-      expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(drive.file.uploads[0]);
+      expect(
+        getTitles(
+          await unlockDatabase({
+            encryptedBytes: expectPersisted(result.record).kdbx.encryptedBytes,
+            password: 'test-password',
+          }),
+        ),
+      ).toEqual(['Local Entry', 'Original Title']);
       expect(stored?.type === 'google-drive' && stored.source.rev).toBe('rev-upload-1');
-      expect(stored?.type === 'google-drive' && stored.isModified).toBe(false);
+      expect(stored?.type === 'google-drive' && isModified(stored)).toBe(false);
       expect(drive.file.uploads).toHaveLength(1);
     });
 
@@ -709,7 +774,7 @@ describe('session', () => {
       const drive = googleDriveApi.fakeFile({ bytes: setup.initialBytes, rev: 'rev-1' });
       mockServer.addHandlers(...drive.handlers);
       using _updateRecord = vi
-        .spyOn(recordRepository, 'updateRecord')
+        .spyOn(recordRepository, 'updateSyncableRecord')
         .mockRejectedValueOnce(new Error('IndexedDB write failed'));
 
       await expect(syncSession(local)).rejects.toThrow('IndexedDB write failed');
@@ -718,15 +783,22 @@ describe('session', () => {
       expect(drive.file.uploads).toHaveLength(1);
       const [failed] = await getRecords();
       expect(failed?.type === 'google-drive' && failed.source.rev).toBe('rev-1');
-      expect(failed?.type === 'google-drive' && failed.isModified).toBe(true);
+      expect(failed?.type === 'google-drive' && isModified(failed)).toBe(true);
 
       const result = await syncSession(local);
 
       expect(getTitles(result.database)).toEqual(['Local Entry', 'Original Title']);
-      expect(expectPersisted(result.record).kdbx.encryptedBytes).toEqual(drive.file.uploads[1]);
+      expect(
+        getTitles(
+          await unlockDatabase({
+            encryptedBytes: expectPersisted(result.record).kdbx.encryptedBytes,
+            password: 'test-password',
+          }),
+        ),
+      ).toEqual(['Local Entry', 'Original Title']);
       const [stored] = await getRecords();
       expect(stored?.type === 'google-drive' && stored.source.rev).toBe('rev-upload-2');
-      expect(stored?.type === 'google-drive' && stored.isModified).toBe(false);
+      expect(stored?.type === 'google-drive' && isModified(stored)).toBe(false);
       await expectLastUploadTitles(drive.file.uploads, ['Local Entry', 'Original Title']);
     });
 
@@ -762,6 +834,65 @@ describe('session', () => {
       await expect(syncSession({ database, record })).rejects.toThrow('Failed to update file: 500');
 
       expect(resolver).toHaveBeenCalledTimes(1);
+    });
+
+    // a record saved by an app version before `version` and `syncedVersion`, with the old `isModified` flag
+    const createOldSyncSetup = async ({ isModified: wasModified }: { isModified: boolean }) => {
+      const credentials = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('test-password'));
+      await credentials.ready;
+      const initialDatabase = kdbxweb.Kdbx.create(credentials, 'Old Record DB');
+      initialDatabase.createEntry(initialDatabase.getDefaultGroup()).fields.set('Title', 'Original Title');
+      const initialBytes = new Uint8Array(await initialDatabase.save());
+
+      await set(RECORDS_STORAGE_KEY, [
+        {
+          id: 'gd-old-record',
+          type: 'google-drive',
+          isModified: wasModified,
+          kdbx: { encryptedBytes: initialBytes, name: 'vault.kdbx' },
+          source: { id: 'drive-file-id', rev: 'rev-1' },
+        },
+      ]);
+      const record = await recordRepository.getSyncableRecord('gd-old-record');
+      const database = await unlockDatabase({ encryptedBytes: initialBytes, password: 'test-password' });
+
+      return { database, initialBytes, record };
+    };
+
+    it('uploads a synced old record once, then syncs only new saves', async () => {
+      const { database, initialBytes, record } = await createOldSyncSetup({ isModified: false });
+      const drive = googleDriveApi.fakeFile({ bytes: initialBytes, rev: 'rev-1' });
+      mockServer.addHandlers(...drive.handlers);
+
+      // an old record has no sync state yet, so it is uploaded once to get one
+      const synced = await syncSession({ database, record });
+      await syncSession(synced);
+
+      expect(drive.file.uploads).toHaveLength(1);
+      expect(isModified(await recordRepository.getSyncableRecord('gd-old-record'))).toBe(false);
+
+      const local = await addLocalEntry(synced);
+      await syncSession(local);
+
+      expect(drive.file.uploads).toHaveLength(2);
+      await expectLastUploadTitles(drive.file.uploads, ['Local Entry', 'Original Title']);
+      expect(isModified(await recordRepository.getSyncableRecord('gd-old-record'))).toBe(false);
+    });
+
+    it('merges and uploads the unsynced edits of an old record', async () => {
+      const { database, initialBytes, record } = await createOldSyncSetup({ isModified: true });
+      const local = await addLocalEntry({ database, record });
+      const otherBytes = await createOtherDeviceDatabase(initialBytes);
+      const drive = googleDriveApi.fakeFile({ bytes: otherBytes, rev: 'rev-2' });
+      mockServer.addHandlers(...drive.handlers);
+
+      const result = await syncSession(local);
+
+      const expectedTitles = ['Local Entry', 'Original Title', 'Other Device Entry'];
+      expect(getTitles(result.database)).toEqual(expectedTitles);
+      expect(drive.file.uploads).toHaveLength(1);
+      await expectLastUploadTitles(drive.file.uploads, expectedTitles);
+      expect(isModified(await recordRepository.getSyncableRecord('gd-old-record'))).toBe(false);
     });
 
     it('runs concurrent syncs one at a time', async () => {
