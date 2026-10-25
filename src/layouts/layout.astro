@@ -1,5 +1,6 @@
 ---
 import { APP_NAME, getPageTitle } from '@/utils/page';
+import { PUBLIC_GOOGLE_SITE_VERIFICATION } from 'astro:env/client';
 import { providers } from '@/services/provider-registry';
 import '../styles/global.css';
 
@@ -41,6 +42,9 @@ const scripts = providers.filter(({ isConfigured }) => isConfigured()).flatMap((
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl.href} />
+    {PUBLIC_GOOGLE_SITE_VERIFICATION && (
+      <meta name="google-site-verification" content={PUBLIC_GOOGLE_SITE_VERIFICATION} />
+    )}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={APP_NAME} />
     <meta property="og:title" content={fullTitle} />

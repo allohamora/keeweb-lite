@@ -10,6 +10,7 @@ export default defineConfig({
     schema: {
       PUBLIC_GOOGLE_CLIENT_ID: envField.string({ context: 'client', access: 'public', optional: true }),
       PUBLIC_GOOGLE_APP_ID: envField.string({ context: 'client', access: 'public', optional: true }),
+      PUBLIC_GOOGLE_SITE_VERIFICATION: envField.string({ context: 'client', access: 'public', optional: true }),
     },
   },
   vite: {
