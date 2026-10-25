@@ -83,6 +83,7 @@ export const useSync = ({ record, database, version, setSession }: UseSyncProps)
 
   return {
     ...state,
+    triggerSync,
     retrySync,
   };
 };
