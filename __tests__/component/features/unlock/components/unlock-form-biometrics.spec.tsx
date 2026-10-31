@@ -129,24 +129,5 @@ describe('unlock-form biometrics', () => {
       });
       expect(authenticator.signals).toHaveLength(1);
     });
-
-    it('shows the error and still removes the record when the passkey cleanup fails', async () => {
-      using _authenticator = installFakeAuthenticator({ failSignal: true });
-      using toastError = vi.spyOn(toast, 'error');
-      const { user, setSession } = await renderForm();
-      await user.type(screen.getByLabelText('Password'), 'vault-password');
-      await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
-      await vi.waitFor(() => {
-        expect(setSession).toHaveBeenCalledTimes(1);
-      });
-
-      await user.click(screen.getByRole('button', { name: 'Remove' }));
-      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove' }));
-
-      await vi.waitFor(async () => {
-        expect(await getRecords()).toEqual([]);
-      });
-      expect(toastError).toHaveBeenCalledWith('signal failed');
-    });
   });
 });

@@ -35,7 +35,7 @@ export const installFakeAuthenticator = ({
   const secrets = new Map<string, Uint8Array<ArrayBuffer>>();
   let cancelNext = false;
   const createdUsers: { id: string; name: string }[] = [];
-  const signals: AllAcceptedCredentialsOptions[] = [];
+  const signals: UnknownCredentialOptions[] = [];
 
   const evaluate = async (secret: Uint8Array<ArrayBuffer>, input?: BufferSource) => {
     if (!supportsPrf || !input) {
@@ -93,8 +93,8 @@ export const installFakeAuthenticator = ({
   Object.defineProperty(navigator, 'credentials', { value: credentials, configurable: true });
   Object.defineProperty(globalThis, 'PublicKeyCredential', { value: FakePublicKeyCredential, configurable: true });
   if (supportsSignal) {
-    Object.defineProperty(FakePublicKeyCredential, 'signalAllAcceptedCredentials', {
-      value: async (options: AllAcceptedCredentialsOptions) => {
+    Object.defineProperty(FakePublicKeyCredential, 'signalUnknownCredential', {
+      value: async (options: UnknownCredentialOptions) => {
         if (failSignal) {
           throw new DOMException('signal failed', 'NotSupportedError');
         }
@@ -115,7 +115,7 @@ export const installFakeAuthenticator = ({
       supportsPrf = false;
     },
     [Symbol.dispose]: () => {
-      Reflect.deleteProperty(FakePublicKeyCredential, 'signalAllAcceptedCredentials');
+      Reflect.deleteProperty(FakePublicKeyCredential, 'signalUnknownCredential');
 
       if (previousCredentials) {
         Object.defineProperty(navigator, 'credentials', previousCredentials);

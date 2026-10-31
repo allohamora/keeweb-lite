@@ -1,15 +1,12 @@
-import { asArrayBuffer } from '@/utils/buffer';
+import { asArrayBuffer, toBase64Url } from '@/utils/buffer';
 import { getRecord, updateRecord, type PersistedFileRecord, type QuickUnlock } from '@/repositories/record';
 import { InvalidKeyError } from '@/services/database';
 import { openDatabase, startSession, unlockSession } from '@/features/unlock/services/session';
 
-const IV_LENGTH = 12;
-
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-const label = encoder.encode('keeweb-lite.quick-unlock');
-const prfExtension = { prf: { eval: { first: asArrayBuffer(label) } } };
+const prfExtension = { prf: { eval: { first: asArrayBuffer(encoder.encode('keeweb-lite.quick-unlock')) } } };
 
 export class QuickUnlockCancelledError extends Error {
   constructor(options?: ErrorOptions) {
@@ -18,22 +15,9 @@ export class QuickUnlockCancelledError extends Error {
   }
 }
 
-class InvalidQuickUnlockError extends Error {
-  constructor(options?: ErrorOptions) {
-    super('Biometric data is invalid. Enter your password to enable biometrics again.', options);
-    this.name = 'InvalidQuickUnlockError';
-  }
-}
-
-export class PasswordRequiredError extends Error {
-  constructor() {
-    super('Enter your password once to enable biometrics.');
-    this.name = 'PasswordRequiredError';
-  }
-}
-
 const randomBytes = (length: number) => crypto.getRandomValues(new Uint8Array(length));
 
+// browsers report a dismissed biometric prompt as NotAllowedError
 const prompt = async <Result>(request: () => Promise<Result>) => {
   try {
     return await request();
@@ -46,7 +30,7 @@ const prompt = async <Result>(request: () => Promise<Result>) => {
   }
 };
 
-const getPrfOutput = (credential: Credential | null) => {
+const getPrfSecret = (credential: Credential | null) => {
   if (!(credential instanceof PublicKeyCredential)) {
     return undefined;
   }
@@ -54,24 +38,62 @@ const getPrfOutput = (credential: Credential | null) => {
   return credential.getClientExtensionResults().prf?.results?.first;
 };
 
-const getPasskeyUserHandle = (recordId: string) => crypto.subtle.digest('SHA-256', encoder.encode(recordId));
+// one stable passkey user per record: a new passkey for the same record replaces the old one
+const getUserHandle = (recordId: string) => crypto.subtle.digest('SHA-256', encoder.encode(`keeweb-lite:${recordId}`));
 
-const createPasskey = async ({ recordId, name }: { recordId: string; name: string }) => {
-  const userHandle = await getPasskeyUserHandle(recordId);
+export const isPasskeySupported = async () => {
+  if (typeof PublicKeyCredential === 'undefined' || !navigator.credentials) {
+    return false;
+  }
 
+  if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) {
+    return false;
+  }
+
+  // getClientCapabilities is missing in some browsers, then PRF support is only known after create()
+  if (!('getClientCapabilities' in PublicKeyCredential)) {
+    return true;
+  }
+
+  const capabilities = await PublicKeyCredential.getClientCapabilities();
+
+  return capabilities['extension:prf'] !== false;
+};
+
+export const readPasskeySecret = async (credentialId: Uint8Array) => {
   const credential = await prompt(() =>
+    navigator.credentials.get({
+      publicKey: {
+        challenge: randomBytes(32),
+        allowCredentials: [{ id: asArrayBuffer(credentialId), type: 'public-key' }],
+        userVerification: 'required',
+        extensions: prfExtension,
+      },
+    }),
+  );
+
+  const secret = getPrfSecret(credential);
+  if (!secret) {
+    throw new Error('Biometrics is not supported on this device.');
+  }
+
+  return secret;
+};
+
+export const createPasskey = async ({ recordId, displayName }: { recordId: string; displayName: string }) => {
+  const credential = await prompt(async () =>
     navigator.credentials.create({
       publicKey: {
         challenge: randomBytes(32),
         rp: { name: 'keeweb-lite' },
-        user: { id: userHandle, name, displayName: name },
+        user: { id: await getUserHandle(recordId), name: 'keeweb-lite', displayName },
         pubKeyCredParams: [
           { alg: -7, type: 'public-key' },
           { alg: -257, type: 'public-key' },
         ],
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          residentKey: 'preferred',
+          residentKey: 'required',
           userVerification: 'required',
         },
         extensions: prfExtension,
@@ -87,34 +109,45 @@ const createPasskey = async ({ recordId, name }: { recordId: string; name: strin
     throw new Error('Biometrics is not supported on this device.');
   }
 
-  return { credentialId: new Uint8Array(credential.rawId), prfOutput: getPrfOutput(credential) };
+  const credentialId = new Uint8Array(credential.rawId);
+
+  // some authenticators return the secret only on get(), which asks for biometrics again
+  return { credentialId, secret: getPrfSecret(credential) ?? (await readPasskeySecret(credentialId)) };
 };
 
-const readPrfOutput = async (credentialId: Uint8Array) => {
-  const credential = await prompt(() =>
-    navigator.credentials.get({
-      publicKey: {
-        challenge: randomBytes(32),
-        allowCredentials: [{ id: asArrayBuffer(credentialId), type: 'public-key' }],
-        userVerification: 'required',
-        extensions: prfExtension,
-      },
-    }),
-  );
-
-  const prfOutput = getPrfOutput(credential);
-  if (!prfOutput) {
-    throw new Error('Biometrics is not supported on this device.');
+// Chrome, Edge and Safari 26+: tells the authenticator that the passkey is gone, so it can hide it.
+// It is just a hint, so other browsers keep the passkey in the OS list and a failure never blocks the user.
+export const removePasskey = async (credentialId: Uint8Array) => {
+  if (typeof PublicKeyCredential === 'undefined' || !('signalUnknownCredential' in PublicKeyCredential)) {
+    return;
   }
 
-  return prfOutput;
+  try {
+    await PublicKeyCredential.signalUnknownCredential({
+      rpId: location.hostname,
+      credentialId: toBase64Url(credentialId),
+    });
+  } catch {
+    // ignored on purpose, see above
+  }
 };
 
-const deriveKey = async (prfOutput: BufferSource) => {
-  const material = await crypto.subtle.importKey('raw', prfOutput, 'HKDF', false, ['deriveKey']);
+const IV_LENGTH = 12;
+
+const info = encoder.encode('keeweb-lite.quick-unlock.v1');
+
+export class InvalidQuickUnlockError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('Biometric data is invalid.', options);
+    this.name = 'InvalidQuickUnlockError';
+  }
+}
+
+const deriveKey = async (secret: BufferSource) => {
+  const material = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveKey']);
 
   return crypto.subtle.deriveKey(
-    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info: label },
+    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info },
     material,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -122,61 +155,42 @@ const deriveKey = async (prfOutput: BufferSource) => {
   );
 };
 
-export const isQuickUnlockSupported = async () => {
-  if (typeof PublicKeyCredential === 'undefined' || !navigator.credentials) {
-    return false;
-  }
-
-  if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) {
-    return false;
-  }
-
-  if (!('getClientCapabilities' in PublicKeyCredential)) {
-    return true;
-  }
-
-  const capabilities = await PublicKeyCredential.getClientCapabilities();
-
-  return capabilities['extension:prf'] !== false;
-};
-
-const createEnrollmentKey = async (record: { recordId: string; name: string }) => {
-  const passkey = await createPasskey(record);
-  const key = await deriveKey(passkey.prfOutput ?? (await readPrfOutput(passkey.credentialId)));
-
-  return { credentialId: passkey.credentialId, key };
-};
-
 // the record id is authenticated with the password, so the data can't be moved to another record
-const encryptPassword = async ({ recordId, password, key }: { recordId: string; password: string; key: CryptoKey }) => {
-  const iv = randomBytes(IV_LENGTH);
+export const encryptPassword = async ({
+  recordId,
+  password,
+  secret,
+}: {
+  recordId: string;
+  password: string;
+  secret: BufferSource;
+}) => {
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv, additionalData: encoder.encode(recordId) },
-    key,
+    await deriveKey(secret),
     encoder.encode(password),
   );
 
-  return new Uint8Array([...iv, ...new Uint8Array(encrypted)]);
+  return { iv, data: new Uint8Array(encrypted) };
 };
 
-const readQuickUnlockPassword = async ({
+export const decryptPassword = async ({
   recordId,
-  quickUnlock: { credentialId, encryptedPassword },
+  iv,
+  data,
+  secret,
 }: {
   recordId: string;
-  quickUnlock: QuickUnlock;
+  iv: Uint8Array;
+  data: Uint8Array;
+  secret: BufferSource;
 }) => {
-  const key = await deriveKey(await readPrfOutput(credentialId));
-
   try {
     const decrypted = await crypto.subtle.decrypt(
-      {
-        name: 'AES-GCM',
-        iv: asArrayBuffer(encryptedPassword.slice(0, IV_LENGTH)),
-        additionalData: encoder.encode(recordId),
-      },
-      key,
-      asArrayBuffer(encryptedPassword.slice(IV_LENGTH)),
+      { name: 'AES-GCM', iv: asArrayBuffer(iv), additionalData: encoder.encode(recordId) },
+      await deriveKey(secret),
+      asArrayBuffer(data),
     );
 
     return decoder.decode(decrypted);
@@ -185,76 +199,74 @@ const readQuickUnlockPassword = async ({
   }
 };
 
-const clearQuickUnlock = async (recordId: string) => {
-  await updateRecord(recordId, (record) => ({ ...record, quickUnlock: undefined }));
+export class PasswordRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PasswordRequiredError';
+  }
+}
+
+const enable = async ({ record, password }: { record: PersistedFileRecord; password: string }) => {
+  // the passkey comes first: the biometric prompt needs the click, the database unlock is slow
+  const { credentialId, secret } = await createPasskey({ recordId: record.id, displayName: record.kdbx.name });
+
+  try {
+    const database = await openDatabase({ record, password });
+    const quickUnlock: QuickUnlock = {
+      credentialId,
+      ...(await encryptPassword({ recordId: record.id, password, secret })),
+    };
+    return await startSession({ database, record, quickUnlock });
+  } catch (error) {
+    await removePasskey(credentialId);
+
+    throw error;
+  }
 };
 
-const unlockWithSavedPassword = async ({
+const reset = async ({ id, quickUnlock }: PersistedFileRecord) => {
+  await updateRecord(id, (record) => ({ ...record, quickUnlock: undefined }));
+
+  if (quickUnlock) {
+    await removePasskey(quickUnlock.credentialId);
+  }
+
+  throw new PasswordRequiredError('Biometrics was reset. Enter your password and click the button again.');
+};
+
+const unlockWithPasskey = async ({
   record,
-  quickUnlock,
+  quickUnlock: { credentialId, iv, data },
 }: {
   record: PersistedFileRecord;
-  quickUnlock: NonNullable<PersistedFileRecord['quickUnlock']>;
+  quickUnlock: QuickUnlock;
 }) => {
   try {
-    const password = await readQuickUnlockPassword({ recordId: record.id, quickUnlock });
+    const secret = await readPasskeySecret(credentialId);
+    const password = await decryptPassword({ recordId: record.id, iv, data, secret });
 
     return await unlockSession({ record, password });
   } catch (error) {
-    if (error instanceof InvalidQuickUnlockError) {
-      await clearQuickUnlock(record.id);
-      throw error;
-    }
-
-    if (error instanceof InvalidKeyError) {
-      await clearQuickUnlock(record.id);
-      throw new Error('Password or key file changed. Enter your password to enable biometrics again.', {
-        cause: error,
-      });
+    if (error instanceof InvalidQuickUnlockError || error instanceof InvalidKeyError) {
+      return reset(record);
     }
 
     throw error;
   }
 };
 
-export const unlockWithBiometrics = async ({ recordId, password }: { recordId: string; password: string }) => {
+// a typed password always (re)enables biometrics, so a broken setup is fixed by typing it again
+export const quickUnlock = async ({ recordId, password }: { recordId: string; password: string }) => {
   const record = await getRecord(recordId);
-  const trimmedPassword = password.trim();
+  const typedPassword = password.trim();
 
-  if (record.quickUnlock && !trimmedPassword) {
-    return unlockWithSavedPassword({ record, quickUnlock: record.quickUnlock });
+  if (typedPassword) {
+    return enable({ record, password: typedPassword });
   }
 
-  if (!trimmedPassword) {
-    throw new PasswordRequiredError();
+  if (record.quickUnlock) {
+    return unlockWithPasskey({ record, quickUnlock: record.quickUnlock });
   }
 
-  const { credentialId, key } = await createEnrollmentKey({ recordId: record.id, name: record.kdbx.name });
-  const database = await openDatabase({ record, password: trimmedPassword });
-  const encryptedPassword = await encryptPassword({ recordId: record.id, password: trimmedPassword, key });
-  const quickUnlock: QuickUnlock = { credentialId, encryptedPassword };
-
-  return startSession({ database, record, quickUnlock });
-};
-
-export const forgetQuickUnlock = async (recordId: string) => {
-  if (typeof PublicKeyCredential === 'undefined' || !('signalAllAcceptedCredentials' in PublicKeyCredential)) {
-    return;
-  }
-
-  const { quickUnlock } = await getRecord(recordId);
-  if (!quickUnlock) {
-    return;
-  }
-
-  const userHandle = new Uint8Array(await getPasskeyUserHandle(recordId));
-
-  await PublicKeyCredential.signalAllAcceptedCredentials({
-    rpId: location.hostname,
-    userId: btoa(String.fromCharCode(...userHandle))
-      .replaceAll('+', '-')
-      .replaceAll('/', '_')
-      .replaceAll('=', ''),
-    allAcceptedCredentialIds: [],
-  });
+  throw new PasswordRequiredError('Enter your password once to enable biometrics.');
 };

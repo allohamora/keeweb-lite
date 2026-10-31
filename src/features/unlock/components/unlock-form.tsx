@@ -14,10 +14,10 @@ import { getErrorMessage } from '@/utils/error';
 import { getRecordsByLastOpened } from '@/features/unlock/services/record';
 import { toast } from 'sonner';
 import {
-  isQuickUnlockSupported,
+  isPasskeySupported,
   PasswordRequiredError,
   QuickUnlockCancelledError,
-  unlockWithBiometrics,
+  quickUnlock,
 } from '@/features/unlock/services/quick-unlock';
 import { RecordRemove } from './record-remove';
 
@@ -66,7 +66,7 @@ export const UnlockForm = ({
     value: records = [],
   } = useAsync(getRecordsByLastOpened, [recordsReloadToken]);
 
-  const { value: isQuickUnlockAvailable = false } = useAsync(isQuickUnlockSupported, []);
+  const { value: isQuickUnlockAvailable = false } = useAsync(isPasskeySupported, []);
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -101,7 +101,7 @@ export const UnlockForm = ({
   const handleQuickUnlock = async () => {
     await runUnlockAction(async () => {
       try {
-        setSession(await unlockWithBiometrics({ recordId: selectedRecordId, password: getValues('password') }));
+        setSession(await quickUnlock({ recordId: selectedRecordId, password: getValues('password') }));
       } catch (error) {
         if (error instanceof PasswordRequiredError) {
           setFocus('password');
