@@ -116,8 +116,9 @@ describe('unlock-form biometrics', () => {
       );
     });
 
-    it('tells the authenticator to drop the passkey when the record is removed', async () => {
+    it('tells the authenticator to drop the passkey and asks to check the password manager when the record is removed', async () => {
       using authenticator = installFakeAuthenticator();
+      using toastSuccess = vi.spyOn(toast, 'success');
       const { user, setSession } = await renderForm();
       await user.type(screen.getByLabelText('Password'), 'vault-password');
       await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
@@ -132,6 +133,9 @@ describe('unlock-form biometrics', () => {
         expect(await getRecords()).toEqual([]);
       });
       expect(authenticator.signals).toHaveLength(1);
+      expect(toastSuccess).toHaveBeenCalledWith('Record removed.', {
+        description: 'Its passkey may not be removed. If it is still in your password manager, remove it manually.',
+      });
     });
   });
 });

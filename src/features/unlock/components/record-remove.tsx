@@ -37,7 +37,12 @@ export const RecordRemove = ({ recordId, disabled, onRecordRemove }: RecordRemov
 
       onRecordRemove();
       setIsOpen(false);
-      toast.success('Record removed.');
+      // passkey managers may ignore the removal signals (e.g. iCloud Keychain in Chrome), so ask the user to check
+      toast.success('Record removed.', {
+        description: quickUnlock
+          ? 'Its passkey may not be removed. If it is still in your password manager, remove it manually.'
+          : undefined,
+      });
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Record removal failed.' }));
     } finally {
