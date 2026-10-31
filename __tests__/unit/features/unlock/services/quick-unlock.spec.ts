@@ -89,6 +89,34 @@ describe('quick-unlock', () => {
       expect(authenticator.createdUsers[0]?.id).not.toBe(authenticator.createdUsers[1]?.id);
     });
 
+    it('enables biometrics again with the typed password, replacing the saved data', async () => {
+      using authenticator = installFakeAuthenticator();
+      await createVault('vault-password');
+      await unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' });
+      const { quickUnlock: firstQuickUnlock } = await getRecord('vault-1');
+
+      const session = await unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' });
+      const { quickUnlock: secondQuickUnlock } = await getRecord('vault-1');
+
+      expect(session.record.id).toBe('vault-1');
+      expect(authenticator.createdUsers).toHaveLength(2);
+      expect(secondQuickUnlock).toBeDefined();
+      expect(secondQuickUnlock).not.toEqual(firstQuickUnlock);
+      await expect(unlockWithBiometrics({ recordId: 'vault-1', password: '' })).resolves.toBeDefined();
+    });
+
+    it('keeps the saved data when the typed password is wrong', async () => {
+      using _authenticator = installFakeAuthenticator();
+      await createVault('vault-password');
+      await unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' });
+      const { quickUnlock } = await getRecord('vault-1');
+
+      await expect(unlockWithBiometrics({ recordId: 'vault-1', password: 'wrong-password' })).rejects.toThrow(
+        'Invalid password or key file.',
+      );
+      expect((await getRecord('vault-1')).quickUnlock).toEqual(quickUnlock);
+    });
+
     it('saves nothing when the prompt is cancelled during setup', async () => {
       using authenticator = installFakeAuthenticator();
       const vault = await createVault('vault-password');

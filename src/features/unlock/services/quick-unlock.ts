@@ -219,11 +219,12 @@ const unlockWithSavedPassword = async ({
 
 export const unlockWithBiometrics = async ({ recordId, password }: { recordId: string; password: string }) => {
   const record = await getRecord(recordId);
-  if (record.quickUnlock) {
+  const trimmedPassword = password.trim();
+
+  if (record.quickUnlock && !trimmedPassword) {
     return unlockWithSavedPassword({ record, quickUnlock: record.quickUnlock });
   }
 
-  const trimmedPassword = password.trim();
   if (!trimmedPassword) {
     throw new PasswordRequiredError();
   }
