@@ -136,17 +136,15 @@ export const isQuickUnlockSupported = async () => {
   return capabilities['extension:prf'] !== false;
 };
 
-// the record id is authenticated with the password, so the data can't be moved to another record
-const enrollQuickUnlock = async ({
-  recordId,
-  password,
-}: {
-  recordId: string;
-  password: string;
-}): Promise<QuickUnlock> => {
+const createEnrollmentKey = async () => {
   const passkey = await createPasskey();
   const key = await deriveKey(passkey.prfOutput ?? (await readPrfOutput(passkey.credentialId)));
 
+  return { credentialId: passkey.credentialId, key };
+};
+
+// the record id is authenticated with the password, so the data can't be moved to another record
+const encryptPassword = async ({ recordId, password, key }: { recordId: string; password: string; key: CryptoKey }) => {
   const iv = randomBytes(IV_LENGTH);
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv, additionalData: encoder.encode(recordId) },
@@ -154,10 +152,7 @@ const enrollQuickUnlock = async ({
     encoder.encode(password),
   );
 
-  return {
-    credentialId: passkey.credentialId,
-    encryptedPassword: new Uint8Array([...iv, ...new Uint8Array(encrypted)]),
-  };
+  return new Uint8Array([...iv, ...new Uint8Array(encrypted)]);
 };
 
 const readQuickUnlockPassword = async ({
@@ -227,9 +222,10 @@ export const unlockWithBiometrics = async ({ recordId, password }: { recordId: s
     throw new PasswordRequiredError();
   }
 
-  // nothing is saved until the password is verified and the passkey is ready, so a cancel leaves no trace
+  const { credentialId, key } = await createEnrollmentKey();
   const database = await openDatabase({ record, password: trimmedPassword });
-  const quickUnlock = await enrollQuickUnlock({ recordId: record.id, password: trimmedPassword });
+  const encryptedPassword = await encryptPassword({ recordId: record.id, password: trimmedPassword, key });
+  const quickUnlock: QuickUnlock = { credentialId, encryptedPassword };
 
   return startSession({ database, record, quickUnlock });
 };
