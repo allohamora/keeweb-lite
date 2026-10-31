@@ -93,8 +93,8 @@ describe('quick-unlock', () => {
       expect(first?.name).toBe('My Vault (local)');
     });
 
-    it('replaces the saved data when enabled again', async () => {
-      using _authenticator = installFakeAuthenticator();
+    it('replaces the saved data and the previous passkey when enabled again', async () => {
+      using authenticator = installFakeAuthenticator();
       await createVault();
       await quickUnlock({ recordId: 'vault-1', password: 'vault-password' });
       const firstCredentialId = await getSavedCredentialId();
@@ -103,6 +103,7 @@ describe('quick-unlock', () => {
       const secondCredentialId = await getSavedCredentialId();
 
       expect(secondCredentialId).not.toBe(firstCredentialId);
+      expect(authenticator.signals.map(({ credentialId }) => credentialId)).toEqual([firstCredentialId]);
       await expect(quickUnlock({ recordId: 'vault-1', password: '' })).resolves.toBeDefined();
     });
 

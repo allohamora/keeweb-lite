@@ -225,7 +225,13 @@ const enable = async ({ record, password }: { record: PersistedFileRecord; passw
       credentialId,
       ...(await encryptPassword({ recordId: record.id, password, secret })),
     };
-    return await startSession({ database, record, quickUnlock });
+    const session = await startSession({ database, record, quickUnlock });
+
+    if (record.quickUnlock) {
+      await removePasskey(record.quickUnlock.credentialId);
+    }
+
+    return session;
   } catch (error) {
     await removePasskey(credentialId);
 
