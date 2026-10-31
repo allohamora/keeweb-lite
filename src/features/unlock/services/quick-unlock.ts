@@ -1,6 +1,7 @@
 import { asArrayBuffer, toBase64Url } from '@/utils/buffer';
 import { getRecord, updateRecord, type PersistedFileRecord, type QuickUnlock } from '@/repositories/record';
 import { InvalidKeyError } from '@/services/database';
+import { getProvider } from '@/services/provider-registry';
 import { openDatabase, startSession, unlockSession } from '@/features/unlock/services/session';
 
 const encoder = new TextEncoder();
@@ -97,13 +98,13 @@ export const removePasskey = async (credentialId: Uint8Array) => {
   }
 };
 
-export const createPasskey = async ({ recordId, displayName }: { recordId: string; displayName: string }) => {
+export const createPasskey = async ({ recordId, name }: { recordId: string; name: string }) => {
   const credential = await prompt(async () =>
     navigator.credentials.create({
       publicKey: {
         challenge: randomBytes(32),
         rp: { name: 'keeweb-lite' },
-        user: { id: await getUserHandle(recordId), name: 'keeweb-lite', displayName },
+        user: { id: await getUserHandle(recordId), name, displayName: name },
         pubKeyCredParams: [
           { alg: -7, type: 'public-key' },
           { alg: -257, type: 'public-key' },
@@ -215,7 +216,10 @@ export class PasswordRequiredError extends Error {
 const enable = async ({ record, password }: { record: PersistedFileRecord; password: string }) => {
   // the password comes first: a new passkey replaces the old one, so a wrong password must not reach it
   const database = await openDatabase({ record, password });
-  const { credentialId, secret } = await createPasskey({ recordId: record.id, displayName: record.kdbx.name });
+  const { credentialId, secret } = await createPasskey({
+    recordId: record.id,
+    name: `${record.kdbx.name} (${getProvider(record).label})`,
+  });
 
   try {
     const quickUnlock: QuickUnlock = {

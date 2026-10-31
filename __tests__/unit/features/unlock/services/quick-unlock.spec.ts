@@ -90,7 +90,7 @@ describe('quick-unlock', () => {
       const [first, again, other] = authenticator.createdUsers;
       expect(first?.id).toBe(again?.id);
       expect(first?.id).not.toBe(other?.id);
-      expect(first?.name).toBe('keeweb-lite');
+      expect(first?.name).toBe('My Vault (Local)');
     });
 
     it('replaces the saved data when enabled again', async () => {
