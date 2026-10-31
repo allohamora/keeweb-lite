@@ -56,6 +56,15 @@ describe('quick-unlock', () => {
       expect((await getRecord('vault-1')).quickUnlock).toBeDefined();
     });
 
+    it('trims the typed password', async () => {
+      using _authenticator = installFakeAuthenticator();
+      await createVault();
+
+      await quickUnlock({ recordId: 'vault-1', password: '  vault-password ' });
+
+      await expect(quickUnlock({ recordId: 'vault-1', password: '' })).resolves.toBeDefined();
+    });
+
     it('enables biometrics with one prompt when the passkey returns the secret on create', async () => {
       using _authenticator = installFakeAuthenticator({ prfOnCreate: true });
       await createVault();
