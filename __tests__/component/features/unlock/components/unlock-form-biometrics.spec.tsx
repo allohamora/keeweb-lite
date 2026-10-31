@@ -92,9 +92,10 @@ describe('unlock-form biometrics', () => {
       });
     });
 
-    it('stays silent when the biometric prompt is cancelled', async () => {
+    it('shows a hint instead of an error when the biometric prompt is cancelled', async () => {
       using authenticator = installFakeAuthenticator();
       using toastError = vi.spyOn(toast, 'error');
+      using toastInfo = vi.spyOn(toast, 'info');
       const { user, setSession } = await renderForm();
       await user.type(screen.getByLabelText('Password'), 'vault-password');
       await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
@@ -110,6 +111,9 @@ describe('unlock-form biometrics', () => {
       });
       expect(setSession).toHaveBeenCalledTimes(1);
       expect(toastError).not.toHaveBeenCalled();
+      expect(toastInfo).toHaveBeenCalledWith(
+        'Biometrics was cancelled. If the passkey was removed, enter your password and click again.',
+      );
     });
 
     it('tells the authenticator to drop the passkey when the record is removed', async () => {

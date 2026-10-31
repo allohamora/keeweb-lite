@@ -106,7 +106,9 @@ export const UnlockForm = ({
         if (error instanceof PasswordRequiredError) {
           setFocus('password');
           toast.info(error.message);
-        } else if (!(error instanceof QuickUnlockCancelledError)) {
+        } else if (error instanceof QuickUnlockCancelledError) {
+          toast.info('Biometrics was cancelled. If the passkey was removed, enter your password and click again.');
+        } else {
           toast.error(getErrorMessage({ error, fallback: 'Biometric unlock failed.' }));
         }
       }
