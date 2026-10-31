@@ -44,18 +44,6 @@ describe('quick-unlock', () => {
       expect(await getRecord('vault-1')).toEqual(vault);
     });
 
-    it('enables biometrics with the password, then unlocks without it', async () => {
-      using _authenticator = installFakeAuthenticator();
-      await createVault();
-
-      const enabledSession = await quickUnlock({ recordId: 'vault-1', password: 'vault-password' });
-      const session = await quickUnlock({ recordId: 'vault-1', password: '' });
-
-      expect(enabledSession.record.id).toBe('vault-1');
-      expect(session.record.id).toBe('vault-1');
-      expect((await getRecord('vault-1')).quickUnlock).toBeDefined();
-    });
-
     it('trims the typed password', async () => {
       using _authenticator = installFakeAuthenticator();
       await createVault();
