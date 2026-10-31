@@ -65,7 +65,7 @@ describe('quick-unlock', () => {
       await expect(quickUnlock({ recordId: 'vault-1', password: '' })).resolves.toBeDefined();
     });
 
-    it('does not enable biometrics for a wrong password and drops the new passkey', async () => {
+    it('does not create a passkey for a wrong password', async () => {
       using authenticator = installFakeAuthenticator();
       const vault = await createVault();
 
@@ -74,8 +74,8 @@ describe('quick-unlock', () => {
       );
 
       expect(await getRecord('vault-1')).toEqual(vault);
-      expect(authenticator.signals).toHaveLength(1);
-      expect(authenticator.signals[0]?.credentialId).toBeTruthy();
+      expect(authenticator.createdUsers).toHaveLength(0);
+      expect(authenticator.signals).toHaveLength(0);
     });
 
     it('uses one passkey user per record and a different one for each record', async () => {
@@ -117,8 +117,8 @@ describe('quick-unlock', () => {
       );
 
       expect(await getSavedCredentialId()).toBe(credentialId);
-      expect(authenticator.signals).toHaveLength(1);
-      expect(authenticator.signals[0]?.credentialId).not.toBe(credentialId);
+      expect(authenticator.createdUsers).toHaveLength(1);
+      expect(authenticator.signals).toHaveLength(0);
       await expect(quickUnlock({ recordId: 'vault-1', password: '' })).resolves.toBeDefined();
     });
 

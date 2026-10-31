@@ -80,6 +80,23 @@ export const readPasskeySecret = async (credentialId: Uint8Array) => {
   return secret;
 };
 
+// Chrome, Edge and Safari 26+: tells the authenticator that the passkey is gone, so it can hide it.
+// It is just a hint, so other browsers keep the passkey in the OS list and a failure never blocks the user.
+export const removePasskey = async (credentialId: Uint8Array) => {
+  if (typeof PublicKeyCredential === 'undefined' || !('signalUnknownCredential' in PublicKeyCredential)) {
+    return;
+  }
+
+  try {
+    await PublicKeyCredential.signalUnknownCredential({
+      rpId: location.hostname,
+      credentialId: toBase64Url(credentialId),
+    });
+  } catch {
+    // ignored on purpose, see above
+  }
+};
+
 export const createPasskey = async ({ recordId, displayName }: { recordId: string; displayName: string }) => {
   const credential = await prompt(async () =>
     navigator.credentials.create({
@@ -111,24 +128,13 @@ export const createPasskey = async ({ recordId, displayName }: { recordId: strin
 
   const credentialId = new Uint8Array(credential.rawId);
 
-  // some authenticators return the secret only on get(), which asks for biometrics again
-  return { credentialId, secret: getPrfSecret(credential) ?? (await readPasskeySecret(credentialId)) };
-};
-
-// Chrome, Edge and Safari 26+: tells the authenticator that the passkey is gone, so it can hide it.
-// It is just a hint, so other browsers keep the passkey in the OS list and a failure never blocks the user.
-export const removePasskey = async (credentialId: Uint8Array) => {
-  if (typeof PublicKeyCredential === 'undefined' || !('signalUnknownCredential' in PublicKeyCredential)) {
-    return;
-  }
-
   try {
-    await PublicKeyCredential.signalUnknownCredential({
-      rpId: location.hostname,
-      credentialId: toBase64Url(credentialId),
-    });
-  } catch {
-    // ignored on purpose, see above
+    // some authenticators return the secret only on get(), which asks for biometrics again
+    return { credentialId, secret: getPrfSecret(credential) ?? (await readPasskeySecret(credentialId)) };
+  } catch (error) {
+    await removePasskey(credentialId);
+
+    throw error;
   }
 };
 
@@ -207,11 +213,11 @@ export class PasswordRequiredError extends Error {
 }
 
 const enable = async ({ record, password }: { record: PersistedFileRecord; password: string }) => {
-  // the passkey comes first: the biometric prompt needs the click, the database unlock is slow
+  // the password comes first: a new passkey replaces the old one, so a wrong password must not reach it
+  const database = await openDatabase({ record, password });
   const { credentialId, secret } = await createPasskey({ recordId: record.id, displayName: record.kdbx.name });
 
   try {
-    const database = await openDatabase({ record, password });
     const quickUnlock: QuickUnlock = {
       credentialId,
       ...(await encryptPassword({ recordId: record.id, password, secret })),
