@@ -54,17 +54,17 @@ const getPrfOutput = (credential: Credential | null) => {
   return credential.getClientExtensionResults().prf?.results?.first;
 };
 
-const getPasskeyUserId = (recordId: string) => crypto.subtle.digest('SHA-256', encoder.encode(recordId));
+const getPasskeyUserHandle = (recordId: string) => crypto.subtle.digest('SHA-256', encoder.encode(recordId));
 
 const createPasskey = async ({ recordId, name }: { recordId: string; name: string }) => {
-  const userId = await getPasskeyUserId(recordId);
+  const userHandle = await getPasskeyUserHandle(recordId);
 
   const credential = await prompt(() =>
     navigator.credentials.create({
       publicKey: {
         challenge: randomBytes(32),
         rp: { name: 'keeweb-lite' },
-        user: { id: userId, name, displayName: name },
+        user: { id: userHandle, name, displayName: name },
         pubKeyCredParams: [
           { alg: -7, type: 'public-key' },
           { alg: -257, type: 'public-key' },
@@ -247,11 +247,11 @@ export const forgetQuickUnlock = async (recordId: string) => {
     return;
   }
 
-  const userId = new Uint8Array(await getPasskeyUserId(recordId));
+  const userHandle = new Uint8Array(await getPasskeyUserHandle(recordId));
 
   await PublicKeyCredential.signalAllAcceptedCredentials({
     rpId: location.hostname,
-    userId: btoa(String.fromCharCode(...userId))
+    userId: btoa(String.fromCharCode(...userHandle))
       .replaceAll('+', '-')
       .replaceAll('/', '_')
       .replaceAll('=', ''),
