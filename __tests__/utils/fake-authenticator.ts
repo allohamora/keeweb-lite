@@ -29,6 +29,7 @@ export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = tru
   let supportsPrf = initialSupportsPrf;
   const secrets = new Map<string, Uint8Array<ArrayBuffer>>();
   let cancelNext = false;
+  const createdUsers: { id: string; name: string }[] = [];
 
   const evaluate = async (secret: Uint8Array<ArrayBuffer>, input?: BufferSource) => {
     if (!supportsPrf || !input) {
@@ -45,6 +46,11 @@ export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = tru
       if (cancelNext) {
         cancelNext = false;
         throw new DOMException('cancelled', 'NotAllowedError');
+      }
+
+      const user = options?.publicKey?.user;
+      if (user) {
+        createdUsers.push({ id: toHex(new Uint8Array(user.id as ArrayBuffer)), name: user.name });
       }
 
       const secret = crypto.getRandomValues(new Uint8Array(32));
@@ -82,6 +88,7 @@ export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = tru
   Object.defineProperty(globalThis, 'PublicKeyCredential', { value: FakePublicKeyCredential, configurable: true });
 
   return {
+    createdUsers,
     cancelNext: () => {
       cancelNext = true;
     },

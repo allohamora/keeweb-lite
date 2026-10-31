@@ -54,13 +54,15 @@ const getPrfOutput = (credential: Credential | null) => {
   return credential.getClientExtensionResults().prf?.results?.first;
 };
 
-const createPasskey = async () => {
+const createPasskey = async ({ recordId, name }: { recordId: string; name: string }) => {
+  const userId = await crypto.subtle.digest('SHA-256', encoder.encode(recordId));
+
   const credential = await prompt(() =>
     navigator.credentials.create({
       publicKey: {
         challenge: randomBytes(32),
         rp: { name: 'keeweb-lite' },
-        user: { id: randomBytes(16), name: 'keeweb-lite', displayName: 'keeweb-lite' },
+        user: { id: userId, name, displayName: name },
         pubKeyCredParams: [
           { alg: -7, type: 'public-key' },
           { alg: -257, type: 'public-key' },
@@ -136,8 +138,8 @@ export const isQuickUnlockSupported = async () => {
   return capabilities['extension:prf'] !== false;
 };
 
-const createEnrollmentKey = async () => {
-  const passkey = await createPasskey();
+const createEnrollmentKey = async (record: { recordId: string; name: string }) => {
+  const passkey = await createPasskey(record);
   const key = await deriveKey(passkey.prfOutput ?? (await readPrfOutput(passkey.credentialId)));
 
   return { credentialId: passkey.credentialId, key };
@@ -222,7 +224,7 @@ export const unlockWithBiometrics = async ({ recordId, password }: { recordId: s
     throw new PasswordRequiredError();
   }
 
-  const { credentialId, key } = await createEnrollmentKey();
+  const { credentialId, key } = await createEnrollmentKey({ recordId: record.id, name: record.kdbx.name });
   const database = await openDatabase({ record, password: trimmedPassword });
   const encryptedPassword = await encryptPassword({ recordId: record.id, password: trimmedPassword, key });
   const quickUnlock: QuickUnlock = { credentialId, encryptedPassword };

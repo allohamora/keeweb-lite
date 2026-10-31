@@ -64,6 +64,30 @@ describe('quick-unlock', () => {
       expect(session.record.id).toBe('vault-1');
     });
 
+    it('reuses the passkey user of the record when biometrics is enabled again', async () => {
+      using authenticator = installFakeAuthenticator();
+      await createVault('vault-password');
+
+      await expect(unlockWithBiometrics({ recordId: 'vault-1', password: 'wrong-password' })).rejects.toThrow();
+      await unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' });
+
+      expect(authenticator.createdUsers).toHaveLength(2);
+      expect(authenticator.createdUsers[0]).toEqual(authenticator.createdUsers[1]);
+      expect(authenticator.createdUsers[0]?.name).toBe('My Vault');
+    });
+
+    it('uses a different passkey user for each record', async () => {
+      using authenticator = installFakeAuthenticator();
+      await createVault('vault-password');
+      const { encryptedBytes } = await createEmptyDatabase({ name: 'Other', password: 'vault-password' });
+      await createRecord({ id: 'vault-2', type: 'local', kdbx: { encryptedBytes, name: 'Other' } });
+
+      await unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' });
+      await unlockWithBiometrics({ recordId: 'vault-2', password: 'vault-password' });
+
+      expect(authenticator.createdUsers[0]?.id).not.toBe(authenticator.createdUsers[1]?.id);
+    });
+
     it('saves nothing when the prompt is cancelled during setup', async () => {
       using authenticator = installFakeAuthenticator();
       const vault = await createVault('vault-password');
