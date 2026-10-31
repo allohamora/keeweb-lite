@@ -1,7 +1,6 @@
 import { asArrayBuffer, toBase64Url } from '@/utils/buffer';
 import { getRecord, updateRecord, type PersistedFileRecord, type QuickUnlock } from '@/repositories/record';
 import { InvalidKeyError } from '@/services/database';
-import { getProvider } from '@/services/provider-registry';
 import { openDatabase, startSession, unlockSession } from '@/features/unlock/services/session';
 
 const encoder = new TextEncoder();
@@ -218,7 +217,7 @@ const enable = async ({ record, password }: { record: PersistedFileRecord; passw
   const database = await openDatabase({ record, password });
   const { credentialId, secret } = await createPasskey({
     recordId: record.id,
-    name: `${record.kdbx.name} (${getProvider(record).label})`,
+    name: `${record.kdbx.name} (${record.type})`,
   });
 
   try {
