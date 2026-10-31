@@ -11,12 +11,6 @@ const keySchema = z.object({
   name: z.string(),
 });
 
-const quickUnlockSchema = z.object({
-  credentialId: z.instanceof(Uint8Array),
-  iv: z.instanceof(Uint8Array),
-  data: z.instanceof(Uint8Array),
-});
-
 const recordKdbxSchema = z.object({
   encryptedBytes: z.instanceof(Uint8Array),
   name: z.string(),
@@ -27,7 +21,6 @@ const localFileRecordSchema = z.object({
   kdbx: recordKdbxSchema,
   key: z.optional(keySchema),
   lastOpenedAt: z.optional(z.string()),
-  quickUnlock: z.optional(quickUnlockSchema),
   type: z.literal('local'),
 });
 
@@ -36,7 +29,6 @@ const googleDriveFileRecordSchema = z.object({
   kdbx: recordKdbxSchema,
   key: z.optional(keySchema),
   lastOpenedAt: z.optional(z.string()),
-  quickUnlock: z.optional(quickUnlockSchema),
   source: z.object({
     id: z.string(),
     rev: z.optional(z.string()),
@@ -49,7 +41,6 @@ const googleDriveFileRecordSchema = z.object({
 const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, googleDriveFileRecordSchema]);
 const fileRecordsSchema = z.array(fileRecordSchema);
 
-export type QuickUnlock = z.infer<typeof quickUnlockSchema>;
 type RecordKdbx = z.infer<typeof recordKdbxSchema>;
 export type PersistedFileRecord = z.infer<typeof fileRecordSchema>;
 
