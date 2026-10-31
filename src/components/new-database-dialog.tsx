@@ -37,8 +37,8 @@ type NewDatabaseDialogProps = DialogProps & {
 const newDatabaseDialogSchema = z
   .object({
     databaseName: z.string().check(z.trim(), z.minLength(1, 'Enter a database name.')),
-    password: z.string().check(z.minLength(1, 'Enter a master password.')),
-    confirmPassword: z.string().check(z.minLength(1, 'Confirm your master password.')),
+    password: z.string().check(z.trim(), z.minLength(1, 'Enter a master password.')),
+    confirmPassword: z.string().check(z.trim(), z.minLength(1, 'Confirm your master password.')),
     useKeyFile: z.boolean(),
   })
   .check(

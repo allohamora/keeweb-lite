@@ -95,6 +95,24 @@ describe('new-database-dialog', () => {
       expect(onOpenChange).toHaveBeenCalledWith(false);
     });
 
+    it('trims the password before creating the record', async () => {
+      const user = userEvent.setup();
+      const onCreate = vi.fn().mockResolvedValue({});
+
+      renderDialog({ onCreate });
+      await user.type(screen.getByLabelText('Database name'), 'My Vault');
+      await user.type(screen.getByLabelText('Password'), '  test-password-123 ');
+      await user.type(screen.getByLabelText('Confirm password'), 'test-password-123');
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+
+      await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
+      expect(onCreate).toHaveBeenCalledWith({
+        databaseName: 'My Vault',
+        password: 'test-password-123',
+        useKeyFile: false,
+      });
+    });
+
     it('creates the record with a key file and downloads it when the checkbox is checked', async () => {
       const user = userEvent.setup();
       const keyFileBytes = new Uint8Array([1, 2, 3]);
