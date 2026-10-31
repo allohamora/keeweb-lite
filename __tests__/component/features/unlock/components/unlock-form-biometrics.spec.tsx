@@ -82,6 +82,9 @@ describe('unlock-form biometrics', () => {
       });
 
       await user.clear(screen.getByLabelText('Password'));
+      await vi.waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Unlock with biometrics' })).toBeEnabled();
+      });
       await user.click(screen.getByRole('button', { name: 'Unlock with biometrics' }));
 
       await vi.waitFor(() => {
