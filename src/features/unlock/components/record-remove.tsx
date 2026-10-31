@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
-import { getRecord, removeRecord } from '@/repositories/record';
-import { removePasskey } from '@/features/unlock/services/quick-unlock';
+import { removeRecord } from '@/repositories/record';
 import {
   Dialog,
   DialogClose,
@@ -28,21 +27,10 @@ export const RecordRemove = ({ recordId, disabled, onRecordRemove }: RecordRemov
   const handleRemove = async () => {
     setIsRemoving(true);
     try {
-      const { quickUnlock } = await getRecord(recordId);
       await removeRecord(recordId);
-
-      if (quickUnlock) {
-        await removePasskey(quickUnlock.credentialId);
-      }
-
       onRecordRemove();
       setIsOpen(false);
-      // passkey managers may ignore the removal signals (e.g. iCloud Keychain in Chrome), so ask the user to check
-      toast.success('Record removed.', {
-        description: quickUnlock
-          ? 'Its passkey may not be removed. If it is still in your password manager, remove it manually.'
-          : undefined,
-      });
+      toast.success('Record removed.');
     } catch (error) {
       toast.error(getErrorMessage({ error, fallback: 'Record removal failed.' }));
     } finally {

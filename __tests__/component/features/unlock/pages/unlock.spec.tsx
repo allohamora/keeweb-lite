@@ -65,7 +65,7 @@ describe('unlock', () => {
     await user.click(screen.getByRole('button', { name: 'Demo' }));
 
     expect(screen.getByRole('combobox', { name: 'Selected record' })).toBeDisabled();
-    expect(screen.getByLabelText('Password')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Password')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
 
     // even if the user could still reach it, the disabled unlock form must not fire a second, competing session
@@ -255,7 +255,7 @@ describe('unlock', () => {
       await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
       await user.click(await screen.findByRole('option', { name: 'drive.kdbx (google-drive)' }));
 
-      expect(screen.getByLabelText('Password')).not.toHaveAttribute('readonly');
+      expect(screen.getByLabelText('Password')).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
     });
