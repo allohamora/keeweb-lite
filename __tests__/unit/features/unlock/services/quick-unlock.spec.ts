@@ -149,7 +149,7 @@ describe('quick-unlock', () => {
       await updateRecord('vault-1', (record) => ({ ...record, kdbx: { ...record.kdbx, encryptedBytes } }));
 
       await expect(unlockWithBiometrics({ recordId: 'vault-1', password: '' })).rejects.toThrow(
-        'Password changed. Enter your password to enable biometrics again.',
+        'Password or key file changed. Enter your password to enable biometrics again.',
       );
       expect(await isEnabled()).toBe(false);
     });

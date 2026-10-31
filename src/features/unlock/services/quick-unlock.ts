@@ -206,7 +206,9 @@ const unlockWithSavedPassword = async ({
 
     if (error instanceof InvalidKeyError) {
       await clearQuickUnlock(record.id);
-      throw new Error('Password changed. Enter your password to enable biometrics again.', { cause: error });
+      throw new Error('Password or key file changed. Enter your password to enable biometrics again.', {
+        cause: error,
+      });
     }
 
     throw error;
