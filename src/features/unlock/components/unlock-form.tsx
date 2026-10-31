@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useAsync } from 'react-use';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
+import { FingerPrintIcon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,12 @@ import { unlockSession, type UnlockSession } from '@/features/unlock/services/se
 import { getErrorMessage } from '@/utils/error';
 import { getRecordsByLastOpened } from '@/features/unlock/services/record';
 import { toast } from 'sonner';
+import {
+  isQuickUnlockSupported,
+  PasswordRequiredError,
+  QuickUnlockCancelledError,
+  unlockWithBiometrics,
+} from '@/features/unlock/services/quick-unlock';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
@@ -40,8 +46,10 @@ export const UnlockForm = ({
   const {
     control,
     formState: { isSubmitting },
+    getValues,
     handleSubmit,
     reset,
+    setFocus,
   } = useForm<UnlockFormValues>({
     defaultValues: {
       password: '',
@@ -57,6 +65,8 @@ export const UnlockForm = ({
     loading: isLoadingRecords,
     value: records = [],
   } = useAsync(getRecordsByLastOpened, [recordsReloadToken]);
+
+  const { value: isQuickUnlockAvailable = false } = useAsync(isQuickUnlockSupported, []);
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -87,6 +97,21 @@ export const UnlockForm = ({
       }
     });
   });
+
+  const handleQuickUnlock = async () => {
+    await runUnlockAction(async () => {
+      try {
+        setSession(await unlockWithBiometrics({ recordId: selectedRecordId, password: getValues('password') }));
+      } catch (error) {
+        if (error instanceof PasswordRequiredError) {
+          setFocus('password');
+          toast.info(error.message);
+        } else if (!(error instanceof QuickUnlockCancelledError)) {
+          toast.error(getErrorMessage({ error, fallback: 'Biometric unlock failed.' }));
+        }
+      }
+    });
+  };
 
   const handleRemove = () => {
     onRecordRemove();
@@ -168,8 +193,9 @@ export const UnlockForm = ({
                   {...field}
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
-                  className="pr-8"
-                  disabled={isUnlockDisabled}
+                  className="pr-8 read-only:opacity-50"
+                  disabled={!selectedRecordId}
+                  readOnly={isBusy}
                   id="unlock-password"
                   placeholder="Enter password"
                   type={showPassword ? 'text' : 'password'}
@@ -199,9 +225,23 @@ export const UnlockForm = ({
           disabled={!selectedRecordId || isBusy}
           onRecordRemove={handleRemove}
         />
-        <Button className="ml-auto h-8 px-4 text-xs" disabled={isUnlockDisabled} type="submit" variant="outline">
-          {isSubmitting ? 'Unlocking...' : 'Unlock'}
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          {isQuickUnlockAvailable && (
+            <Button
+              aria-label="Unlock with biometrics"
+              className="h-8 px-3"
+              disabled={isUnlockDisabled}
+              onClick={() => void handleQuickUnlock()}
+              type="button"
+              variant="outline"
+            >
+              <HugeiconsIcon icon={FingerPrintIcon} size={16} />
+            </Button>
+          )}
+          <Button className="h-8 px-4 text-xs" disabled={isUnlockDisabled} type="submit" variant="outline">
+            {isSubmitting ? 'Unlocking...' : 'Unlock'}
+          </Button>
+        </div>
       </div>
     </form>
   );
