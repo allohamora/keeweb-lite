@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
 import { removeRecord } from '@/repositories/record';
+import { forgetQuickUnlock } from '@/features/unlock/services/quick-unlock';
 import {
   Dialog,
   DialogClose,
@@ -27,6 +28,9 @@ export const RecordRemove = ({ recordId, disabled, onRecordRemove }: RecordRemov
   const handleRemove = async () => {
     setIsRemoving(true);
     try {
+      await forgetQuickUnlock(recordId).catch((error: unknown) => {
+        toast.error(getErrorMessage({ error, fallback: 'Biometrics passkey cleanup failed.' }));
+      });
       await removeRecord(recordId);
       onRecordRemove();
       setIsOpen(false);

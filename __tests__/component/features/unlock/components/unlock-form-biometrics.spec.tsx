@@ -1,11 +1,11 @@
 import userEvent from '@testing-library/user-event';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import { UnlockForm } from '@/features/unlock/components/unlock-form';
 import { useAsyncLock } from '@/features/unlock/hooks/use-async-lock';
 import type { UnlockSession } from '@/features/unlock/services/session';
-import { createRecord } from '@/repositories/record';
+import { createRecord, getRecords } from '@/repositories/record';
 import { createEmptyDatabase } from '@/services/database';
 import { installFakeAuthenticator } from '@tests/utils/fake-authenticator';
 
@@ -107,6 +107,43 @@ describe('unlock-form biometrics', () => {
       });
       expect(setSession).toHaveBeenCalledTimes(1);
       expect(toastError).not.toHaveBeenCalled();
+    });
+
+    it('tells the authenticator to drop the passkey when the record is removed', async () => {
+      using authenticator = installFakeAuthenticator();
+      const { user, setSession } = await renderForm();
+      await user.type(screen.getByLabelText('Password'), 'vault-password');
+      await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await vi.waitFor(() => {
+        expect(setSession).toHaveBeenCalledTimes(1);
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove' }));
+
+      await vi.waitFor(async () => {
+        expect(await getRecords()).toEqual([]);
+      });
+      expect(authenticator.signals).toHaveLength(1);
+    });
+
+    it('shows the error and still removes the record when the passkey cleanup fails', async () => {
+      using _authenticator = installFakeAuthenticator({ failSignal: true });
+      using toastError = vi.spyOn(toast, 'error');
+      const { user, setSession } = await renderForm();
+      await user.type(screen.getByLabelText('Password'), 'vault-password');
+      await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await vi.waitFor(() => {
+        expect(setSession).toHaveBeenCalledTimes(1);
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Remove' }));
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove' }));
+
+      await vi.waitFor(async () => {
+        expect(await getRecords()).toEqual([]);
+      });
+      expect(toastError).toHaveBeenCalledWith('signal failed');
     });
   });
 });

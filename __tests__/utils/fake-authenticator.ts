@@ -25,11 +25,17 @@ class FakePublicKeyCredential {
 }
 
 // a software passkey: the PRF output is an HMAC of the stored secret and the input, like a real authenticator
-export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = true, prfOnCreate = false } = {}) => {
+export const installFakeAuthenticator = ({
+  supportsPrf: initialSupportsPrf = true,
+  prfOnCreate = false,
+  supportsSignal = true,
+  failSignal = false,
+} = {}) => {
   let supportsPrf = initialSupportsPrf;
   const secrets = new Map<string, Uint8Array<ArrayBuffer>>();
   let cancelNext = false;
   const createdUsers: { id: string; name: string }[] = [];
+  const signals: AllAcceptedCredentialsOptions[] = [];
 
   const evaluate = async (secret: Uint8Array<ArrayBuffer>, input?: BufferSource) => {
     if (!supportsPrf || !input) {
@@ -86,9 +92,22 @@ export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = tru
 
   Object.defineProperty(navigator, 'credentials', { value: credentials, configurable: true });
   Object.defineProperty(globalThis, 'PublicKeyCredential', { value: FakePublicKeyCredential, configurable: true });
+  if (supportsSignal) {
+    Object.defineProperty(FakePublicKeyCredential, 'signalAllAcceptedCredentials', {
+      value: async (options: AllAcceptedCredentialsOptions) => {
+        if (failSignal) {
+          throw new DOMException('signal failed', 'NotSupportedError');
+        }
+
+        signals.push(options);
+      },
+      configurable: true,
+    });
+  }
 
   return {
     createdUsers,
+    signals,
     cancelNext: () => {
       cancelNext = true;
     },
@@ -96,6 +115,8 @@ export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = tru
       supportsPrf = false;
     },
     [Symbol.dispose]: () => {
+      Reflect.deleteProperty(FakePublicKeyCredential, 'signalAllAcceptedCredentials');
+
       if (previousCredentials) {
         Object.defineProperty(navigator, 'credentials', previousCredentials);
       } else {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRecord, getRecord, updateRecord } from '@/repositories/record';
 import { createEmptyDatabase } from '@/services/database';
 import {
+  forgetQuickUnlock,
   isQuickUnlockSupported,
   PasswordRequiredError,
   QuickUnlockCancelledError,
@@ -205,6 +206,49 @@ describe('quick-unlock', () => {
         'Biometric data is invalid',
       );
       expect(await isEnabled()).toBe(false);
+    });
+  });
+
+  describe('forgetQuickUnlock', () => {
+    it('tells the authenticator to drop the passkey of the record', async () => {
+      using authenticator = installFakeAuthenticator();
+      await createVault('vault-password');
+      await unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' });
+
+      await forgetQuickUnlock('vault-1');
+
+      expect(authenticator.signals).toEqual([
+        {
+          rpId: location.hostname,
+          userId: Buffer.from(authenticator.createdUsers[0]?.id ?? '', 'hex').toString('base64url'),
+          allAcceptedCredentialIds: [],
+        },
+      ]);
+    });
+
+    it('does nothing when biometrics is not enabled', async () => {
+      using authenticator = installFakeAuthenticator();
+      await createVault('vault-password');
+
+      await forgetQuickUnlock('vault-1');
+
+      expect(authenticator.signals).toEqual([]);
+    });
+
+    it('does nothing when the browser cannot signal credentials', async () => {
+      using authenticator = installFakeAuthenticator({ supportsSignal: false });
+      await createVault('vault-password');
+      await unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' });
+
+      await expect(forgetQuickUnlock('vault-1')).resolves.toBeUndefined();
+      expect(authenticator.signals).toEqual([]);
+    });
+
+    it('fails for an unknown record', async () => {
+      using authenticator = installFakeAuthenticator();
+
+      await expect(forgetQuickUnlock('missing')).rejects.toThrow('Record not found.');
+      expect(authenticator.signals).toEqual([]);
     });
   });
 });

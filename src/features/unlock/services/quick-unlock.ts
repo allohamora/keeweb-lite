@@ -54,8 +54,10 @@ const getPrfOutput = (credential: Credential | null) => {
   return credential.getClientExtensionResults().prf?.results?.first;
 };
 
+const getPasskeyUserId = (recordId: string) => crypto.subtle.digest('SHA-256', encoder.encode(recordId));
+
 const createPasskey = async ({ recordId, name }: { recordId: string; name: string }) => {
-  const userId = await crypto.subtle.digest('SHA-256', encoder.encode(recordId));
+  const userId = await getPasskeyUserId(recordId);
 
   const credential = await prompt(() =>
     navigator.credentials.create({
@@ -232,4 +234,26 @@ export const unlockWithBiometrics = async ({ recordId, password }: { recordId: s
   const quickUnlock: QuickUnlock = { credentialId, encryptedPassword };
 
   return startSession({ database, record, quickUnlock });
+};
+
+export const forgetQuickUnlock = async (recordId: string) => {
+  if (typeof PublicKeyCredential === 'undefined' || !('signalAllAcceptedCredentials' in PublicKeyCredential)) {
+    return;
+  }
+
+  const { quickUnlock } = await getRecord(recordId);
+  if (!quickUnlock) {
+    return;
+  }
+
+  const userId = new Uint8Array(await getPasskeyUserId(recordId));
+
+  await PublicKeyCredential.signalAllAcceptedCredentials({
+    rpId: location.hostname,
+    userId: btoa(String.fromCharCode(...userId))
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      .replaceAll('=', ''),
+    allAcceptedCredentialIds: [],
+  });
 };
