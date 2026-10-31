@@ -8,7 +8,7 @@ keeweb-lite is a lightweight, web-only password manager inspired by [KeeWeb](htt
 
 - Source types: `Local` and optional `Google Drive`.
 - Unlock with password and optional key file.
-- Optional biometric unlock with a passkey (WebAuthn PRF): enter the password once, then use the fingerprint button. Typing the password and clicking it again re-creates a broken setup. Removing a record asks the browser to hide its passkey (works in Chrome, Edge and Safari 26+; elsewhere the passkey stays in the OS passkey list and is replaced when biometrics is enabled again).
+- Optional biometric unlock with a passkey (WebAuthn PRF): enter the password once, then use the fingerprint button.
 - Key file stays in runtime memory during unlock flow.
 - Google Drive records sync after every change.
 - No settings/options UI; behavior is fixed by design.
