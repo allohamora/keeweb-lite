@@ -65,7 +65,7 @@ export const readPasskeySecret = async (credentialId: Uint8Array) => {
     navigator.credentials.get({
       publicKey: {
         challenge: randomBytes(32),
-        allowCredentials: [{ id: asArrayBuffer(credentialId), type: 'public-key' }],
+        allowCredentials: [{ id: asArrayBuffer(credentialId), type: 'public-key', transports: ['internal'] }],
         userVerification: 'required',
         extensions: prfExtension,
       },
