@@ -11,11 +11,16 @@ class FakePublicKeyCredential {
 
   constructor(
     public rawId: ArrayBuffer,
+    private prfEnabled: boolean,
     private prfOutput?: ArrayBuffer,
   ) {}
 
   getClientExtensionResults() {
-    return this.prfOutput ? { prf: { enabled: true, results: { first: this.prfOutput } } } : {};
+    if (!this.prfEnabled) {
+      return {};
+    }
+
+    return { prf: { enabled: true, ...(this.prfOutput && { results: { first: this.prfOutput } }) } };
   }
 }
 
@@ -50,7 +55,7 @@ export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = tru
         ? await evaluate(secret, options?.publicKey?.extensions?.prf?.eval?.first)
         : undefined;
 
-      return new FakePublicKeyCredential(rawId.buffer, prfOutput);
+      return new FakePublicKeyCredential(rawId.buffer, supportsPrf, prfOutput);
     },
     get: async (options?: CredentialRequestOptions) => {
       if (cancelNext) {
@@ -66,7 +71,7 @@ export const installFakeAuthenticator = ({ supportsPrf: initialSupportsPrf = tru
 
       const prfOutput = await evaluate(secret, options.publicKey?.extensions?.prf?.eval?.first);
 
-      return new FakePublicKeyCredential(allowed.id as ArrayBuffer, prfOutput);
+      return new FakePublicKeyCredential(allowed.id as ArrayBuffer, supportsPrf, prfOutput);
     },
   };
 

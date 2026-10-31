@@ -79,6 +79,10 @@ const createPasskey = async () => {
     throw new Error('Biometrics setup failed.');
   }
 
+  if (!credential.getClientExtensionResults().prf?.enabled) {
+    throw new Error('Biometrics is not supported on this device.');
+  }
+
   return { credentialId: new Uint8Array(credential.rawId), prfOutput: getPrfOutput(credential) };
 };
 
@@ -119,7 +123,17 @@ export const isQuickUnlockSupported = async () => {
     return false;
   }
 
-  return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) {
+    return false;
+  }
+
+  if (!('getClientCapabilities' in PublicKeyCredential)) {
+    return true;
+  }
+
+  const capabilities = await PublicKeyCredential.getClientCapabilities();
+
+  return capabilities['extension:prf'] !== false;
 };
 
 // the record id is authenticated with the password, so the data can't be moved to another record

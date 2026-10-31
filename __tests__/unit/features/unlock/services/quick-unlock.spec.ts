@@ -142,6 +142,16 @@ describe('quick-unlock', () => {
       expect(await isEnabled()).toBe(true);
     });
 
+    it('fails to enable biometrics on a device without PRF', async () => {
+      using _authenticator = installFakeAuthenticator({ supportsPrf: false });
+      await createVault('vault-password');
+
+      await expect(unlockWithBiometrics({ recordId: 'vault-1', password: 'vault-password' })).rejects.toThrow(
+        'Biometrics is not supported on this device.',
+      );
+      expect(await isEnabled()).toBe(false);
+    });
+
     it('does not open the data of another record', async () => {
       using _authenticator = installFakeAuthenticator();
       await createVault('vault-password');
