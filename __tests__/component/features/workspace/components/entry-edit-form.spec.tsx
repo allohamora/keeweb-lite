@@ -302,7 +302,6 @@ describe('entry-edit-form', () => {
       await user.click(screen.getByRole('button', { name: 'Show notes' }));
 
       expect(notes).not.toHaveClass(maskedClass);
-      expect(screen.getByRole('button', { name: 'Hide notes' })).toHaveAttribute('aria-pressed', 'true');
 
       await user.click(screen.getByRole('button', { name: 'Hide notes' }));
 

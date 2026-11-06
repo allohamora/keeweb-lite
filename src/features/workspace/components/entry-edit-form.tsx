@@ -436,7 +436,6 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                       type="button"
                       className="absolute top-0 right-0 flex items-center p-2 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowNotes((prev) => !prev)}
-                      aria-pressed={showNotes}
                       aria-label={showNotes ? 'Hide notes' : 'Show notes'}
                     >
                       <HugeiconsIcon icon={showNotes ? ViewOffIcon : ViewIcon} size={14} />
