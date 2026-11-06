@@ -11,10 +11,28 @@ import {
 import { installFakeAuthenticator } from '@tests/utils/fake-authenticator';
 
 describe('quick-unlock', () => {
-  const createVault = async ({ id = 'vault-1', password = 'vault-password' } = {}) => {
-    const { encryptedBytes } = await createEmptyDatabase({ name: 'My Vault', password });
+  const createVault = async ({ id = 'vault-1', password = 'vault-password', name = 'My Vault' } = {}) => {
+    const { encryptedBytes } = await createEmptyDatabase({ name, password });
 
-    return createRecord({ id, type: 'local', kdbx: { encryptedBytes, name: 'My Vault' } });
+    return createRecord({ id, type: 'local', kdbx: { encryptedBytes, name } });
+  };
+
+  const chromeOnMac =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36';
+
+  const stubUserAgent = (value: string) => {
+    const previous = Object.getOwnPropertyDescriptor(navigator, 'userAgent');
+    Object.defineProperty(navigator, 'userAgent', { value, configurable: true });
+
+    return {
+      [Symbol.dispose]: () => {
+        if (previous) {
+          Object.defineProperty(navigator, 'userAgent', previous);
+        } else {
+          Reflect.deleteProperty(navigator, 'userAgent');
+        }
+      },
+    };
   };
 
   const getSavedCredentialId = async (id = 'vault-1') => {
@@ -87,7 +105,25 @@ describe('quick-unlock', () => {
       const [first, again, other] = authenticator.createdUsers;
       expect(first?.id).toBe(again?.id);
       expect(first?.id).not.toBe(other?.id);
-      expect(first?.name).toBe('My Vault (local)');
+    });
+
+    it('names the passkey with the record and the device OS', async () => {
+      using authenticator = installFakeAuthenticator();
+      using _userAgent = stubUserAgent(chromeOnMac);
+      await createVault();
+
+      await quickUnlock({ recordId: 'vault-1', password: 'vault-password' });
+
+      expect(authenticator.createdUsers[0]?.name).toBe('My Vault (local) - macOS');
+    });
+
+    it('shortens a long passkey name to 64 characters', async () => {
+      using authenticator = installFakeAuthenticator();
+      await createVault({ name: 'A'.repeat(100) });
+
+      await quickUnlock({ recordId: 'vault-1', password: 'vault-password' });
+
+      expect(authenticator.createdUsers[0]?.name).toBe(`${'A'.repeat(61)}...`);
     });
 
     it('replaces the saved data and the previous passkey when enabled again', async () => {
