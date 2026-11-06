@@ -75,7 +75,7 @@ describe('unlock-form', () => {
         expect(getRecordsByLastOpened).toHaveBeenCalledTimes(2);
       });
       expect(screen.getByRole('combobox', { name: 'Selected record' })).toBeDisabled();
-      expect(screen.getByLabelText('Password')).toBeDisabled();
+      expect(screen.getByLabelText('Password')).toHaveAttribute('readonly');
       expect(screen.getByRole('button', { name: 'Show password' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Remove' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
@@ -89,7 +89,7 @@ describe('unlock-form', () => {
       await vi.waitFor(() => {
         expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
       });
-      expect(screen.getByLabelText('Password')).toBeEnabled();
+      expect(screen.getByLabelText('Password')).not.toHaveAttribute('readonly');
       expect(screen.getByRole('button', { name: 'Show password' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
     });

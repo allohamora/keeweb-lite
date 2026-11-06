@@ -6,6 +6,13 @@ import { Lock } from '@/utils/lock';
 // import() is cached per module, so calling this again reuses the loaded module.
 const loadKdbxweb = async () => (await import('@/utils/kdbxweb')).default;
 
+export class InvalidKeyError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('Invalid password or key file.', options);
+    this.name = 'InvalidKeyError';
+  }
+}
+
 export const toKeyFileHash = async (file: File) => {
   const kdbxweb = await loadKdbxweb();
 
@@ -42,7 +49,7 @@ export const unlockDatabase = async ({
     return await loadDatabase({ encryptedBytes, credentials });
   } catch (error) {
     if (error instanceof kdbxweb.KdbxError && error.code === kdbxweb.Consts.ErrorCodes.InvalidKey) {
-      throw new Error('Invalid password or key file.', { cause: error });
+      throw new InvalidKeyError({ cause: error });
     }
 
     throw error;
