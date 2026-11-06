@@ -6,7 +6,7 @@ import {
   PasswordRequiredError,
   QuickUnlockCancelledError,
   quickUnlock,
-  removePasskey,
+  signalPasskeyRemovable,
 } from '@/features/unlock/services/quick-unlock';
 import { installFakeAuthenticator } from '@tests/utils/fake-authenticator';
 
@@ -231,11 +231,11 @@ describe('quick-unlock', () => {
     });
   });
 
-  describe('removePasskey', () => {
+  describe('signalPasskeyRemovable', () => {
     it('tells the authenticator that the passkey is gone', async () => {
       using authenticator = installFakeAuthenticator();
 
-      await removePasskey(new Uint8Array([1, 2, 3]));
+      await signalPasskeyRemovable(new Uint8Array([1, 2, 3]));
 
       expect(authenticator.signals).toEqual([{ rpId: location.hostname, credentialId: 'AQID' }]);
     });
@@ -243,13 +243,13 @@ describe('quick-unlock', () => {
     it('does nothing when the browser cannot signal credentials', async () => {
       using _authenticator = installFakeAuthenticator({ supportsSignal: false });
 
-      await expect(removePasskey(new Uint8Array([1]))).resolves.toBeUndefined();
+      await expect(signalPasskeyRemovable(new Uint8Array([1]))).resolves.toBeUndefined();
     });
 
     it('does not fail when the signal fails', async () => {
       using _authenticator = installFakeAuthenticator({ failSignal: true });
 
-      await expect(removePasskey(new Uint8Array([1]))).resolves.toBeUndefined();
+      await expect(signalPasskeyRemovable(new Uint8Array([1]))).resolves.toBeUndefined();
     });
   });
 });

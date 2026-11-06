@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/utils/error';
 import { getRecord, removeRecord } from '@/repositories/record';
-import { removePasskey } from '@/features/unlock/services/quick-unlock';
+import { signalPasskeyRemovable } from '@/features/unlock/services/quick-unlock';
 import {
   Dialog,
   DialogClose,
@@ -32,7 +32,7 @@ export const RecordRemove = ({ recordId, disabled, onRecordRemove }: RecordRemov
       await removeRecord(recordId);
 
       if (quickUnlock) {
-        await removePasskey(quickUnlock.credentialId);
+        await signalPasskeyRemovable(quickUnlock.credentialId);
       }
 
       onRecordRemove();

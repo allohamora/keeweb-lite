@@ -87,7 +87,7 @@ export const readPasskeySecret = async (credentialId: Uint8Array) => {
 
 // Chrome, Edge and Safari 26+: tells the authenticator that the passkey is gone, so it can hide it.
 // It is just a hint, so other browsers keep the passkey in the OS list and a failure never blocks the user.
-export const removePasskey = async (credentialId: Uint8Array) => {
+export const signalPasskeyRemovable = async (credentialId: Uint8Array) => {
   if (typeof PublicKeyCredential === 'undefined' || !('signalUnknownCredential' in PublicKeyCredential)) {
     return;
   }
@@ -137,7 +137,7 @@ export const createPasskey = async ({ recordId, name }: { recordId: string; name
     // some authenticators return the secret only on get(), which asks for biometrics again
     return { credentialId, secret: getPrfSecret(credential) ?? (await readPasskeySecret(credentialId)) };
   } catch (error) {
-    await removePasskey(credentialId);
+    await signalPasskeyRemovable(credentialId);
 
     throw error;
   }
@@ -168,12 +168,12 @@ const enable = async ({ record, password }: { record: PersistedFileRecord; passw
     const session = await startSession({ database, record, quickUnlock });
 
     if (record.quickUnlock) {
-      await removePasskey(record.quickUnlock.credentialId);
+      await signalPasskeyRemovable(record.quickUnlock.credentialId);
     }
 
     return session;
   } catch (error) {
-    await removePasskey(credentialId);
+    await signalPasskeyRemovable(credentialId);
 
     throw error;
   }
@@ -183,7 +183,7 @@ const reset = async ({ id, quickUnlock }: PersistedFileRecord) => {
   await updateRecord(id, (record) => ({ ...record, quickUnlock: undefined }));
 
   if (quickUnlock) {
-    await removePasskey(quickUnlock.credentialId);
+    await signalPasskeyRemovable(quickUnlock.credentialId);
   }
 
   throw new PasswordRequiredError('Biometrics was reset. Enter your password and click the button again.');
