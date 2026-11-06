@@ -2,11 +2,11 @@ import { asArrayBuffer, toBase64Url } from '@/utils/buffer';
 import { truncate } from '@/utils/string';
 import { getRecord, updateRecord, type PersistedFileRecord, type QuickUnlock } from '@/repositories/record';
 import { InvalidKeyError } from '@/services/database';
+import { decrypt, encrypt, InvalidCipherError } from '@/services/crypto';
 import { getDeviceOs } from '@/features/unlock/services/device';
 import { openDatabase, startSession, unlockSession } from '@/features/unlock/services/session';
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
 
 const prfExtension = { prf: { eval: { first: asArrayBuffer(encoder.encode('keeweb-lite.quick-unlock')) } } };
 
@@ -143,72 +143,7 @@ export const createPasskey = async ({ recordId, name }: { recordId: string; name
   }
 };
 
-const IV_LENGTH = 12;
-
-const info = encoder.encode('keeweb-lite.quick-unlock.v1');
-
-export class InvalidQuickUnlockError extends Error {
-  constructor(options?: ErrorOptions) {
-    super('Biometric data is invalid.', options);
-    this.name = 'InvalidQuickUnlockError';
-  }
-}
-
-const deriveKey = async (secret: BufferSource) => {
-  const material = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveKey']);
-
-  return crypto.subtle.deriveKey(
-    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info },
-    material,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt'],
-  );
-};
-
-// the record id is authenticated with the password, so the data can't be moved to another record
-export const encryptPassword = async ({
-  recordId,
-  password,
-  secret,
-}: {
-  recordId: string;
-  password: string;
-  secret: BufferSource;
-}) => {
-  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv, additionalData: encoder.encode(recordId) },
-    await deriveKey(secret),
-    encoder.encode(password),
-  );
-
-  return { iv, data: new Uint8Array(encrypted) };
-};
-
-export const decryptPassword = async ({
-  recordId,
-  iv,
-  data,
-  secret,
-}: {
-  recordId: string;
-  iv: Uint8Array;
-  data: Uint8Array;
-  secret: BufferSource;
-}) => {
-  try {
-    const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: asArrayBuffer(iv), additionalData: encoder.encode(recordId) },
-      await deriveKey(secret),
-      asArrayBuffer(data),
-    );
-
-    return decoder.decode(decrypted);
-  } catch (error) {
-    throw new InvalidQuickUnlockError({ cause: error });
-  }
-};
+const QUICK_UNLOCK_INFO = 'keeweb-lite.quick-unlock.v1';
 
 export class PasswordRequiredError extends Error {
   constructor(message: string) {
@@ -228,7 +163,7 @@ const enable = async ({ record, password }: { record: PersistedFileRecord; passw
   try {
     const quickUnlock: QuickUnlock = {
       credentialId,
-      ...(await encryptPassword({ recordId: record.id, password, secret })),
+      ...(await encrypt({ secret, info: QUICK_UNLOCK_INFO, context: record.id, text: password })),
     };
     const session = await startSession({ database, record, quickUnlock });
 
@@ -263,11 +198,11 @@ const unlockWithPasskey = async ({
 }) => {
   try {
     const secret = await readPasskeySecret(credentialId);
-    const password = await decryptPassword({ recordId: record.id, iv, data, secret });
+    const password = await decrypt({ secret, info: QUICK_UNLOCK_INFO, context: record.id, iv, data });
 
     return await unlockSession({ record, password });
   } catch (error) {
-    if (error instanceof InvalidQuickUnlockError || error instanceof InvalidKeyError) {
+    if (error instanceof InvalidCipherError || error instanceof InvalidKeyError) {
       return reset(record);
     }
 
