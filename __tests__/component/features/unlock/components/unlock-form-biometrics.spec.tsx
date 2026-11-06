@@ -67,6 +67,7 @@ describe('unlock-form biometrics', () => {
 
       await user.type(screen.getByLabelText('Password'), 'wrong-password');
       await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await user.click(await screen.findByRole('button', { name: 'I understand' }));
 
       await vi.waitFor(() => {
         expect(toastError).toHaveBeenCalledWith('Invalid password or key file.');
@@ -80,6 +81,7 @@ describe('unlock-form biometrics', () => {
 
       await user.type(screen.getByLabelText('Password'), 'vault-password');
       await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await user.click(await screen.findByRole('button', { name: 'I understand' }));
       await vi.waitFor(() => {
         expect(setSession).toHaveBeenCalledTimes(1);
       });
@@ -95,6 +97,64 @@ describe('unlock-form biometrics', () => {
       });
     });
 
+    it('warns before enabling biometrics and creates no passkey until it is confirmed', async () => {
+      using authenticator = installFakeAuthenticator();
+      const { user, setSession } = await renderForm();
+
+      await user.type(screen.getByLabelText('Password'), 'vault-password');
+      await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Enable biometrics?')).toBeInTheDocument();
+      expect(authenticator.createdUsers).toHaveLength(0);
+      expect(setSession).not.toHaveBeenCalled();
+
+      await user.click(within(dialog).getByRole('button', { name: 'I understand' }));
+
+      await vi.waitFor(() => {
+        expect(setSession).toHaveBeenCalledTimes(1);
+      });
+      expect(authenticator.createdUsers).toHaveLength(1);
+    });
+
+    it('does not enable biometrics when the warning is cancelled', async () => {
+      using authenticator = installFakeAuthenticator();
+      const { user, setSession } = await renderForm();
+
+      await user.type(screen.getByLabelText('Password'), 'vault-password');
+      await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+      expect(authenticator.createdUsers).toHaveLength(0);
+      expect(setSession).not.toHaveBeenCalled();
+    });
+
+    it('does not warn again once biometrics is enabled for the record', async () => {
+      using authenticator = installFakeAuthenticator();
+      const { user, setSession } = await renderForm();
+      await user.type(screen.getByLabelText('Password'), 'vault-password');
+      await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await user.click(await screen.findByRole('button', { name: 'I understand' }));
+      await vi.waitFor(() => {
+        expect(setSession).toHaveBeenCalledTimes(1);
+      });
+
+      await user.clear(screen.getByLabelText('Password'));
+      await vi.waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Unlock with biometrics' })).toBeEnabled();
+      });
+      await user.click(screen.getByRole('button', { name: 'Unlock with biometrics' }));
+
+      await vi.waitFor(() => {
+        expect(setSession).toHaveBeenCalledTimes(2);
+      });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(authenticator.createdUsers).toHaveLength(1);
+    });
+
     it('shows a hint instead of an error when the biometric prompt is cancelled', async () => {
       using authenticator = installFakeAuthenticator();
       using toastError = vi.spyOn(toast, 'error');
@@ -102,10 +162,12 @@ describe('unlock-form biometrics', () => {
       const { user, setSession } = await renderForm();
       await user.type(screen.getByLabelText('Password'), 'vault-password');
       await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await user.click(await screen.findByRole('button', { name: 'I understand' }));
       await vi.waitFor(() => {
         expect(setSession).toHaveBeenCalledTimes(1);
       });
 
+      await user.clear(screen.getByLabelText('Password'));
       authenticator.cancelNext();
       await user.click(screen.getByRole('button', { name: 'Unlock with biometrics' }));
 
@@ -125,6 +187,7 @@ describe('unlock-form biometrics', () => {
       const { user, setSession } = await renderForm();
       await user.type(screen.getByLabelText('Password'), 'vault-password');
       await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
+      await user.click(await screen.findByRole('button', { name: 'I understand' }));
       await vi.waitFor(() => {
         expect(setSession).toHaveBeenCalledTimes(1);
       });

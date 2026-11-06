@@ -19,6 +19,7 @@ import {
   QuickUnlockCancelledError,
   quickUnlock,
 } from '@/features/unlock/services/quick-unlock';
+import { QuickUnlockWarning } from './quick-unlock-warning';
 import { RecordRemove } from './record-remove';
 
 const unlockFormSchema = z.object({
@@ -77,6 +78,7 @@ export const UnlockForm = ({
   const { value: isQuickUnlockAvailable = false } = useAsync(isPasskeySupported, []);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [isQuickUnlockWarningOpen, setIsQuickUnlockWarningOpen] = useState(false);
 
   const isBusy = isLoadingRecords || isSubmitting || isUnlocking;
   const isUnlockDisabled = !selectedRecordId || isBusy;
@@ -121,6 +123,23 @@ export const UnlockForm = ({
         }
       }
     });
+  };
+
+  // a typed password creates a passkey, so the user has to confirm the warning first
+  const handleQuickUnlockClick = async () => {
+    const selectedRecord = records.find(({ id }) => id === selectedRecordId);
+    if (!selectedRecord?.quickUnlock && getValues('password').trim()) {
+      setIsQuickUnlockWarningOpen(true);
+      return;
+    }
+
+    await handleQuickUnlock();
+  };
+
+  const handleQuickUnlockWarningConfirm = async () => {
+    setIsQuickUnlockWarningOpen(false);
+
+    await handleQuickUnlock();
   };
 
   const handleRemove = () => {
@@ -241,7 +260,7 @@ export const UnlockForm = ({
               aria-label="Unlock with biometrics"
               className="h-8 px-3"
               disabled={isUnlockDisabled}
-              onClick={() => void handleQuickUnlock()}
+              onClick={() => void handleQuickUnlockClick()}
               type="button"
               variant="outline"
             >
@@ -253,6 +272,11 @@ export const UnlockForm = ({
           </Button>
         </div>
       </div>
+      <QuickUnlockWarning
+        open={isQuickUnlockWarningOpen}
+        onOpenChange={setIsQuickUnlockWarningOpen}
+        onConfirm={() => void handleQuickUnlockWarningConfirm()}
+      />
     </form>
   );
 };
