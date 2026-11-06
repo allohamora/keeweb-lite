@@ -208,23 +208,6 @@ describe('quick-unlock', () => {
       expect((await getRecord('vault-1')).quickUnlock).toBeUndefined();
     });
 
-    it('does not open the data of another record', async () => {
-      using _authenticator = installFakeAuthenticator();
-      await createVault();
-      await quickUnlock({ recordId: 'vault-1', password: 'vault-password' });
-      const { quickUnlock: saved } = await getRecord('vault-1');
-      const { encryptedBytes } = await createEmptyDatabase({ name: 'Other', password: 'vault-password' });
-      await createRecord({
-        id: 'vault-2',
-        type: 'local',
-        kdbx: { encryptedBytes, name: 'Other' },
-        quickUnlock: saved,
-      });
-
-      await expect(quickUnlock({ recordId: 'vault-2', password: '' })).rejects.toBeInstanceOf(PasswordRequiredError);
-      expect((await getRecord('vault-2')).quickUnlock).toBeUndefined();
-    });
-
     it('fails when the device loses PRF after setup and keeps the saved data', async () => {
       using authenticator = installFakeAuthenticator();
       await createVault();

@@ -4,7 +4,7 @@ import { createCipher, InvalidCipherError } from '@/services/crypto';
 describe('crypto', () => {
   const secret = new Uint8Array(32).fill(7);
   const cipher = createCipher('test.v1');
-  const base = { secret, id: 'record-1' };
+  const base = { secret };
 
   describe('createCipher', () => {
     it('restores the encrypted value', async () => {
@@ -27,13 +27,10 @@ describe('crypto', () => {
       expect(first.slice(0, 16)).not.toEqual(second.slice(0, 16));
     });
 
-    it.each([
-      ['secret', { secret: new Uint8Array(32).fill(8) }],
-      ['id', { id: 'record-2' }],
-    ])('rejects another %s', async (_name, override) => {
+    it('rejects another secret', async () => {
       const encrypted = await cipher.encrypt({ ...base, value: 'my password' });
 
-      await expect(cipher.decrypt({ ...base, ...override, value: encrypted })).rejects.toBeInstanceOf(
+      await expect(cipher.decrypt({ secret: new Uint8Array(32).fill(8), value: encrypted })).rejects.toBeInstanceOf(
         InvalidCipherError,
       );
     });

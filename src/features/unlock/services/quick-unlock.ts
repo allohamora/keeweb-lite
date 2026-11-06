@@ -163,7 +163,7 @@ const enable = async ({ record, password }: { record: PersistedFileRecord; passw
   try {
     const quickUnlock: QuickUnlock = {
       credentialId,
-      data: await cipher.encrypt({ secret, id: record.id, value: password }),
+      data: await cipher.encrypt({ secret, value: password }),
     };
     const session = await startSession({ database, record, quickUnlock });
 
@@ -198,7 +198,7 @@ const unlockWithPasskey = async ({
 }) => {
   try {
     const secret = await readPasskeySecret(credentialId);
-    const password = await cipher.decrypt({ secret, id: record.id, value: data });
+    const password = await cipher.decrypt({ secret, value: data });
 
     return await unlockSession({ record, password });
   } catch (error) {

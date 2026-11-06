@@ -27,14 +27,13 @@ const deriveKey = async ({ secret, label, salt }: { secret: BufferSource; label:
 };
 
 // `secret` must be random (e.g. a passkey secret), not a password.
-// `label` gives each cipher its own key. `id` is authenticated with the value,
-// so the encrypted bytes can only be decrypted with the same id (e.g. the same record)
+// `label` gives each cipher its own key
 export const createCipher = (label: string) => ({
-  encrypt: async ({ secret, id, value }: { secret: BufferSource; id: string; value: string }) => {
+  encrypt: async ({ secret, value }: { secret: BufferSource; value: string }) => {
     const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
     const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv, additionalData: encoder.encode(id) },
+      { name: 'AES-GCM', iv },
       await deriveKey({ secret, label, salt }),
       encoder.encode(value),
     );
@@ -42,12 +41,12 @@ export const createCipher = (label: string) => ({
     return new Uint8Array([...salt, ...iv, ...new Uint8Array(encrypted)]);
   },
 
-  decrypt: async ({ secret, id, value }: { secret: BufferSource; id: string; value: Uint8Array }) => {
+  decrypt: async ({ secret, value }: { secret: BufferSource; value: Uint8Array }) => {
     try {
       const salt = value.slice(0, SALT_LENGTH);
       const iv = value.slice(SALT_LENGTH, DATA_OFFSET);
       const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: asArrayBuffer(iv), additionalData: encoder.encode(id) },
+        { name: 'AES-GCM', iv: asArrayBuffer(iv) },
         await deriveKey({ secret, label, salt }),
         asArrayBuffer(value.slice(DATA_OFFSET)),
       );
