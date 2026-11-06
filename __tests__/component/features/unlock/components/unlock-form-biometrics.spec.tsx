@@ -106,7 +106,7 @@ describe('unlock-form biometrics', () => {
       await user.click(await screen.findByRole('button', { name: 'Unlock with biometrics' }));
 
       const dialog = await screen.findByRole('dialog');
-      expect(within(dialog).getByText('Enable biometrics?')).toBeInTheDocument();
+      expect(within(dialog).getByText('Enable biometrics for the record?')).toBeInTheDocument();
       expect(authenticator.createdUsers).toHaveLength(0);
       expect(setSession).not.toHaveBeenCalled();
 

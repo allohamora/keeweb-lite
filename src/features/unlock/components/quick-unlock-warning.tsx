@@ -19,24 +19,23 @@ export const QuickUnlockWarning = ({ open, onOpenChange, onConfirm }: QuickUnloc
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent showCloseButton={false} className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>Enable biometrics?</DialogTitle>
+        <DialogTitle>Enable biometrics for the record?</DialogTitle>
         <DialogDescription>
-          Biometrics is very convenient, so we offer it as an option. But browsers have no API to unlock local data with
-          biometrics, so we use a passkey instead. Passkeys are made for signing in to servers, not for this. It is a
-          workaround, so other issues are possible too. Known downsides:
+          Browsers have no API to unlock local data with biometrics. But they have a passkey API made for signing in to
+          servers, so we use it as a workaround. Because of that, some issues are possible.
         </DialogDescription>
       </DialogHeader>
-      <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-        <li>
+      <div className="grid gap-3 text-xs/relaxed text-muted-foreground">
+        <p>
           The passkey is saved in your password manager or device passkey list, named after the record and your system.
           Services like iCloud Keychain or Google Password Manager may sync it to your other devices, but it only
           unlocks in this browser.
-        </li>
-        <li>
+        </p>
+        <p>
           When you remove the record, we can only signal your browser and password manager that the passkey can be
           removed, and they usually ignore it. The passkey stays as a leftover, so you may need to delete it manually.
-        </li>
-      </ul>
+        </p>
+      </div>
       <DialogFooter className="grid grid-cols-2">
         <DialogClose asChild>
           <Button type="button" variant="secondary">
