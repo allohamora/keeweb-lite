@@ -12,6 +12,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme="system"
+      position="bottom-center"
+      closeButton
       className="toaster group"
       icons={{
         success: <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4" />,
@@ -26,6 +28,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
           '--border-radius': 'var(--radius)',
+          '--toast-close-button-start': 'unset',
+          '--toast-close-button-end': '0',
+          '--toast-close-button-transform': 'translate(35%, -35%)',
         } as React.CSSProperties
       }
       toastOptions={{

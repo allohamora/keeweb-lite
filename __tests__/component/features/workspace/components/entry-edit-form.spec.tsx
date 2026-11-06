@@ -287,5 +287,25 @@ describe('entry-edit-form', () => {
       save.resolve({ nextDatabase: database, nextEntryUuid: entry.uuid, nextRecord: record });
       await waitFor(() => expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled());
     });
+
+    it('masks notes by default and toggles visibility with the Show/Hide button', async () => {
+      const database = await createTestDatabase();
+      const entry = createTestEntry(database);
+      const user = userEvent.setup();
+      const maskedClass = '[-webkit-text-security:disc]';
+
+      render(<EntryEditForm database={database} entry={entry} record={record} onEntrySave={vi.fn()} />);
+      const notes = screen.getByLabelText('Notes');
+
+      expect(notes).toHaveClass(maskedClass);
+
+      await user.click(screen.getByRole('button', { name: 'Show notes' }));
+
+      expect(notes).not.toHaveClass(maskedClass);
+
+      await user.click(screen.getByRole('button', { name: 'Hide notes' }));
+
+      expect(notes).toHaveClass(maskedClass);
+    });
   });
 });

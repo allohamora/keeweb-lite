@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/autocomplete';
 import { TagSelect } from '@/components/ui/tag-select';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/utils/error';
 import { getEntryColor } from '@/features/workspace/services/color';
 import {
@@ -78,6 +79,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   const handleEntryValuesChange = useEffectEvent(() => {
     // a sync can bring new entry data: show it, but keep what the user is typing
@@ -421,14 +423,24 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="entry-notes">Notes</FieldLabel>
                 <FieldContent>
-                  <Textarea
-                    {...field}
-                    autoComplete="off"
-                    aria-invalid={fieldState.invalid}
-                    className="min-h-24 resize-none text-xs"
-                    id="entry-notes"
-                    placeholder="Notes"
-                  />
+                  <div className="relative">
+                    <Textarea
+                      {...field}
+                      autoComplete="off"
+                      aria-invalid={fieldState.invalid}
+                      className={cn('min-h-24 resize-none pr-8 text-xs', !showNotes && '[-webkit-text-security:disc]')}
+                      id="entry-notes"
+                      placeholder="Notes"
+                    />
+                    <button
+                      type="button"
+                      className="absolute top-0 right-0 flex items-center p-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowNotes((prev) => !prev)}
+                      aria-label={showNotes ? 'Hide notes' : 'Show notes'}
+                    >
+                      <HugeiconsIcon icon={showNotes ? ViewOffIcon : ViewIcon} size={14} />
+                    </button>
+                  </div>
                   <FieldError errors={[fieldState.error]} />
                 </FieldContent>
               </Field>
