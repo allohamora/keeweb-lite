@@ -28,7 +28,9 @@ describe('unlock-form', () => {
         <UnlockForm onRecordRemove={vi.fn()} recordsReloadToken={0} runUnlockAction={vi.fn()} setSession={vi.fn()} />,
       );
 
-      expect(await screen.findByRole('combobox', { name: 'Selected record' })).toHaveTextContent('Other Vault (local)');
+      await vi.waitFor(() => {
+        expect(screen.getByRole('combobox', { name: 'Selected record' })).toHaveTextContent('Other Vault (local)');
+      });
     });
 
     it('disables the record actions while the records reload and enables them once it finishes', async () => {
