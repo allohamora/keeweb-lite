@@ -1,5 +1,5 @@
 import * as z from 'zod/mini';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useAsync } from 'react-use';
@@ -40,8 +40,10 @@ export const UnlockForm = ({
   const {
     control,
     formState: { isSubmitting },
+    getValues,
     handleSubmit,
     reset,
+    setValue,
   } = useForm<UnlockFormValues>({
     defaultValues: {
       password: '',
@@ -57,6 +59,13 @@ export const UnlockForm = ({
     loading: isLoadingRecords,
     value: records = [],
   } = useAsync(getRecordsByLastOpened, [recordsReloadToken]);
+
+  useEffect(() => {
+    const [lastOpenedRecord] = records;
+    if (lastOpenedRecord && !getValues('selectedRecordId')) {
+      setValue('selectedRecordId', lastOpenedRecord.id);
+    }
+  }, [records, getValues, setValue]);
 
   const [showPassword, setShowPassword] = useState(false);
 

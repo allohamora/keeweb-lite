@@ -14,6 +14,23 @@ describe('unlock-form', () => {
   };
 
   describe('UnlockForm', () => {
+    it('preselects the most recently opened record after loading', async () => {
+      const otherRecord: PersistedFileRecord = {
+        ...createTestRecord(),
+        id: 'local-2',
+        kdbx: { ...createTestRecord().kdbx, name: 'Other Vault' },
+      };
+      using _getRecordsByLastOpened = vi
+        .spyOn(recordService, 'getRecordsByLastOpened')
+        .mockResolvedValueOnce([otherRecord, vaultRecord]);
+
+      render(
+        <UnlockForm onRecordRemove={vi.fn()} recordsReloadToken={0} runUnlockAction={vi.fn()} setSession={vi.fn()} />,
+      );
+
+      expect(await screen.findByRole('combobox', { name: 'Selected record' })).toHaveTextContent('Other Vault (local)');
+    });
+
     it('disables the record actions while the records reload and enables them once it finishes', async () => {
       const user = userEvent.setup();
       const runUnlockAction = vi.fn();
@@ -33,8 +50,9 @@ describe('unlock-form', () => {
           setSession={setSession}
         />,
       );
-      await user.click(await screen.findByRole('combobox', { name: 'Selected record' }));
-      await user.click(await screen.findByRole('option', { name: 'My Vault (local)' }));
+      await vi.waitFor(() => {
+        expect(screen.getByLabelText('Password')).toBeEnabled();
+      });
       await user.type(screen.getByLabelText('Password'), 'password');
 
       expect(screen.getByLabelText('Password')).toBeEnabled();
