@@ -256,6 +256,7 @@ describe('unlock', () => {
       await user.click(await screen.findByRole('option', { name: 'drive.kdbx (google-drive)' }));
 
       expect(screen.getByLabelText('Password')).not.toHaveAttribute('readonly');
+      expect(screen.getByLabelText('Password')).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
     });

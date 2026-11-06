@@ -90,6 +90,7 @@ describe('unlock-form', () => {
         expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
       });
       expect(screen.getByLabelText('Password')).not.toHaveAttribute('readonly');
+      expect(screen.getByLabelText('Password')).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Show password' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
     });
