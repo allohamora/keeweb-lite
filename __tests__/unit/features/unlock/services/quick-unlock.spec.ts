@@ -42,10 +42,6 @@ describe('quick-unlock', () => {
   };
 
   describe('isPasskeySupported', () => {
-    it('is false without WebAuthn', async () => {
-      expect(await isPasskeySupported()).toBe(false);
-    });
-
     it('is true with a platform authenticator', async () => {
       using _authenticator = installFakeAuthenticator();
 

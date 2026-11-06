@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import { UnlockForm } from '@/features/unlock/components/unlock-form';
@@ -42,6 +42,7 @@ describe('unlock-form biometrics', () => {
   describe('UnlockForm', () => {
     it('hides the biometrics button without WebAuthn', async () => {
       await renderForm();
+      await act(async () => {});
 
       expect(screen.queryByRole('button', { name: 'Unlock with biometrics' })).not.toBeInTheDocument();
     });
