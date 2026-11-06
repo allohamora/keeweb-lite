@@ -1,5 +1,5 @@
 import { asArrayBuffer, toBase64Url } from '@/utils/buffer';
-import { truncate } from '@/utils/string';
+import { truncateBytes } from '@/utils/string';
 import { getRecord, updateRecord, type PersistedFileRecord, type QuickUnlock } from '@/repositories/record';
 import { InvalidKeyError } from '@/services/database';
 import { createCipher, InvalidCipherError } from '@/services/crypto';
@@ -17,8 +17,8 @@ export class QuickUnlockCancelledError extends Error {
   }
 }
 
-// authenticators may cut a user name over 64 bytes (UTF-8), counted here as characters
-const MAX_PASSKEY_NAME_LENGTH = 64;
+// authenticators may cut or reject a user name over 64 bytes (UTF-8)
+const MAX_PASSKEY_NAME_BYTES = 64;
 
 const randomBytes = (length: number) => crypto.getRandomValues(new Uint8Array(length));
 
@@ -157,7 +157,7 @@ const enable = async ({ record, password }: { record: PersistedFileRecord; passw
   const database = await openDatabase({ record, password });
   const { credentialId, secret } = await createPasskey({
     recordId: record.id,
-    name: truncate(`${record.kdbx.name} (${record.type}) - ${getDeviceOs()}`, MAX_PASSKEY_NAME_LENGTH),
+    name: truncateBytes(`${record.kdbx.name} (${record.type}) - ${getDeviceOs()}`, MAX_PASSKEY_NAME_BYTES),
   });
 
   try {

@@ -117,7 +117,7 @@ describe('quick-unlock', () => {
       expect(authenticator.createdUsers[0]?.name).toBe('My Vault (local) - macOS');
     });
 
-    it('shortens a long passkey name to 64 characters', async () => {
+    it('shortens a long passkey name to 64 bytes', async () => {
       using authenticator = installFakeAuthenticator();
       await createVault({ name: 'A'.repeat(100) });
 
