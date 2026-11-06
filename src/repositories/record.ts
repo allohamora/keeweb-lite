@@ -13,7 +13,6 @@ const keySchema = z.object({
 
 const quickUnlockSchema = z.object({
   credentialId: z.instanceof(Uint8Array),
-  iv: z.instanceof(Uint8Array),
   data: z.instanceof(Uint8Array),
 });
 

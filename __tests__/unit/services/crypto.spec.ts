@@ -1,39 +1,58 @@
 import { describe, expect, it } from 'vitest';
-import { decrypt, encrypt, InvalidCipherError } from '@/services/crypto';
+import { createCipher, InvalidCipherError } from '@/services/crypto';
 
 describe('crypto', () => {
   const secret = new Uint8Array(32).fill(7);
-  const base = { secret, info: 'test.v1', context: 'record-1' };
+  const cipher = createCipher('test.v1');
+  const base = { secret, id: 'record-1' };
 
-  describe('encrypt and decrypt', () => {
-    it('restores the encrypted text', async () => {
-      const encrypted = await encrypt({ ...base, text: 'my password' });
+  describe('createCipher', () => {
+    it('restores the encrypted value', async () => {
+      const encrypted = await cipher.encrypt({ ...base, value: 'my password' });
 
-      await expect(decrypt({ ...base, ...encrypted })).resolves.toBe('my password');
+      await expect(cipher.decrypt({ ...base, value: encrypted })).resolves.toBe('my password');
     });
 
-    it('uses a new iv for each call', async () => {
-      const first = await encrypt({ ...base, text: 'my password' });
-      const second = await encrypt({ ...base, text: 'my password' });
+    it('encrypts the same value differently each time', async () => {
+      const first = await cipher.encrypt({ ...base, value: 'my password' });
+      const second = await cipher.encrypt({ ...base, value: 'my password' });
 
-      expect(first.iv).not.toEqual(second.iv);
-      expect(first.data).not.toEqual(second.data);
+      expect(first).not.toEqual(second);
+    });
+
+    it('uses a new salt for each call', async () => {
+      const first = await cipher.encrypt({ ...base, value: 'my password' });
+      const second = await cipher.encrypt({ ...base, value: 'my password' });
+
+      expect(first.slice(0, 16)).not.toEqual(second.slice(0, 16));
     });
 
     it.each([
       ['secret', { secret: new Uint8Array(32).fill(8) }],
-      ['info', { info: 'other.v1' }],
-      ['context', { context: 'record-2' }],
+      ['id', { id: 'record-2' }],
     ])('rejects another %s', async (_name, override) => {
-      const encrypted = await encrypt({ ...base, text: 'my password' });
+      const encrypted = await cipher.encrypt({ ...base, value: 'my password' });
 
-      await expect(decrypt({ ...base, ...override, ...encrypted })).rejects.toBeInstanceOf(InvalidCipherError);
+      await expect(cipher.decrypt({ ...base, ...override, value: encrypted })).rejects.toBeInstanceOf(
+        InvalidCipherError,
+      );
     });
 
-    it('rejects changed data', async () => {
-      const { iv, data } = await encrypt({ ...base, text: 'my password' });
+    it('rejects another label', async () => {
+      const encrypted = await cipher.encrypt({ ...base, value: 'my password' });
 
-      await expect(decrypt({ ...base, iv, data: data.map((b) => b ^ 1) })).rejects.toBeInstanceOf(InvalidCipherError);
+      await expect(createCipher('other.v1').decrypt({ ...base, value: encrypted })).rejects.toBeInstanceOf(
+        InvalidCipherError,
+      );
+    });
+
+    it.each([
+      ['changed', (bytes: Uint8Array) => bytes.map((b) => b ^ 1)],
+      ['too short', (bytes: Uint8Array) => bytes.slice(0, 20)],
+    ])('rejects %s data', async (_name, change) => {
+      const encrypted = await cipher.encrypt({ ...base, value: 'my password' });
+
+      await expect(cipher.decrypt({ ...base, value: change(encrypted) })).rejects.toBeInstanceOf(InvalidCipherError);
     });
   });
 });

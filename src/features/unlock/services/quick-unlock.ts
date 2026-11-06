@@ -2,7 +2,7 @@ import { asArrayBuffer, toBase64Url } from '@/utils/buffer';
 import { truncate } from '@/utils/string';
 import { getRecord, updateRecord, type PersistedFileRecord, type QuickUnlock } from '@/repositories/record';
 import { InvalidKeyError } from '@/services/database';
-import { decrypt, encrypt, InvalidCipherError } from '@/services/crypto';
+import { createCipher, InvalidCipherError } from '@/services/crypto';
 import { getDeviceOs } from '@/features/unlock/services/device';
 import { openDatabase, startSession, unlockSession } from '@/features/unlock/services/session';
 
@@ -143,7 +143,7 @@ export const createPasskey = async ({ recordId, name }: { recordId: string; name
   }
 };
 
-const QUICK_UNLOCK_INFO = 'keeweb-lite.quick-unlock.v1';
+const cipher = createCipher('keeweb-lite.quick-unlock.v1');
 
 export class PasswordRequiredError extends Error {
   constructor(message: string) {
@@ -163,7 +163,7 @@ const enable = async ({ record, password }: { record: PersistedFileRecord; passw
   try {
     const quickUnlock: QuickUnlock = {
       credentialId,
-      ...(await encrypt({ secret, info: QUICK_UNLOCK_INFO, context: record.id, text: password })),
+      data: await cipher.encrypt({ secret, id: record.id, value: password }),
     };
     const session = await startSession({ database, record, quickUnlock });
 
@@ -191,14 +191,14 @@ const reset = async ({ id, quickUnlock }: PersistedFileRecord) => {
 
 const unlockWithPasskey = async ({
   record,
-  quickUnlock: { credentialId, iv, data },
+  quickUnlock: { credentialId, data },
 }: {
   record: PersistedFileRecord;
   quickUnlock: QuickUnlock;
 }) => {
   try {
     const secret = await readPasskeySecret(credentialId);
-    const password = await decrypt({ secret, info: QUICK_UNLOCK_INFO, context: record.id, iv, data });
+    const password = await cipher.decrypt({ secret, id: record.id, value: data });
 
     return await unlockSession({ record, password });
   } catch (error) {
