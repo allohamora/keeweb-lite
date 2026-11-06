@@ -17,7 +17,7 @@ export class QuickUnlockCancelledError extends Error {
   }
 }
 
-// authenticators must accept at least 64 bytes for a user name and may cut longer ones
+// authenticators may cut a user name over 64 bytes (UTF-8), counted here as characters
 const MAX_PASSKEY_NAME_LENGTH = 64;
 
 const randomBytes = (length: number) => crypto.getRandomValues(new Uint8Array(length));
