@@ -181,7 +181,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
         void handleSaveSubmit(e);
       }}
     >
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-3 min-[769px]:p-4">
         <section className="space-y-3">
           <Controller
             control={control}
