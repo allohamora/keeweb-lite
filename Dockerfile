@@ -23,7 +23,7 @@ ENV PUBLIC_GOOGLE_SITE_VERIFICATION=$PUBLIC_GOOGLE_SITE_VERIFICATION
 
 RUN npm run build
 
-FROM nginx:1.29.5
+FROM nginx:1.31.9
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
