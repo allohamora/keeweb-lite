@@ -22,9 +22,9 @@ type BackToListButtonProps = {
 };
 
 const BackToListButton = ({ onBack }: BackToListButtonProps) => (
-  <div className="border-b border-border p-2">
+  <div className="border-b border-border py-2">
     <Button
-      className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+      className="h-auto text-xs text-muted-foreground hover:text-foreground"
       onClick={onBack}
       size="xs"
       type="button"
