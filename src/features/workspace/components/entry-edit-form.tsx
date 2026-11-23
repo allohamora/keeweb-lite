@@ -431,6 +431,7 @@ export const EntryEditForm = ({ database, entry, record, onEntrySave }: EntryEdi
                       className={cn('min-h-24 resize-none pr-8 text-xs', !showNotes && '[-webkit-text-security:disc]')}
                       id="entry-notes"
                       placeholder="Notes"
+                      spellCheck={false}
                     />
                     <button
                       type="button"
