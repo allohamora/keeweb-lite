@@ -17,7 +17,7 @@ describe('app', () => {
       await user.click(screen.getByRole('button', { name: 'Demo' }));
 
       expect(await screen.findByRole('button', { name: 'All Items' }, { timeout: 5000 })).toBeInTheDocument();
-      expect(document.title).toBe('Workspace - Keeweb Lite');
+      expect(document.title).toBe('Demo - Keeweb Lite');
     });
   });
 });

@@ -25,7 +25,7 @@ export const App = () => {
   const [session, setSession] = useState<UnlockSession | null>(null);
 
   useEffect(() => {
-    const page = session ? 'Workspace' : 'Unlock';
+    const page = session?.record.kdbx.name ?? 'Unlock';
 
     document.title = getPageTitle(page);
   }, [session]);

@@ -15,7 +15,7 @@ export const WorkspaceControls = ({ session, setSession, onWorkspaceLock }: Work
   const { sync, isConfigured, label } = getProvider(record);
 
   return (
-    <header className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-2 py-1">
+    <header className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-1 min-[769px]:px-4">
       <div className="min-w-0 text-[11px] text-muted-foreground">
         <p className="flex flex-wrap items-center gap-1.5">
           <span className="min-w-0 truncate font-medium text-foreground">

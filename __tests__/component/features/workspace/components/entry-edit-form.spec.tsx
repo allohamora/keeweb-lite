@@ -40,7 +40,7 @@ describe('entry-edit-form', () => {
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     });
 
-    it('turns browser autocomplete off on the text fields', async () => {
+    it('sets browser autocomplete and spellcheck attributes', async () => {
       const database = await createTestDatabase();
       const entry = createTestEntry(database);
 
@@ -50,6 +50,7 @@ describe('entry-edit-form', () => {
         expect(screen.getByLabelText(label)).toHaveAttribute('autocomplete', 'off');
       }
       expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'new-password');
+      expect(screen.getByLabelText('Notes')).toHaveAttribute('spellcheck', 'false');
     });
 
     it('enables Save once a field is edited', async () => {

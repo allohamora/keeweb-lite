@@ -22,15 +22,15 @@ type BackToListButtonProps = {
 };
 
 const BackToListButton = ({ onBack }: BackToListButtonProps) => (
-  <div className="border-b border-border p-2">
+  <div className="border-b border-border py-1">
     <Button
-      className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+      className="m-0 h-auto py-1 text-xs text-muted-foreground hover:text-foreground"
       onClick={onBack}
       size="xs"
       type="button"
       variant="ghost"
     >
-      <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={1.5} />
+      <HugeiconsIcon className="-ml-0.5" icon={ArrowLeft01Icon} size={14} strokeWidth={1.5} />
       Back to list
     </Button>
   </div>
@@ -49,10 +49,10 @@ export const EntryDetails = ({
     return (
       <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
         {showBackButton && <BackToListButton onBack={onBack} />}
-        <div className="border-b border-border px-3 py-2">
+        <div className="border-b border-border px-3 py-2 min-[769px]:px-4">
           <p className="truncate text-xs font-medium text-foreground">Entry</p>
         </div>
-        <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+        <div className="flex min-h-0 flex-1 items-center justify-center p-3 min-[769px]:p-4">
           <p className="text-xs text-muted-foreground">Select an entry to view its details.</p>
         </div>
       </aside>
@@ -62,7 +62,7 @@ export const EntryDetails = ({
   return (
     <aside className={cn('flex h-full min-w-0 flex-1 flex-col bg-background', className)}>
       {showBackButton && <BackToListButton onBack={onBack} />}
-      <div className="border-b border-border px-3 py-2">
+      <div className="border-b border-border px-3 py-2 min-[769px]:px-4">
         <p className="truncate text-xs font-medium text-foreground">Entry</p>
       </div>
       <EntryEditForm
