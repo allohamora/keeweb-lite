@@ -1,3 +1,4 @@
+import { webDavProvider } from '@/features/webdav/services/provider';
 import { demoProvider } from '@/features/demo/services/provider';
 import { googleDriveProvider } from '@/features/google-drive/services/provider';
 import { localProvider } from '@/features/local/services/provider';
@@ -7,6 +8,7 @@ import type { Provider } from '@/services/provider';
 const providersByType: { [Type in FileRecord['type']]: Provider<Type> } = {
   local: localProvider,
   'google-drive': googleDriveProvider,
+  webdav: webDavProvider,
   demo: demoProvider,
 };
 

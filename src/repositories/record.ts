@@ -45,7 +45,19 @@ const googleDriveFileRecordSchema = z.object({
   type: z.literal('google-drive'),
 });
 
-const fileRecordSchema = z.discriminatedUnion('type', [localFileRecordSchema, googleDriveFileRecordSchema]);
+const webDavFileRecordSchema = z.object({
+  ...localFileRecordSchema.shape,
+  type: z.literal('webdav'),
+  source: z.object({ url: z.url(), credentials: z.instanceof(Uint8Array), etag: z.optional(z.string()) }),
+  version: z.optional(z.number()),
+  syncedVersion: z.optional(z.number()),
+});
+export type WebDavFileRecord = z.infer<typeof webDavFileRecordSchema>;
+const fileRecordSchema = z.discriminatedUnion('type', [
+  localFileRecordSchema,
+  googleDriveFileRecordSchema,
+  webDavFileRecordSchema,
+]);
 const fileRecordsSchema = z.array(fileRecordSchema);
 
 export type QuickUnlock = z.infer<typeof quickUnlockSchema>;
@@ -166,12 +178,15 @@ export const updateRecord = async (recordId: string, update: (record: PersistedF
   });
 };
 
-export const updateSyncableRecord = async (recordId: string, update: (record: SyncableRecord) => SyncableRecord) => {
+export const updateSyncableRecord = async (
+  recordId: string,
+  update: (record: SyncableRecord) => Omit<SyncableRecord, 'source'> & { source: SyncableRecord['source'] },
+) => {
   return updateRecord(recordId, (record) => {
     if (!isSyncable(record)) {
       throw new Error('Record does not sync.');
     }
 
-    return update(record);
+    return fileRecordSchema.parse(update(record));
   });
 };

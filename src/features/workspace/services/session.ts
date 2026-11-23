@@ -71,7 +71,10 @@ export const syncSession = async ({
   // remote only: brings the snapshot and the remote file to the same state, without writing the local record
   const syncSnapshot = async (snapshot: SyncableRecord): Promise<Synced | undefined> => {
     const isLocalChanged = isModified(snapshot);
-    const { data, isRemoteChanged } = (await sync.check?.(snapshot)) ?? { data: undefined, isRemoteChanged: true };
+    const { data, isRemoteChanged } = (await sync.check?.(snapshot, database)) ?? {
+      data: undefined,
+      isRemoteChanged: true,
+    };
 
     if (!isLocalChanged && !isRemoteChanged) {
       return undefined;
@@ -98,14 +101,17 @@ export const syncSession = async ({
         ? synced.encryptedBytes
         : await toEncryptedBytes(await merge(stored.kdbx.encryptedBytes, synced.encryptedBytes));
 
-      const nextRecord = await updateSyncableRecord(stored.id, (current) => ({
-        ...current,
-        kdbx: { ...current.kdbx, encryptedBytes },
-        source: synced.source,
-        syncedVersion: snapshot.version ?? 0,
-      }));
+      const nextDatabase = await load(encryptedBytes);
+      const nextRecord = await updateSyncableRecord(stored.id, (current) => {
+        return {
+          ...current,
+          source: synced.source,
+          kdbx: { ...current.kdbx, encryptedBytes },
+          syncedVersion: snapshot.version ?? 0,
+        };
+      });
 
-      return { database: await load(encryptedBytes), record: nextRecord };
+      return { database: nextDatabase, record: nextRecord };
     });
 
   const syncOnce = async (): Promise<SyncSessionResult> => {

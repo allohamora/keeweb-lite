@@ -40,12 +40,13 @@ export class SyncConflictError extends Error {
 }
 
 // `check` cheaply reads the remote state (`data`, e.g. an ETag or a revision id) and tells whether the remote
-// changed since the last sync. `data` is passed to `pull` and `push`. Without `check` the remote is always pulled.
+// changed since the last sync. The unlocked database lets providers decrypt saved connection credentials.
+// `data` is passed to `pull` and `push`. Without `check` the remote is always pulled.
 // `pull` also returns the `source` the record gets if its local copy is replaced by the pulled bytes.
 // `push` returns the new `source` of the record, which is saved with the pushed bytes.
 // Whether the local copy changed since the last sync is tracked by `version` and `syncedVersion` on the record.
 export type Sync<Record extends FileRecord = FileRecord, SyncData = undefined> = {
-  check?: (record: Record) => Promise<{ data: SyncData; isRemoteChanged: boolean }>;
+  check?(record: Record, database: kdbxweb.Kdbx): Promise<{ data: SyncData; isRemoteChanged: boolean }>;
   pull(record: Record, data: SyncData): Promise<{ bytes: Uint8Array<ArrayBuffer>; source: SourceOf<Record> }>;
   // must throw SyncConflictError if the remote changed since `check` returned `data`
   push(record: Record, bytes: Uint8Array<ArrayBuffer>, data: SyncData): Promise<SourceOf<Record>>;
@@ -63,7 +64,9 @@ export type Provider<Type extends FileRecord['type'] = FileRecord['type']> = {
 };
 
 type ProviderConfig<Type extends FileRecord['type'], SyncData> = Pick<Provider<Type>, 'type'> &
-  Partial<Omit<Provider<Type>, 'type' | 'sync'>> & { sync?: Sync<RecordOf<Type>, SyncData> };
+  Partial<Omit<Provider<Type>, 'type' | 'sync'>> & {
+    sync?: Sync<RecordOf<Type>, SyncData>;
+  };
 
 export const defineProvider = <Type extends FileRecord['type'], SyncData = undefined>(
   provider: ProviderConfig<Type, SyncData>,

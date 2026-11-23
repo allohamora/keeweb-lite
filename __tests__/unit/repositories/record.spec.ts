@@ -5,6 +5,7 @@ import {
   clearRecords,
   createRecord,
   getRecords,
+  isModified,
   removeRecord,
   updateRecord,
   type PersistedFileRecord,
@@ -57,6 +58,22 @@ describe('record-repository', () => {
       await seedRecords(records);
 
       expect(await getRecords()).toEqual(records);
+    });
+
+    it('keeps old WebDAV records readable and treats unknown sync state as modified', async () => {
+      const oldRecord = {
+        id: 'webdav-old',
+        type: 'webdav',
+        kdbx: { name: 'vault.kdbx', encryptedBytes: new Uint8Array([1, 2, 3]) },
+        source: { url: 'https://dav.example/vault.kdbx', credentials: new Uint8Array([4, 5, 6]) },
+        synchronization: { generation: 2, pending: true },
+      };
+      await set(RECORDS_STORAGE_KEY, [oldRecord]);
+      const [record] = await getRecords();
+      if (record.type !== 'webdav') throw new Error('Expected WebDAV');
+      expect(record.kdbx).toEqual(oldRecord.kdbx);
+      expect(record.source).toEqual(oldRecord.source);
+      expect(isModified(record)).toBe(true);
     });
 
     it('throws and keeps storage unchanged when stored records are invalid', async () => {

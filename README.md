@@ -6,11 +6,11 @@ keeweb-lite is a lightweight, web-only password manager inspired by [KeeWeb](htt
 
 ## Features
 
-- Source types: `Local` and optional `Google Drive`.
+- Source types: `Local`, `WebDAV`, and optional `Google Drive`.
 - Unlock with password and optional key file.
 - Optional biometric unlock with a passkey (WebAuthn PRF): enter the password once, confirm the warning (the passkey is used in an unintended way and stays in your password manager after the record is removed), then use the fingerprint button.
 - Key file stays in runtime memory during unlock flow.
-- Google Drive records sync after every change.
+- Google Drive and WebDAV records sync after every change.
 - No settings/options UI; behavior is fixed by design.
 - KeeWeb-like workspace layout: groups, tags, entry list, and details editor.
 - Built-in password generator in entry editing flow.
@@ -80,6 +80,12 @@ Use Docker Compose:
 # Optionally set `PUBLIC_GOOGLE_CLIENT_ID`, `PUBLIC_GOOGLE_APP_ID` and `PUBLIC_GOOGLE_SITE_VERIFICATION` in `.env`, then run:
 docker compose up -d --build # App is available at `http://localhost:4321`.
 ```
+
+## WebDAV Setup
+
+Use a full HTTPS file URL with Basic credentials or an app password. The parent collection must exist. For cross-origin access, allow the app origin, HEAD/GET/PUT, and the `Authorization`, `Content-Type`, `If-Match`, and `If-None-Match` headers. Expose a strong ETag with `Access-Control-Expose-Headers: ETag`; without it, updates are disabled. The server must support HEAD and conditional GET/PUT requests. Unchanged files are checked without downloading them; concurrent updates are merged and retried up to three times.
+
+Connection credentials are stored encrypted on this device and unlocked with the database password and key file. If the remote database password, key file, or WebDAV credentials change, download your local database before removing its record and reimporting with the current credentials. Failed syncs keep local changes available for editing and download.
 
 ## Google Drive Setup
 
